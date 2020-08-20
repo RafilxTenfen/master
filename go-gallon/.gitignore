@@ -1,0 +1,6 @@
+/loginsrv
+dist/*
+log/*
+tmp/*
+*.log
+
