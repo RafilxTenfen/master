@@ -15,7 +15,7 @@ $~ make
 ```shell
 $~ ./main 3
 ```
-- It will generate two matrix 3x3 filled with random numbers 
+- It will generate two matrix 3x3 filled with random numbers and print the sum and multiplication between them
 
 __Expected Result__
 ```shell
