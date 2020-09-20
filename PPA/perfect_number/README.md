@@ -49,4 +49,5 @@ It took 40.524437 seconds to find 9 perfect numbers using Euclid
 > The received value for the 9'th perfect number should be 2658455991569831744654692615953842176 instead of -1152921504606846976 
 
 - Computer Specs
+
 ![image](https://user-images.githubusercontent.com/17556614/93689603-8f111d00-faa6-11ea-89a4-10e42fef614f.png)
