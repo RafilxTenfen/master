@@ -4,8 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-const char* bf = "bf";
-
 // is_perfect_number "brute force"
 // Sum all the divisors of the number.
 // If the sum is equal to the number, return 0.
