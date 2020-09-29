@@ -39,10 +39,6 @@ int is_prime(unsigned long number) {
 
 // my_pow elevate the base to the power
 unsigned long my_pow(unsigned long base, unsigned long power) {
-  if (power == 1) {
-    return base;
-  }
-
   unsigned long result = 1;
   for (int i = 0; i < power; i++) {
     result = result * base;
