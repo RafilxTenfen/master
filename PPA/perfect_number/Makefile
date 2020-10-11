@@ -6,16 +6,20 @@ CC = gcc
 #  -Wall turns on most, but not all, compiler warnings
 CFLAGS  = -g -Wall 
 
+PRAGMAFLAGS = -fopenmp
+
 SFLAGS = -lm
 
 # the build target executable:
 TARGET = main
+SEQUENC = sequen
 OUTPUT = generate
 
 all: $(TARGET)
 
 $(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -o $(OUTPUT) $(TARGET).c $(SFLAGS)
+	$(CC) $(CFLAGS) $(PRAGMAFLAGS) -o $(OUTPUT) $(TARGET).c $(SFLAGS)
+	$(CC) $(CFLAGS) -o $(OUTPUT)_$(SEQUENC) $(TARGET)_$(SEQUENC).c $(SFLAGS)
 
 clean:
 	$(RM) $(TARGET)
