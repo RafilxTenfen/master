@@ -1,25 +1,9 @@
 #include <math.h>
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-// is_perfect_number "brute force"
-// Sum all the divisors of the number.
-// If the sum is equal to the number, return 0.
-int is_perfect_number_bf(unsigned long number) {
-  int sum = 0;
-  for (int i = 1; sum <= number && i < number; i++) {
-    if (number % i == 0) {
-      sum += i;
-    }
-  }
-
-  if (sum != number) {
-    return 1;
-  }
-  return 0;
-}
 
 // is_prime return 0 if it's prime
 int is_prime(unsigned long number) {
@@ -40,7 +24,10 @@ int is_prime(unsigned long number) {
 // my_pow elevate the base to the power
 unsigned long my_pow(unsigned long base, unsigned long power) {
   unsigned long result = 1;
-  for (int i = 0; i < power; i++) {
+  unsigned long i;
+
+  #pragma omp parallel for reduction(*: result)
+  for (i = 0; i < power; i++) {
     result = result * base;
   }
 
@@ -48,19 +35,30 @@ unsigned long my_pow(unsigned long base, unsigned long power) {
 }
 
 // allocate_perfect_numbers allocate memory for unsigned long
-unsigned long* allocate_perfect_numbers(int qnt) {
-  unsigned long* perfect_numbers = NULL;
-  perfect_numbers = (unsigned long*)malloc(sizeof(unsigned long) * qnt);
+unsigned long *allocate_perfect_numbers(int qnt) {
+  unsigned long *perfect_numbers = NULL;
+  perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * qnt);
 
   return perfect_numbers;
 }
 
 // generate_perfect_numbers_bf uses brute force to find perfect numbers
-unsigned long* generate_perfect_numbers_bf(int qnt) {
-  unsigned long* perfect_numbers = allocate_perfect_numbers(qnt);
+unsigned long *generate_perfect_numbers_bf(int qnt) {
+  unsigned long *perfect_numbers = allocate_perfect_numbers(qnt);
   int count = 0;
-  for (int number = 1; count < qnt; number++) {
-    if (is_perfect_number_bf(number) == 0) {
+  unsigned long number, divisor, sum_divisors;
+
+  for (number = 1; count < qnt; number++) {
+    sum_divisors = 0;
+
+    # pragma omp parallel for default(shared) reduction(+:sum_divisors) private(divisor)
+    for (divisor = 1; divisor < number; divisor++) {
+      if (number % divisor == 0) {
+        sum_divisors += divisor;
+      }
+    }
+
+    if (sum_divisors == number) {
       perfect_numbers[count] = number;
       count++;
     }
@@ -70,8 +68,8 @@ unsigned long* generate_perfect_numbers_bf(int qnt) {
 }
 
 // generate_perfect_numbers_prime uses euclid form to find perfect numbers
-unsigned long* generate_perfect_numbers_prime(int qnt) {
-  unsigned long* perfect_numbers = allocate_perfect_numbers(qnt);
+unsigned long *generate_perfect_numbers_prime(int qnt) {
+  unsigned long *perfect_numbers = allocate_perfect_numbers(qnt);
 
   int count = 0;
   for (unsigned long number = 2; count < qnt; number++) {
@@ -89,7 +87,7 @@ unsigned long* generate_perfect_numbers_prime(int qnt) {
 }
 
 // print_perfect_numbers just print the received perfect_numbers
-void print_perfect_numbers(unsigned long* perfect_numbers, int qnt) {
+void print_perfect_numbers(unsigned long *perfect_numbers, int qnt) {
   printf("Perfect Numbers: ");
   for (int i = 0; i < qnt; i++) {
     printf("%ld ", perfect_numbers[i]);
@@ -100,7 +98,7 @@ void print_perfect_numbers(unsigned long* perfect_numbers, int qnt) {
 // and calculates the time it took to find those numbers
 void run_perfect_number_brute_force(int qnt) {
   clock_t t = clock();
-  unsigned long* generated_numbers = generate_perfect_numbers_bf(qnt);
+  unsigned long *generated_numbers = generate_perfect_numbers_bf(qnt);
   t = clock() - t;
 
   print_perfect_numbers(generated_numbers, qnt);
@@ -113,7 +111,7 @@ void run_perfect_number_brute_force(int qnt) {
 // and calculates the time it took to find those numbers
 void run_perfect_number_prime_number(int qnt) {
   clock_t t = clock();
-  unsigned long* generated_numbers = generate_perfect_numbers_prime(qnt);
+  unsigned long *generated_numbers = generate_perfect_numbers_prime(qnt);
   t = clock() - t;
 
   print_perfect_numbers(generated_numbers, qnt);
@@ -122,17 +120,23 @@ void run_perfect_number_prime_number(int qnt) {
   printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n", time_taken, qnt);
 }
 
-int main(int argc, char** agrv) {
+int main(int argc, char **agrv) {
   if (argc < 2 && argc > 4) {
     printf("Error, Wrong number of paramerters, Expected: 2 or 3, Received: %d ", argc);
     return 1;
   }
 
+  printf ("Perfect Number Generator C/OpenMP version\n" );
+  printf ("\n" );
+  printf ("Number of processors available = %d\n", omp_get_num_procs ( ) );
+  printf ("Number of threads =              %d\n", omp_get_max_threads ( ) );
+  printf ("\n" );
+
   int qnt = atoi(agrv[1]);
   printf("Perfect numbers to be generated: %d\n", qnt);
 
   if (argc == 3) {
-    char* func = agrv[2];
+    char *func = agrv[2];
     if (strcmp(func, "bf") == 0) {  // it can be implemented more ways to generate perfect numbers
       run_perfect_number_brute_force(qnt);
     }
