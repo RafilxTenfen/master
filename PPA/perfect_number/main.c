@@ -5,6 +5,8 @@
 #include <string.h>
 #include <time.h>
 
+#define LIMIT_PERFECT_NUMBERS 20
+
 // is_prime return 0 if it's prime
 int is_prime(unsigned long number) {
   int i, limit;
@@ -19,30 +21,16 @@ int is_prime(unsigned long number) {
   return 0;
 }
 
-// my_pow elevate the base to the power
-// unsigned long my_pow(unsigned long base, unsigned long power) {
-//   unsigned long result = 1;
-//   unsigned long i;
-
-//   #pragma omp for reduction(*: result)
-//   for (i = 0; i < power; i++) {
-//     result = result * base;
-//   }
-
-//   return result;
-// }
-
 // allocate_perfect_numbers allocate memory for unsigned long
-unsigned long *allocate_perfect_numbers(int qnt) {
+unsigned long *allocate_perfect_numbers() {
   unsigned long *perfect_numbers = NULL;
-  perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * qnt);
+  perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
 
   return perfect_numbers;
 }
 
-// generate_perfect_numbers_bf uses brute force to find perfect numbers
-unsigned long *generate_perfect_numbers_bf(int limit) {
-  unsigned long *perfect_numbers = allocate_perfect_numbers(limit);
+// generate_perfect_numbers_bf uses brute force to find perfect numbers, return the quantity of perfect numbers finded
+int generate_perfect_numbers_bf(unsigned long *perfect_numbers, int limit) {
   int count = 0;
   unsigned long number, divisor;
 
@@ -50,7 +38,7 @@ unsigned long *generate_perfect_numbers_bf(int limit) {
   {
 
     # pragma omp for
-    for (number = 1; number < 8900; number++) {
+    for (number = 1; number < limit; number++) {
       unsigned long sum_divisors = 0;
 
       for (divisor = 1; divisor < number; divisor++) {
@@ -59,7 +47,7 @@ unsigned long *generate_perfect_numbers_bf(int limit) {
         }
       }
 
-      if (count < limit && sum_divisors == number) {
+      if (sum_divisors == number) {
         perfect_numbers[count] = number;
         count++;
       }
@@ -68,16 +56,12 @@ unsigned long *generate_perfect_numbers_bf(int limit) {
 
   }
 
-  return perfect_numbers;
+  return count;
 }
-
-// # pragma omp single 
-// #pragma omp for ordered
-// # pragma omp for reduction(+:sum_divisors) 
 
 // generate_perfect_numbers_prime uses euclid form to find perfect numbers
 unsigned long *generate_perfect_numbers_prime(int qnt) {
-  unsigned long *perfect_numbers = allocate_perfect_numbers(qnt);
+  unsigned long *perfect_numbers = allocate_perfect_numbers();
   unsigned long number, mersenne_number, prev_mersenne_number, result_pow, pow_i;
   int count = 0;
   
@@ -114,21 +98,27 @@ unsigned long *generate_perfect_numbers_prime(int qnt) {
 void print_perfect_numbers(unsigned long *perfect_numbers, int qnt) {
   printf("Perfect Numbers: ");
   for (int i = 0; i < qnt; i++) {
-    printf("%ld ", perfect_numbers[i]);
+    unsigned long number = perfect_numbers[i];
+    if (number == 0) {
+      break;
+    }
+    printf("%ld ", number);
   }
 }
 
 // run_perfect_number_brute_force run the brute force startegy to find the perfect numbers
 // and calculates the time it took to find those numbers
 void run_perfect_number_brute_force(int limit) {
-  clock_t t = clock();
-  unsigned long *generated_numbers = generate_perfect_numbers_bf(limit);
-  t = clock() - t;
+  unsigned long *perfect_numbers = allocate_perfect_numbers();
 
-  print_perfect_numbers(generated_numbers, limit);
+  clock_t t = clock();
+  int count = generate_perfect_numbers_bf(perfect_numbers, limit);
+  t = clock() - t;
+  
+  print_perfect_numbers(perfect_numbers, count);
 
   double time_taken = ((double)t) / CLOCKS_PER_SEC;
-  printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", time_taken, limit);
+  printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", time_taken, count);
 }
 
 // run_perfect_number_prime_number run the euclid startegy to find the perfect numbers
@@ -157,7 +147,7 @@ int main(int argc, char **agrv) {
   printf ("\n" );
 
   int limit = atoi(agrv[1]);
-  printf("Perfect numbers to be generated: %d\n", limit);
+  printf("Max Limit %d to check Perfect numbers\n", limit);
 
   if (argc == 3) {
     char *func = agrv[2];
