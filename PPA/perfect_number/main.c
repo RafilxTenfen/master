@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #define LIMIT_PERFECT_NUMBERS 20
 
@@ -30,15 +29,19 @@ unsigned long *allocate_perfect_numbers() {
 }
 
 // generate_perfect_numbers_bf uses brute force to find perfect numbers, return the quantity of perfect numbers finded
-int generate_perfect_numbers_bf(unsigned long *perfect_numbers, int limit) {
+int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long limit) {
   int count = 0;
   unsigned long number, divisor;
 
   # pragma omp parallel shared(perfect_numbers, count) private(number, divisor)
   {
-
-    # pragma omp for
-    for (number = 1; number < limit; number++) {
+    // # pragma omp for
+    // # pragma omp for schedule(runtime, chunk)
+    // # pragma omp for schedule(runtime)// 5.36
+    // # pragma omp for schedule(auto)// 6.80
+    // # pragma omp for schedule(static, chunk)// 5.56
+    # pragma omp for schedule(runtime)// 5.56
+    for (number = 1; number <= limit; number++) {
       unsigned long sum_divisors = 0;
 
       for (divisor = 1; divisor < number; divisor++) {
@@ -48,8 +51,11 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, int limit) {
       }
 
       if (sum_divisors == number) {
-        perfect_numbers[count] = number;
-        count++;
+        #pragma omp critical
+        {
+          perfect_numbers[count] = number;
+          count++;
+        }
       }
 
     }
@@ -64,16 +70,16 @@ unsigned long *generate_perfect_numbers_prime(int qnt) {
   unsigned long *perfect_numbers = allocate_perfect_numbers();
   unsigned long number, mersenne_number, prev_mersenne_number, result_pow, pow_i;
   int count = 0;
-  
+
   // # pragma omp parallel shared(perfect_numbers)
   // {
     for (number = 2; count < qnt; number++) {
       if (is_prime(number) == 0) {
-      
+
         // pow of a number
         result_pow = 1;
 
-        # pragma omp parallel for default(shared) private(pow_i) reduction(*:result_pow) 
+        # pragma omp parallel for default(shared) private(pow_i) reduction(*:result_pow)
         for (pow_i = 0; pow_i < number - 1; pow_i++) {
           result_pow = result_pow * 2;
         }
@@ -108,30 +114,26 @@ void print_perfect_numbers(unsigned long *perfect_numbers, int qnt) {
 
 // run_perfect_number_brute_force run the brute force startegy to find the perfect numbers
 // and calculates the time it took to find those numbers
-void run_perfect_number_brute_force(int limit) {
+void run_perfect_number_brute_force(unsigned long limit) {
   unsigned long *perfect_numbers = allocate_perfect_numbers();
 
-  clock_t t = clock();
+  double start = omp_get_wtime();
   int count = generate_perfect_numbers_bf(perfect_numbers, limit);
-  t = clock() - t;
-  
-  print_perfect_numbers(perfect_numbers, count);
+  double end = omp_get_wtime();
 
-  double time_taken = ((double)t) / CLOCKS_PER_SEC;
-  printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", time_taken, count);
+  print_perfect_numbers(perfect_numbers, count);
+  printf("\nIt took %f seconds to find %d perfect numbers using brute force\n",  end - start, count);
 }
 
 // run_perfect_number_prime_number run the euclid startegy to find the perfect numbers
 // and calculates the time it took to find those numbers
 void run_perfect_number_prime_number(int qnt) {
-  clock_t t = clock();
+  double start = omp_get_wtime();
   unsigned long *generated_numbers = generate_perfect_numbers_prime(qnt);
-  t = clock() - t;
+  double end = omp_get_wtime();
 
   print_perfect_numbers(generated_numbers, qnt);
-
-  double time_taken = ((double)t) / CLOCKS_PER_SEC;
-  printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n", time_taken, qnt);
+  printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n",  end - start, qnt);
 }
 
 int main(int argc, char **agrv) {
@@ -140,14 +142,18 @@ int main(int argc, char **agrv) {
     return 1;
   }
 
-  printf ("Perfect Number Generator C/OpenMP version\n" );
+  const char* omp_schedule = getenv("OMP_SCHEDULE");
+  const char* omp_num_threads = getenv("OMP_NUM_THREADS");
+
+  printf ("Perfect Number Generator C/OpenMP version\n");
   printf ("\n" );
-  printf ("Number of processors available =            %d\n", omp_get_num_procs ( ) );
-  printf ("Number Max of threads omp_get_max_threads = %d\n", omp_get_max_threads ( ) );
+  printf ("Number of processors available  = %d\n", omp_get_num_procs());
+  printf ("Env OMP_SCHEDULE    = %s\n", omp_schedule);
+  printf ("Env OMP_NUM_THREADS = %s\n", omp_num_threads);
   printf ("\n" );
 
-  int limit = atoi(agrv[1]);
-  printf("Max Limit %d to check Perfect numbers\n", limit);
+  unsigned long limit = atoi(agrv[1]);
+  printf("Max Limit %ld to check Perfect numbers\n", limit);
 
   if (argc == 3) {
     char *func = agrv[2];
