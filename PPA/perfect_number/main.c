@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define LIMIT_PERFECT_NUMBERS 20
+#define LIMIT_PERFECT_NUMBERS 30
 
 // is_prime return 0 if it's prime
 int is_prime(unsigned long number) {
@@ -31,18 +31,14 @@ unsigned long *allocate_perfect_numbers() {
 // generate_perfect_numbers_bf uses brute force to find perfect numbers, return the quantity of perfect numbers finded
 int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long limit) {
   int count = 0;
-  unsigned long number, divisor;
+  unsigned long number;
 
-  # pragma omp parallel shared(perfect_numbers, count) private(number, divisor)
+  # pragma omp parallel shared(perfect_numbers, count) private(number)
   {
-    // # pragma omp for
-    // # pragma omp for schedule(runtime, chunk)
-    // # pragma omp for schedule(runtime)// 5.36
-    // # pragma omp for schedule(auto)// 6.80
-    // # pragma omp for schedule(static, chunk)// 5.56
-    # pragma omp for schedule(runtime)// 5.56
+
+    # pragma omp for schedule(runtime)
     for (number = 1; number <= limit; number++) {
-      unsigned long sum_divisors = 0;
+      unsigned long sum_divisors, divisor = 0;
 
       for (divisor = 1; divisor < number; divisor++) {
         if (number % divisor == 0) {
@@ -66,38 +62,54 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long li
 }
 
 // generate_perfect_numbers_prime uses euclid form to find perfect numbers
-unsigned long *generate_perfect_numbers_prime(int qnt) {
-  unsigned long *perfect_numbers = allocate_perfect_numbers();
-  unsigned long number, mersenne_number, prev_mersenne_number, result_pow, pow_i;
+int generate_perfect_numbers_prime(unsigned long *perfect_numbers, unsigned long limit) {
+  unsigned long number, i;
   int count = 0;
+  unsigned long omp_num_threads = atol(getenv("OMP_NUM_THREADS"));
 
-  // # pragma omp parallel shared(perfect_numbers)
-  // {
-    for (number = 2; count < qnt; number++) {
-      if (is_prime(number) == 0) {
+  if (omp_num_threads > limit) {
+    omp_num_threads = limit;
+  }
+  unsigned long chunk = limit / omp_num_threads;
 
-        // pow of a number
-        result_pow = 1;
+  # pragma omp parallel shared(perfect_numbers, count, chunk) private(number, i, omp_num_threads)
+  {
 
-        # pragma omp parallel for default(shared) private(pow_i) reduction(*:result_pow)
-        for (pow_i = 0; pow_i < number - 1; pow_i++) {
-          result_pow = result_pow * 2;
+    # pragma omp for schedule(runtime)
+    for (i = 1; i < limit; i+=chunk) {
+
+      for (number = i+1; number <= i+chunk; number++) {
+        if (is_prime(number) == 0) {
+
+          // pow of a number
+          unsigned long result_pow = 1;
+          unsigned long pow_i;
+
+          // # pragma omp parallel for default(shared) private(pow_i) reduction(*:result_pow)
+          for (pow_i = 0; pow_i < (number - 1); pow_i++) {
+            result_pow = result_pow * 2;
+          }
+
+          // end of pow
+          unsigned long prev_mersenne_number = result_pow;
+          unsigned long mersenne_number = (prev_mersenne_number * 2) - 1;
+
+          if (is_prime(mersenne_number) == 0) {
+            #pragma omp critical
+            {
+              perfect_numbers[count] = prev_mersenne_number * mersenne_number;
+              count++;
+            }
+          }
+
         }
-
-        // end of pow
-        prev_mersenne_number = result_pow;
-        mersenne_number = (prev_mersenne_number * 2) - 1;
-
-        if (is_prime(mersenne_number) == 0) {
-          perfect_numbers[count] = prev_mersenne_number * mersenne_number;
-          count++;
-        }
-
       }
-    }
-  // }
 
-  return perfect_numbers;
+    }
+
+  }
+
+  return count;
 }
 
 // print_perfect_numbers just print the received perfect_numbers
@@ -125,15 +137,26 @@ void run_perfect_number_brute_force(unsigned long limit) {
   printf("\nIt took %f seconds to find %d perfect numbers using brute force\n",  end - start, count);
 }
 
+// solve_bhaskara for the equasion t² - t - (limit*2)
+unsigned long solve_bhaskara(unsigned long limit) {
+  unsigned long delta = 1 - (4 * 1 * (-(limit*2)));
+  return 1 + sqrt(delta) / 2;
+}
+
 // run_perfect_number_prime_number run the euclid startegy to find the perfect numbers
 // and calculates the time it took to find those numbers
-void run_perfect_number_prime_number(int qnt) {
+void run_perfect_number_prime_number(unsigned long limit) {
+  unsigned long *perfect_numbers = allocate_perfect_numbers();
+
+  // limit should be divided by the equasion (2^(x-1)) . (2^x - 1) <= limit, when simplify the equasion it will be log2(positive x bhaskara(limit))
+  limit = log2(solve_bhaskara(limit));
+
   double start = omp_get_wtime();
-  unsigned long *generated_numbers = generate_perfect_numbers_prime(qnt);
+  int count = generate_perfect_numbers_prime(perfect_numbers, limit);
   double end = omp_get_wtime();
 
-  print_perfect_numbers(generated_numbers, qnt);
-  printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n",  end - start, qnt);
+  print_perfect_numbers(perfect_numbers, count);
+  printf("\nIt took %f seconds to find %d perfect numbers using Euclid mersenne prime numbers\n", end - start, count);
 }
 
 int main(int argc, char **agrv) {
@@ -147,14 +170,16 @@ int main(int argc, char **agrv) {
 
   printf ("Perfect Number Generator C/OpenMP version\n");
   printf ("\n" );
-  printf ("Number of processors available  = %d\n", omp_get_num_procs());
-  printf ("Env OMP_SCHEDULE    = %s\n", omp_schedule);
-  printf ("Env OMP_NUM_THREADS = %s\n", omp_num_threads);
+  printf ("Number of processors available = %d\n", omp_get_num_procs());
+  printf ("\n" );
+  printf ("ENV OMP_SCHEDULE    = %s\n", omp_schedule);
+  printf ("ENV OMP_NUM_THREADS = %s\n", omp_num_threads);
   printf ("\n" );
 
-  unsigned long limit = atoi(agrv[1]);
-  printf("Max Limit %ld to check Perfect numbers\n", limit);
+  unsigned long limit = atol(agrv[1]);
+  printf("Max Limit %ld to check for Perfect numbers\n", limit);
 
+  // printf("solve_bhaskara %ld \n", (unsigned long) log2(solve_bhaskara(limit)));
   if (argc == 3) {
     char *func = agrv[2];
     if (strcmp(func, "bf") == 0) {  // it can be implemented more ways to generate perfect numbers

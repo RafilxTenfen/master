@@ -47,7 +47,6 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long li
   for (number = 1; number <= limit; number++) {
     unsigned long sum_divisors = 0;
 
-    // # pragma omp for reduction(+:sum_divisors)
     for (divisor = 1; divisor < number; divisor++) {
       if (number % divisor == 0) {
         sum_divisors += divisor;
@@ -63,16 +62,15 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long li
 
   return count;
 }
-// generate_perfect_numbers_prime uses euclid form to find perfect numbers
-unsigned long* generate_perfect_numbers_prime(int qnt) {
-  unsigned long* perfect_numbers = allocate_perfect_numbers(qnt);
 
+// generate_perfect_numbers_prime uses euclid form to find perfect numbers
+int generate_perfect_numbers_prime(unsigned long *perfect_numbers, unsigned long limit) {
   int count = 0;
-  for (unsigned long number = 2; count < qnt; number++) {
+  for (unsigned long number = 2; number <= limit; number++) {
     if (is_prime(number) == 0) {
       unsigned long prev_mersenne_number = my_pow(2, number - 1);
       unsigned long mersenne_number = (prev_mersenne_number * 2) - 1;
-      
+
       if (is_prime(mersenne_number) == 0) {
         unsigned long perfect_number = prev_mersenne_number * mersenne_number;
         perfect_numbers[count] = perfect_number;
@@ -81,7 +79,7 @@ unsigned long* generate_perfect_numbers_prime(int qnt) {
     }
   }
 
-  return perfect_numbers;
+  return count;
 }
 
 // print_perfect_numbers just print the received perfect_numbers
@@ -104,21 +102,31 @@ void run_perfect_number_brute_force(int limit) {
   double start = omp_get_wtime();
   int count = generate_perfect_numbers_bf(perfect_numbers, limit);
   double end = omp_get_wtime();
-  
+
   print_perfect_numbers(perfect_numbers, count);
   printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end - start, count);
 }
 
+// solve_bhaskara for the equasion t² - t - (limit*2)
+unsigned long solve_bhaskara(unsigned long limit) {
+  unsigned long delta = 1 - (4 * 1 * (-(limit*2)));
+  return 1 + sqrt(delta) / 2;
+}
+
 // run_perfect_number_prime_number run the euclid startegy to find the perfect numbers
 // and calculates the time it took to find those numbers
-void run_perfect_number_prime_number(int qnt) {
+void run_perfect_number_prime_number(unsigned long limit) {
+  unsigned long *perfect_numbers = allocate_perfect_numbers();
+
+  // limit should be divided by the equasion (2^(x-1)) . (2^x - 1) <= limit, when simplify the equasion it will be log2(positive x bhaskara(limit))
+  limit = log2(solve_bhaskara(limit));
+
   double start = omp_get_wtime();
-  unsigned long* generated_numbers = generate_perfect_numbers_prime(qnt);
+  int count = generate_perfect_numbers_prime(perfect_numbers, limit);
   double end = omp_get_wtime();
 
-  print_perfect_numbers(generated_numbers, qnt);
-
-  printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n", end - start, qnt);
+  print_perfect_numbers(perfect_numbers, limit);
+  printf("\nIt took %f seconds to find %d perfect numbers using Euclid \n",  end - start, count);
 }
 
 int main(int argc, char** agrv) {
@@ -127,8 +135,8 @@ int main(int argc, char** agrv) {
     return 1;
   }
 
-  int limit = atoi(agrv[1]);
-  printf("Perfect numbers to be generated: %d\n", limit);
+  unsigned long limit = atol(agrv[1]);
+  printf("Max Limit %ld to check for Perfect numbers\n", limit);
 
   if (argc == 3) {
     char* func = agrv[2];
