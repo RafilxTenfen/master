@@ -31,14 +31,14 @@ unsigned long *allocate_perfect_numbers() {
 // generate_perfect_numbers_bf uses brute force to find perfect numbers, return the quantity of perfect numbers finded
 int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long limit) {
   int count = 0;
-  unsigned long number;
+  unsigned long number, divisor;
 
-  # pragma omp parallel shared(perfect_numbers, count) private(number)
+  # pragma omp parallel shared(perfect_numbers, count) private(number, divisor)
   {
 
     # pragma omp for schedule(runtime)
     for (number = 1; number <= limit; number++) {
-      unsigned long sum_divisors, divisor = 0;
+      unsigned long sum_divisors = 0;
 
       for (divisor = 1; divisor < number; divisor++) {
         if (number % divisor == 0) {
