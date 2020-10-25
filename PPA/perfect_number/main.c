@@ -114,13 +114,13 @@ int generate_perfect_numbers_prime(unsigned long *perfect_numbers, unsigned long
 
 // print_perfect_numbers just print the received perfect_numbers
 void print_perfect_numbers(unsigned long *perfect_numbers, int qnt) {
-  printf("Perfect Numbers: ");
+  // printf("Perfect Numbers: ");
   for (int i = 0; i < qnt; i++) {
     unsigned long number = perfect_numbers[i];
     if (number == 0) {
       break;
     }
-    printf("%ld ", number);
+    // printf("%ld ", number);
   }
 }
 
@@ -134,7 +134,8 @@ void run_perfect_number_brute_force(unsigned long limit) {
   double end = omp_get_wtime();
 
   print_perfect_numbers(perfect_numbers, count);
-  printf("\nIt took %f seconds to find %d perfect numbers using brute force\n",  end - start, count);
+  // printf("\nIt took %f seconds to find %d perfect numbers using brute force\n",  end - start, count);
+  printf("%f;%ld;%s;%s", end - start, limit, getenv("OMP_NUM_THREADS"), getenv("OMP_SCHEDULE"));
 }
 
 // solve_bhaskara for the equasion t² - t - (limit*2)
@@ -156,7 +157,8 @@ void run_perfect_number_prime_number(unsigned long limit) {
   double end = omp_get_wtime();
 
   print_perfect_numbers(perfect_numbers, count);
-  printf("\nIt took %f seconds to find %d perfect numbers using Euclid mersenne prime numbers\n", end - start, count);
+  // printf("\nIt took %f seconds to find %d perfect numbers using Euclid mersenne prime numbers\n", end - start, count);
+  printf("%f,%s,%s", end - start, getenv("OMP_NUM_THREADS"), getenv("OMP_SCHEDULE"));
 }
 
 int main(int argc, char **agrv) {
@@ -165,19 +167,19 @@ int main(int argc, char **agrv) {
     return 1;
   }
 
-  const char* omp_schedule = getenv("OMP_SCHEDULE");
-  const char* omp_num_threads = getenv("OMP_NUM_THREADS");
+  // const char* omp_schedule = getenv("OMP_SCHEDULE");
+  // const char* omp_num_threads = getenv("OMP_NUM_THREADS");
 
-  printf ("Perfect Number Generator C/OpenMP version\n");
-  printf ("\n" );
-  printf ("Number of processors available = %d\n", omp_get_num_procs());
-  printf ("\n" );
-  printf ("ENV OMP_SCHEDULE    = %s\n", omp_schedule);
-  printf ("ENV OMP_NUM_THREADS = %s\n", omp_num_threads);
-  printf ("\n" );
+  // printf ("Perfect Number Generator C/OpenMP version\n");
+  // printf ("\n" );
+  // printf ("Number of processors available = %d\n", omp_get_num_procs());
+  // printf ("\n" );
+  // printf ("ENV OMP_SCHEDULE    = %s\n", omp_schedule);
+  // printf ("ENV OMP_NUM_THREADS = %s\n", omp_num_threads);
+  // printf ("\n" );
 
   unsigned long limit = atol(agrv[1]);
-  printf("Max Limit %ld to check for Perfect numbers\n", limit);
+  // printf("Max Limit %ld to check for Perfect numbers\n", limit);
 
   // printf("solve_bhaskara %ld \n", (unsigned long) log2(solve_bhaskara(limit)));
   if (argc == 3) {
