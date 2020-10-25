@@ -2,7 +2,7 @@
 
 - Perfect number, is a positive integer that is equal to the sum of its proper divisors. The smallest perfect number is 6, which is the sum of 1, 2, and 3. Other perfect numbers are 28, 496, and 8.128.
 
-### How to build 
+### How to build
 - Just run `make`
 - This will generate a binary called 'generate'
 
@@ -10,15 +10,15 @@
 
 #### Brute Force
 - The brute force strategy tries to divide each predecessor number and then sum all possible divisors to check if it's equal to the current number
-- Inform the binary the numbers that you want to generate and the method brute force `bf`
+- Inform the binary the max number that you want to check for a perfect number and the method brute force `bf`
 ```shell
 $~ ./generate 4 bf
 ```
 
 __Expected Result__
 ```shell
-Perfect numbers to be generated: 4
-Perfect Numbers: 6 28 496 8128 
+Perfect numbers to be generated: 9000
+Perfect Numbers: 6 28 496 8128
 It took 0.117603 seconds to find 4 perfect numbers
 ```
 
@@ -32,9 +32,9 @@ $~ ./generate 8
 ```
 __Expected Result__
 ```shell
-Perfect numbers to be generated: 8
-Perfect Numbers: 6 28 496 8128 33550336 8589869056 137438691328 2305843008139952128 
-It took 22.748743 seconds to find 8 perfect numbers using Euclid 
+Perfect numbers to be generated: 2305843008139952129
+Perfect Numbers: 6 28 496 8128 33550336 8589869056 137438691328 2305843008139952128
+It took 22.748743 seconds to find 8 perfect numbers using Euclid
 ```
 
 #### Issues
@@ -42,11 +42,11 @@ It took 22.748743 seconds to find 8 perfect numbers using Euclid
 
 - The Euclid strategy took 40 seconds to generate 9 perfect numbers, but the `unsigned long` C type isn't big enough to print the value, ex.:
 ```shell
-Perfect numbers to be generated: 9
-Perfect Numbers: 6 28 496 8128 33550336 8589869056 137438691328 2305843008139952128 -1152921504606846976 
+Perfect numbers to be generated: 999999999999999999999999999
+Perfect Numbers: 6 28 496 8128 33550336 8589869056 137438691328 2305843008139952128 -1152921504606846976
 It took 40.524437 seconds to find 9 perfect numbers using Euclid
 ```
-> The received value for the 9'th perfect number should be 2658455991569831744654692615953842176 instead of -1152921504606846976 
+> The received value for the 9'th perfect number should be 2658455991569831744654692615953842176 instead of -1152921504606846976
 
 - Computer Specs
 

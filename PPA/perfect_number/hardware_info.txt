@@ -1,0 +1,47 @@
+ALL COMMANDS: WARNING: output may be incomplete or inaccurate, you should run this program as super-user.
+
+COMMAND: lshw -short
+/0/0                   memory         47GiB System memory
+/0/5                   processor      Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz
+/0/100                 bridge         Xeon E3-1200 v6/7th Gen Core Processor Host Bridge/DRAM Registers
+/0/100/1               bridge         Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor PCIe Controller (x16)
+/0/100/1/0             display        GP102 [TITAN Xp]
+/0/100/1/0.1           multimedia     GP102 HDMI Audio Controller
+/0/100/14              bus            100 Series/C230 Series Chipset Family USB 3.0 xHCI Controller
+/0/100/14.2            generic        100 Series/C230 Series Chipset Family Thermal Subsystem
+/0/100/16              communication  100 Series/C230 Series Chipset Family MEI Controller #1
+/0/100/16.1            communication  100 Series/C230 Series Chipset Family MEI Controller #2
+/0/100/17              storage        Q170/Q150/B150/H170/H110/Z170/CM236 Chipset SATA Controller [AHCI Mode]
+/0/100/1d              bridge         100 Series/C230 Series Chipset Family PCI Express Root Port #10
+/0/100/1d/0            display        MGA G200e [Pilot] ServerEngines (SEP1)
+/0/100/1d.2            bridge         100 Series/C230 Series Chipset Family PCI Express Root Port #11
+/0/100/1d.2/0  eno1    network        I210 Gigabit Network Connection
+/0/100/1d.3            bridge         100 Series/C230 Series Chipset Family PCI Express Root Port #12
+/0/100/1d.3/0  eno2    network        I210 Gigabit Network Connection
+/0/100/1f              bridge         C232 Chipset LPC/eSPI Controller
+/0/100/1f.2            memory         Memory controller
+/0/100/1f.4            bus            100 Series/C230 Series Chipset Family SMBus
+
+COMMAND: lshw -C cpu
+  *-cpu
+       product: Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz
+       vendor: Intel Corp.
+       physical id: 5
+       bus info: cpu@0
+       size: 3801MHz
+       capacity: 3900MHz
+       width: 64 bits
+       capabilities: fpu fpu_exception wp vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp x86-64 constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb invpcid_single pti ssbd ibrs ibpb stibp tpr_shadow vnmi flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm mpx rdseed adx smap clflushopt intel_pt xsaveopt xsavec xgetbv1 xsaves dtherm ida arat pln pts hwp hwp_notify hwp_act_window hwp_epp md_clear flush_l1d cpufreq
+
+
+COMMAND: lshw -short -C memory
+H/W path       Device  Class          Description
+=================================================
+/0/0                   memory         47GiB System memory
+/0/100/1f.2            memory         Memory controller
+
+COMMAND: lspci | grep -i vga
+01:00.0 VGA compatible controller: NVIDIA Corporation GP102 [TITAN Xp] (rev a1)
+02:00.0 VGA compatible controller: Matrox Electronics Systems Ltd. MGA G200e [Pilot] ServerEngines (SEP1) (rev 05)
+
+Disk info: DENIED

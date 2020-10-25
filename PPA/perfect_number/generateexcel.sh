@@ -7,7 +7,10 @@ generateexcell() {
 
   schedules=(static dynamic guided auto)
   threads=(1 2 4 6 8)
-  numbers=(10 30 1000)
+  # numbers=(100000 300000 600000)
+  numbers=(100 1000 10000)
+
+  echo "SECONDS;LIMIT;THREADS;SCHEDULE" >> $CSV_FILE
   for schedule in "${schedules[@]}"
   do
 
