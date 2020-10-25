@@ -19,7 +19,6 @@ all: $(TARGET)
 
 $(TARGET): $(TARGET).c
 	$(CC) $(CFLAGS) $(PRAGMAFLAGS) -o $(OUTPUT) $(TARGET).c $(SFLAGS)
-	$(CC) $(CFLAGS) $(PRAGMAFLAGS) -o $(OUTPUT)_$(SEQUENC) $(TARGET)_$(SEQUENC).c $(SFLAGS)
 
 clean:
 	$(RM) $(TARGET)
