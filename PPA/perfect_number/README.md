@@ -51,3 +51,19 @@ It took 40.524437 seconds to find 9 perfect numbers using Euclid
 - Computer Specs
 
 ![image](https://user-images.githubusercontent.com/17556614/93689603-8f111d00-faa6-11ea-89a4-10e42fef614f.png)
+
+# Hardware information
+- `hardware_info.txt` ens5 LABP2D machine
+
+# 2D Line Graphs
+- `images` directory
+
+# OpenMP implementation using brute force
+- `main.c` commented to be able to generate `csv` data
+
+# CSV generator
+- `generateexcel.sh`
+
+# Python code to generate line graphs
+- `plot_graph.py.ipynb`
+- type `jupyter notebook` and run
