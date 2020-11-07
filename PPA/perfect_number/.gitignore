@@ -1,2 +1,4 @@
 main
 generate
+generate_openmp
+generate_mpi

@@ -52,3 +52,5 @@ Module.symvers
 Mkfile.old
 dkms.conf
 PPA/matrix/main
+PPA/perfect_number/generate_sequen
+PPA/perfect_number/.vscode/settings.json
