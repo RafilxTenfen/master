@@ -122,22 +122,24 @@ void run_perfect_number_brute_force(unsigned long limit) {
     unsigned long *master_perfect_numbers = allocate_perfect_numbers();
     int count = generate_perfect_numbers_bf(master_perfect_numbers, init, end);
 
-    printf("\nMASTER found %d from %ld to %ld => ", count, init, end);
-    print_perfect_numbers(master_perfect_numbers, count);
-    printf("\n ");
+    // printf("\nMASTER found %d from %ld to %ld => ", count, init, end);
+    // print_perfect_numbers(master_perfect_numbers, count);
+    // printf("\n ");
 
     for (int i = 1; i < size; i++) {
       MPI_Status status;
-      int recv_count = 0;
       unsigned long *recv_perfect_numbers = allocate_perfect_numbers();
 
       MPI_Recv(recv_perfect_numbers, LIMIT_PERFECT_NUMBERS, MPI_UNSIGNED_LONG, MPI_ANY_TAG, TAG, MPI_COMM_WORLD, &status);
+
+      int recv_count;
       MPI_Get_count(&status, MPI_INT, &recv_count);
 
       //receive the perfect numbers and now add to the list of perfect numbers to be printed
-      printf("\nRANK %d send %d to node MASTER => ", i, recv_count);
-      print_perfect_numbers(recv_perfect_numbers, recv_count);
+      // printf("\nRANK %d send %d to node MASTER => ", i, recv_count);
+      // print_perfect_numbers(recv_perfect_numbers, recv_count);
 
+      recv_count--; // always come with the total count+1 if it's not 0
       for (int j = 0; j < recv_count; j++) {
         unsigned long number = recv_perfect_numbers[j];
         if (number == 0) {
@@ -153,11 +155,11 @@ void run_perfect_number_brute_force(unsigned long limit) {
     printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
   } else {
     unsigned long *send_perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
-    int count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
-    printf("\nRANK %d found %d from %ld to %ld => ", rank, count, init, end);
-    print_perfect_numbers(send_perfect_numbers, count);
-    printf("\n ");
-    MPI_Send(send_perfect_numbers, count, MPI_UNSIGNED_LONG, RANK_MASTER, TAG, MPI_COMM_WORLD);
+    int send_count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
+    // printf("\nRANK %d found %d from %ld to %ld => ", rank, send_count, init, end);
+    // print_perfect_numbers(send_perfect_numbers, send_count);
+    // printf("\n SEND_COUNT %d", send_count);
+    MPI_Send(send_perfect_numbers, send_count, MPI_UNSIGNED_LONG, RANK_MASTER, TAG, MPI_COMM_WORLD);
   }
 
   MPI_Finalize();
