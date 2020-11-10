@@ -57,6 +57,7 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long in
     }
 
     if (sum_divisors == number) {
+      printf("\n generate_perfect_numbers_bf number: %ld", number);
       perfect_numbers[count] = number;
       count++;
     }
@@ -121,20 +122,21 @@ void run_perfect_number_brute_force(unsigned long limit) {
     unsigned long *master_perfect_numbers = allocate_perfect_numbers();
     int count = generate_perfect_numbers_bf(master_perfect_numbers, init, end);
 
-    // printf("\nMASTER found %d from %ld to %ld => ", count, init, end);
-    // print_perfect_numbers(master_perfect_numbers, count);
-    // printf("\n ");
+    printf("\nMASTER found %d from %ld to %ld => ", count, init, end);
+    print_perfect_numbers(master_perfect_numbers, count);
+    printf("\n ");
 
     for (int i = 1; i < size; i++) {
       MPI_Status status;
-      int recv_count;
+      int recv_count = 0;
       unsigned long *recv_perfect_numbers = allocate_perfect_numbers();
-      MPI_Recv(recv_perfect_numbers, LIMIT_PERFECT_NUMBERS, MPI_UNSIGNED_LONG, i, TAG, MPI_COMM_WORLD, &status);
+
+      MPI_Recv(recv_perfect_numbers, LIMIT_PERFECT_NUMBERS, MPI_UNSIGNED_LONG, MPI_ANY_TAG, TAG, MPI_COMM_WORLD, &status);
       MPI_Get_count(&status, MPI_INT, &recv_count);
 
       //receive the perfect numbers and now add to the list of perfect numbers to be printed
-      // printf("\nRANK %d send %d to node MASTER => ", i, recv_count);
-      // print_perfect_numbers(recv_perfect_numbers, recv_count);
+      printf("\nRANK %d send %d to node MASTER => ", i, recv_count);
+      print_perfect_numbers(recv_perfect_numbers, recv_count);
 
       for (int j = 0; j < recv_count; j++) {
         unsigned long number = recv_perfect_numbers[j];
@@ -152,22 +154,13 @@ void run_perfect_number_brute_force(unsigned long limit) {
   } else {
     unsigned long *send_perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
     int count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
-    // printf("\nRANK %d found %d from %ld to %ld => ", rank, count, init, end);
-    // print_perfect_numbers(send_perfect_numbers, count);
-    // printf("\n ");
+    printf("\nRANK %d found %d from %ld to %ld => ", rank, count, init, end);
+    print_perfect_numbers(send_perfect_numbers, count);
+    printf("\n ");
     MPI_Send(send_perfect_numbers, count, MPI_UNSIGNED_LONG, RANK_MASTER, TAG, MPI_COMM_WORLD);
   }
 
-
-
-
-
   MPI_Finalize();
-
-  // if (rank == RANK_MASTER) {
-  //   print_perfect_numbers(perfect_numbers, LIMIT_PERFECT_NUMBERS);
-
-  // }
 }
 
 // solve_bhaskara for the equasion t² - t - (limit*2)
@@ -216,3 +209,4 @@ int main(int argc, char** agrv) {
 }
 
 // mpirun --use-hwthread-cpus generate_mpi 10030000 bf
+// mpirun --machinefile cluster.txt APP
