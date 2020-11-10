@@ -57,7 +57,7 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long in
     }
 
     if (sum_divisors == number) {
-      printf("\n generate_perfect_numbers_bf number: %ld", number);
+      // printf("\n generate_perfect_numbers_bf number: %ld", number);
       perfect_numbers[count] = number;
       count++;
     }
