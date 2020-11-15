@@ -23,4 +23,26 @@
 
 ### DSEOM: A Framework for Dynamic Security Evaluationand Optimization of MTD in Container-based Cloud
 
--
+- Hai Jin,Fellow, IEEE,Zhi Li,  Deqing Zou  and Bin Yuan,Member, IEEE
+
+- Werefer this problem aseffectiveness drift problemof defense mechanisms, which is particularly acute in the proactive defensemechanisms, such as moving target defense (MTD).
+
+??
+
+### Sandnet: Towards High Quality of Deception inContainer-based Microservice Architectures
+
+-  measure  the  Quality  of  Deception  (QoD)  anduse it to evaluate three proposed network deception mechanisms.Our  evaluation  results  indicate  that  in  our  evaluation  scenarioin  best  case,  an  optimal  QoD  is  achieved.
+
+
+### Conversa
+
+- Trabalho com proposta fundamentada para refinar a pesquisa
+
+- Moving target
+
+- Most, if not all, proposals for mitigation are Moving Target Defense-based solutions (MTD) [68]. The idea behindMTD is to continuously perform transformation of system components and configurations preventing attackers fromacquiring knowledge about target systems to be used to initiate harmful attacks.  This includes, periodically updateor restart microservices, IP shuffling, and live migration of microservices. Specifically, the authors of P21 proposeddeception through live cloning and sandboxing of suspicious containers respecting the same network overloading andperformance to deceive attackers .
+
+- Porque mitigation é relevante, qual é a graça do mitigation
+
+- extrair a ideia do porque que a mitigação é importante para esses serviços
+

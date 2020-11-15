@@ -47,21 +47,28 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long in
   int count = 0;
   unsigned long number, divisor;
 
-  for (number = init; number <= end; number++) {
-    unsigned long sum_divisors = 0;
+  # pragma omp parallel shared(perfect_numbers, count) private(number, divisor)
+  {
 
-    for (divisor = 1; divisor < number; divisor++) {
-      if (number % divisor == 0) {
-        sum_divisors += divisor;
+    # pragma omp for schedule(runtime)
+    for (number = init; number <= end; number++) {
+      unsigned long sum_divisors = 0;
+
+      for (divisor = 1; divisor < number; divisor++) {
+        if (number % divisor == 0) {
+          sum_divisors += divisor;
+        }
       }
-    }
 
-    if (sum_divisors == number) {
-      // printf("\n generate_perfect_numbers_bf number: %ld", number);
-      perfect_numbers[count] = number;
-      count++;
-    }
+      if (sum_divisors == number) {
+        #pragma omp critical
+        {
+          perfect_numbers[count] = number;
+          count++;
+        }
+      }
 
+    }
   }
 
   return count;
@@ -151,9 +158,8 @@ void run_perfect_number_brute_force(unsigned long limit) {
     }
     end_time = MPI_Wtime();
 
-    // print_perfect_numbers(master_perfect_numbers, count);
-    // printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
-    printf("%f;%ld;%d;%s", end_time - start_time, limit, size, "MPI");
+    print_perfect_numbers(master_perfect_numbers, count);
+    printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
   } else {
     unsigned long *send_perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
     int send_count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
