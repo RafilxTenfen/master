@@ -158,8 +158,9 @@ void run_perfect_number_brute_force(unsigned long limit) {
     }
     end_time = MPI_Wtime();
 
-    print_perfect_numbers(master_perfect_numbers, count);
-    printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
+    // print_perfect_numbers(master_perfect_numbers, count);
+    // printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
+    printf("%f;%ld;%d;%s;%s", end_time - start_time, limit, size, getenv("OMP_SCHEDULE"), getenv("OMP_NUM_THREADS"));
   } else {
     unsigned long *send_perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
     int send_count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
