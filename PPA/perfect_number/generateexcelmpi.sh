@@ -25,7 +25,7 @@ generateexcellmpi() {
         _cluster_file=$CLUSTER_DIR/$thread
 
         echo "Running ${schedule} with ${thread} threads with ${number} number for cluster file ${_cluster_file}"
-        export OMP_NUM_THREADS="$thread"
+        # export OMP_NUM_THREADS="$thread"
         # export OMP_SCHEDULE="$schedule"
 
         mpirun --machinefile $_cluster_file ./$BINARY $number bf >> $CSV_FILE
