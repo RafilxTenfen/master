@@ -7,7 +7,8 @@ CLUSTER_DIR=cluster
 generateexcellmpi() {
 
   schedules=(MPI)
-  threads=(1 2 4 6 8 10 12 16 20 24)
+  # threads=(1 2 4 6 8 10 12 16 20 24)
+  threads=(1 2 4 8 16 24)
   numbers=(100000 300000 600000)
   # numbers=(100 1000 10000)
 
