@@ -46,8 +46,10 @@ unsigned long *allocate_perfect_numbers() {
 int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long init, unsigned long end) {
   int count = 0;
   unsigned long number, divisor;
+  // int number_threads = omp_get_num_procs();
+  int number_threads = 2;
 
-  # pragma omp parallel shared(perfect_numbers, count) private(number, divisor)
+  # pragma omp parallel shared(perfect_numbers, count) private(number, divisor) num_threads(number_threads)
   {
 
     # pragma omp for schedule(runtime)
@@ -160,7 +162,8 @@ void run_perfect_number_brute_force(unsigned long limit) {
 
     // print_perfect_numbers(master_perfect_numbers, count);
     // printf("\nIt took %f seconds to find %d perfect numbers using brute force\n", end_time - start_time, count);
-    printf("%f;%ld;%d;%s;%s", end_time - start_time, limit, size, getenv("OMP_SCHEDULE"), getenv("OMP_NUM_THREADS"));
+    // printf("%f;%ld;%d;%s;%d", end_time - start_time, limit, size, getenv("OMP_SCHEDULE"), 24);
+    printf("%f;%ld;%d;%s;%d", end_time - start_time, limit, size, getenv("OMP_SCHEDULE"), 8);
   } else {
     unsigned long *send_perfect_numbers = (unsigned long *)malloc(sizeof(unsigned long) * LIMIT_PERFECT_NUMBERS);
     int send_count = generate_perfect_numbers_bf(send_perfect_numbers, init, end);
