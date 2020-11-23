@@ -54,6 +54,7 @@ It took 40.524437 seconds to find 9 perfect numbers using Euclid
 
 # Hardware information
 - `hardware_info.txt` ens5 LABP2D machine
+- hardware paths
 
 # 2D Line Graphs
 - `images` directory

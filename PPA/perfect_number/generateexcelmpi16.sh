@@ -1,18 +1,18 @@
 #!/bin/bash
 
-CSV_FILE=datampiopenmp_3_1threads.csv
-BINARY=generate_mpi_openmp
+CSV_FILE=datampi_16.csv
+BINARY=generate_mpi
 CLUSTER_DIR=cluster
 
-generateexcelmpiopenmp() {
+generateexcellmpi() {
 
-  schedules=(static dynamic guided)
-  threads=(2222)
+  schedules=(MPI)
+  # threads=(1 2 4 6 8 10 12 16 20 24)
+  threads=(16)
   numbers=(100000 300000 600000)
-  hosts_ens=(ens1 ens2 ens4 ens5)
   # numbers=(100 1000 10000)
 
-  echo "SECONDS;LIMIT;THREADSMPI;SCHEDULE;THREADSOPENMP" >> $CSV_FILE
+  echo "SECONDS;LIMIT;THREADS;SCHEDULE" >> $CSV_FILE
   for schedule in "${schedules[@]}"
   do
 
@@ -23,9 +23,10 @@ generateexcelmpiopenmp() {
       do
 
         _cluster_file=$CLUSTER_DIR/$thread
+
         echo "Running ${schedule} with ${thread} threads with ${number} number for cluster file ${_cluster_file}"
         # export OMP_NUM_THREADS="$thread"
-        export OMP_SCHEDULE="$schedule"
+        # export OMP_SCHEDULE="$schedule"
 
         mpirun --machinefile $_cluster_file ./$BINARY $number bf >> $CSV_FILE
         echo >> $CSV_FILE # break line
@@ -37,4 +38,4 @@ generateexcelmpiopenmp() {
 }
 
 rm $CSV_FILE
-generateexcelmpiopenmp
+generateexcellmpi

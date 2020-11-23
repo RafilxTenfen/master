@@ -47,7 +47,7 @@ int generate_perfect_numbers_bf(unsigned long *perfect_numbers, unsigned long in
   int count = 0;
   unsigned long number, divisor;
   // int number_threads = omp_get_num_procs();
-  int number_threads = 2;
+  int number_threads = 1;
 
   # pragma omp parallel shared(perfect_numbers, count) private(number, divisor) num_threads(number_threads)
   {
