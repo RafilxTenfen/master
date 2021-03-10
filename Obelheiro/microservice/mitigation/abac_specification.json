@@ -1,0 +1,25 @@
+[
+  {
+    "service": "string",
+    "routes": [
+      {
+        "path": "string",
+        "attributes": [
+          {
+            "source": "string",
+            "name": "string",
+            "type": "string",
+            "format": "string",
+            "operator": "string",
+            "value": {
+              "type": "string",
+              "format": "string",
+              "value": "string"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+

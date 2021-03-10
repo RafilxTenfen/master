@@ -1,0 +1,27 @@
+[
+  {
+    "service": "finance",
+    "routes": [
+      {
+        "path": "project/{projectID}/salary",
+        "method": "POST",
+        "attributes": [
+          {
+            "source": "user",
+            "name": "created_at",
+            "type": "timestamp",
+            "format": "DD/MM/YYYY HH:MM:SS",
+            "operator": ">",
+            "value": {
+              "type": "timestamp",
+              "format": "DD/MM/YYYY",
+              "value": "01/12/2020"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+
+
