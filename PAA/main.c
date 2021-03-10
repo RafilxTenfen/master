@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
     // QUEST 2
     // char *nome = "Algoritmos";
 
-    // fe(nome+1);
+    // fe(nome);
 
     // QUEST 3
     // char aux;
