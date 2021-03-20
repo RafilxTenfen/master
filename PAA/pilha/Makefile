@@ -4,16 +4,20 @@ CC = gcc
 # compiler flags:
 #  -g    adds debugging information to the executable file
 #  -Wall turns on most, but not all, compiler warnings
-CFLAGS  = -g -Wall
+CFLAGS  = -g -Wall -O3
 
-# the build target executable:
-TARGET = main
+default: aplicacao ajuste
 
-all: $(TARGET)
+pilha.o: pilha.c pilha_publico.h pilha_privado.h
+	$(CC) $(CFLAGS) -c pilha.c -o pilha.o
 
-$(TARGET): $(TARGET).c
-	$(CC) $(CFLAGS) -o $(TARGET) $(TARGET).c
-	./$(TARGET)
+aplicacao: aplicacao.c aplicacao.h pilha.o
+	$(CC) $(CFLAGS) aplicacao.c pilha.o -o aplicacao
+
+ajuste: ajuste.c ajuste.h pilha.o
+	$(CC) $(CFLAGS) ajuste.c pilha.o -o ajuste
 
 clean:
-	$(RM) $(TARGET)
+	rm -f aplicacao ajuste *.o core a.out *.*~ Makefile~
+
+all: aplicacao ajuste
