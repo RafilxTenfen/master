@@ -4,20 +4,68 @@
 #include "pilha_publico.h"
 
 int main(int argc, char **argv) {
-  printf("\n INIT MAIN");
+  int nElementos = 4;
+  pPilha p;
 
-  ppPilha myPilha = NULL;
+  // int elemento3;
+  // desempilha(p, &elemento3);
+  // printf("\n desempilha %d", elemento3);
 
-  printf("\n vai criar pilha");
-  criaPilha(myPilha, 4, sizeof(int));
-  printf("\n criou pilha");
+  // int intTopo;
+  // topo(p, &intTopo);
+  // printf("\n topo %d", intTopo);
 
-  int elemento = 100;
-  empilha(*myPilha, &elemento);
+  criaPilha(&p, nElementos, sizeof(int));
+
+  int elemento = 7;
+  printf("\n insere %d", elemento);
+  empilha(p, &elemento);
+
+  int elemento2 = 12;
+  printf("\n insere %d", elemento2);
+  empilha(p, &elemento2);
 
   int intTopo;
-  topo(*myPilha, &intTopo);
-  printf("topo %i", intTopo);
+  topo(p, &intTopo);
+  printf("\n topo %d", intTopo);
+
+  int elemento3;
+  desempilha(p, &elemento3);
+  printf("\n desempilha %d", elemento3);
+  int elemento98;
+  desempilha(p, &elemento98);
+  printf("\n desempilha %d", elemento98);
+
+  topo(p, &intTopo);
+  printf("\n topo %d", intTopo);
+
+  int elemento4 = 99;
+  printf("\n insere %d", elemento4);
+  empilha(p, &elemento4);
+
+  printf("\n reinicia a pilha");
+  reiniciaPilha(p);
+
+  int elemento5 = 99;
+  printf("\n insere %d", elemento5);
+  empilha(p, &elemento5);
+
+  printf("\n destroi a pilha");
+  destroiPilha(&p);
+
+  int elemento6 = 6;
+  printf("\n insere %d", elemento6);
+  empilha(p, &elemento6);
+
+  int elemento7 = 7;
+  printf("\n insere %d", elemento7);
+  empilha(p, &elemento7);
+  printf("\n insere %d", elemento4);
+  empilha(p, &elemento4);
+
+  int intTopo2;
+  topo(p, &intTopo2);
+  printf("\n topo %d", intTopo2);
 
   return EXIT_SUCCESS;
 }
