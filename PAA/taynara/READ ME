@@ -1,0 +1,13 @@
+Observações 
+-> A pilha trabalha apenas com elementos inteiros. 
+
+-> Na sua aplicação é necessário incluir o arquivo: "pilhaPublico.h".
+
+-> Deve-se criar um objeto do tipo pilha. 
+   Por exemplo "pilha *p", que irá receber o retorno da função de criação da pilha.  
+
+-> Para compilar, executar o seguinte comando:
+gcc -o "definirNome" pilha.c "nomeArquivoAplicacao".c -lm
+./"definirNome"  
+
+

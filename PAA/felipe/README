@@ -1,0 +1,18 @@
+Apenas o arquivo "pilha_interface.h" deve ser importado na aplicação que utilizar a estrutura.
+
+A estrutura disponibiliza as seguintes funções:
+
+"criarPilha": cria um ponteiro de pilha na variavel passada por parâmetro, definindo também o tamanho dos dados
+que serão armazenados na estrutura.
+
+"destruirPilha": destrói o ponteiro da pilha contida na variavel passada por parâmetro e atribui NULL em seu lugar.
+
+"empilharPilha": empilha um dado na pilha.
+
+"desempilharPilha": desempilha o topo da pilha.
+
+"topoPilha": atribui à variavel passada por parâmetro o valor do topo da pilha.
+
+"tamanhoPilha": atribui à variável passada por parâmetro o tamanho da pilha.
+
+Todas as funções retornam o valor 1 se a função for executada com sucesso, ou 0 se ocorrer algum erro interno.
