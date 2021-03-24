@@ -1,6 +1,7 @@
 {
   "files.associations": {
     "stack_public.h": "c",
-    "pilha_interface.h": "c"
+    "pilha_interface.h": "c",
+    "stdlib.h": "c"
   }
 }
