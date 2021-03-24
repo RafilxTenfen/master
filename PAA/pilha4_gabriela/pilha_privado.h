@@ -1,6 +1,5 @@
 #include <string.h>
 #include "pilha_interface.h"
-
 typedef struct stack_t {
   void *data;
   int head;
