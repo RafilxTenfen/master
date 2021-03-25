@@ -6,15 +6,15 @@ CC = gcc
 #  -Wall turns on most, but not all, compiler warnings
 CFLAGS  = -g -Wall -O3
 
-default: aplicacao
+default: main
 
 pilha.o: pilha.c pilha_interface.h pilha_privado.h
 	$(CC) $(CFLAGS) -c pilha.c -o pilha.o
 
-aplicacao: aplicacao.c pilha.o
-	$(CC) $(CFLAGS) aplicacao.c pilha.o -o aplicacao
+main: main.c pilha.o
+	$(CC) $(CFLAGS) main.c pilha.o -o main
 
 clean:
-	rm -f aplicacao *.o core a.out *.*~ Makefile~
+	rm -f main *.o core a.out *.*~ Makefile~
 
-all: aplicacao
+all: main
