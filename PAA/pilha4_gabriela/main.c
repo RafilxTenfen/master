@@ -11,12 +11,19 @@ int read_words_start_a(FILE* f, pPilha p, callbackReadWord callBack) {
   /* assumes no word exceeds length of 1023 */
   while (fscanf(f, "%s", buf) == 1) {
     char buf0 = buf[0];
-    if (buf0 == 'a' || buf0 == 'A') {
+    if (containA(buf0) == 1) {
       count++;
       callBack(buf, p);
     }
   }
   return count;
+}
+
+int containA(char buf) {
+  if (buf == 'a' || buf == 'A') {
+    return 1;
+  }
+  return 0;
 }
 
 void readJustA(char* word, pPilha p) {

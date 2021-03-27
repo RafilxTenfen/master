@@ -10,3 +10,6 @@ int read_words_start_a(FILE* f, pPilha p, callbackReadWord callBack);
 
 // read one word at time
 void readJustA(char* word, pPilha p);
+
+// verify if char is 'a' or 'A', 1 is true, 0 is false
+int containA(char buf);
