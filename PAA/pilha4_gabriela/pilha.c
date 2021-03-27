@@ -28,6 +28,9 @@ ppPilha init(int data_size) {
 }
 
 void destroy(ppPilha stack) {
+  if (stack == NULL) {
+    return;
+  }
   int i;
   void *p_element;
 
