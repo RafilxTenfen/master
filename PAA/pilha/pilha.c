@@ -53,7 +53,7 @@ int criaPilha(ppPilha pp, int tamanhoVetor, int tamanhoInfo) {
   }
 
   (*pp)->dados = malloc(tamanhoInfo * tamanhoVetor);
-  (*pp)->topo = 0;
+  (*pp)->topo = -1;
   (*pp)->tinfo = tamanhoInfo;
   (*pp)->tmax = tamanhoVetor;
 
@@ -71,13 +71,21 @@ int destroiPilha(ppPilha pp) {
   return TRUE;
 };
 
+void *getTopPointer(pPilha p) {
+  printf("\ngetTopPointer topo %d", p->topo);
+  int posicao = p->topo * p->tinfo;
+  return p->dados + posicao;
+}
+
 int empilha(pPilha p, void *elemento) {
   int ret = cheia(p);
   if (ret != FALSE) {
     return printErrorEnum(ret);
   }
-  p->dados[p->topo] = elemento;
   p->topo++;
+
+  int posicao = p->topo * p->tinfo;
+  memcpy(p->dados + posicao, elemento, p->tinfo);
   return TRUE;
 };
 
@@ -111,11 +119,14 @@ int reiniciaPilha(pPilha p) {
 };
 
 int topo(pPilha p, void *topo) {
-  int ret = vazia(p);
-  if (ret) {
-    return printErrorEnum(ret);
-  }
-  memcpy(topo, p->dados[p->topo - 1], p->tinfo);
+    int ret = vazia(p);
+    if (ret) {
+      return printErrorEnum(ret);
+    }
+
+  int posicao = p->topo * p->tinfo;
+  memcpy(topo, p->dados + posicao, p->tinfo);
+
   return TRUE;
 };
 
@@ -133,9 +144,8 @@ int vazia(pPilha p) {
   if (isPilhaNull(p) == TRUE) {
     return ESTRUTURA_NULLA;
   }
-  if (p->topo != 0) {
+  if (p->topo >= 0) {
     return FALSE;
   }
   return TRUE;
 };
-

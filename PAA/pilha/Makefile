@@ -11,7 +11,7 @@ default: aplicacao
 pilha.o: pilha.c pilha_publico.h pilha_privado.h
 	$(CC) $(CFLAGS) -c pilha.c -o pilha.o
 
-aplicacao: aplicacao.c aplicacao.h pilha.o
+aplicacao: aplicacao.c pilha.o
 	$(CC) $(CFLAGS) aplicacao.c pilha.o -o aplicacao
 
 clean:

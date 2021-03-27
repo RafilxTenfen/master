@@ -4,7 +4,7 @@
 #include "pilha_publico.h"
 
 int main(int argc, char **argv) {
-  int nElementos = 4;
+  int nElementos = 15;
   pPilha p;
 
   // int elemento3;
@@ -15,57 +15,63 @@ int main(int argc, char **argv) {
   // topo(p, &intTopo);
   // printf("\n topo %d", intTopo);
 
-  criaPilha(&p, nElementos, sizeof(int));
+  criaPilha(&p, nElementos, sizeof(char*));
 
-  int elemento = 7;
-  printf("\n insere %d", elemento);
-  empilha(p, &elemento);
+  char* word = "coee";
+  empilha(p, word);
 
-  int elemento2 = 12;
-  printf("\n insere %d", elemento2);
-  empilha(p, &elemento2);
+  void* topoChar;
+  topo(p, &topoChar);
+  printf("\n topo is %s", (char*) &topoChar);
+  // // int elemento = 7;
+  // printf("\n insere %d", elemento);
+  // empilha(p, &elemento);
 
-  int intTopo;
-  topo(p, &intTopo);
-  printf("\n topo %d", intTopo);
+  // int elemento2 = 12;
+  // printf("\n insere %d", elemento2);
+  // empilha(p, &elemento2);
 
-  int elemento3;
-  desempilha(p, &elemento3);
-  printf("\n desempilha %d", elemento3);
-  int elemento98;
-  desempilha(p, &elemento98);
-  printf("\n desempilha %d", elemento98);
+  // int intTopo;
+  // topo(p, &intTopo);
+  // printf("\n topo %d", intTopo);
 
-  topo(p, &intTopo);
-  printf("\n topo %d", intTopo);
+  // int elemento3;
+  // desempilha(p, &elemento3);
+  // printf("\n desempilha %d", elemento3);
+  // int elemento98;
+  // desempilha(p, &elemento98);
+  // printf("\n desempilha %d", elemento98);
 
-  int elemento4 = 99;
-  printf("\n insere %d", elemento4);
-  empilha(p, &elemento4);
+  // topo(p, &intTopo);
+  // printf("\n topo %d", intTopo);
 
-  printf("\n reinicia a pilha");
-  reiniciaPilha(p);
+  // int elemento4 = 99;
+  // printf("\n insere %d", elemento4);
+  // empilha(p, &elemento4);
 
-  int elemento5 = 99;
-  printf("\n insere %d", elemento5);
-  empilha(p, &elemento5);
+  // printf("\n reinicia a pilha");
+  // reiniciaPilha(p);
 
-  printf("\n destroi a pilha");
-  destroiPilha(&p);
+  // int elemento5 = 99;
+  // printf("\n insere %d", elemento5);
+  // empilha(p, &elemento5);
 
-  int elemento6 = 6;
-  printf("\n insere %d", elemento6);
-  empilha(p, &elemento6);
+  // printf("\n destroi a pilha");
+  // destroiPilha(&p);
 
-  int elemento7 = 7;
-  printf("\n insere %d", elemento7);
-  empilha(p, &elemento7);
-  printf("\n insere %d", elemento4);
-  empilha(p, &elemento4);
+  // int elemento6 = 6;
+  // printf("\n insere %d", elemento6);
+  // empilha(p, &elemento6);
 
-  int intTopo2;
-  topo(p, &intTopo2);
-  printf("\n topo %d", intTopo2);
+  // int elemento7 = 7;
+  // printf("\n insere %d", elemento7);
+  // empilha(p, &elemento7);
+  // printf("\n insere %d", elemento4);
+  // empilha(p, &elemento4);
+
+  // int intTopo2;
+  // topo(p, &intTopo2);
+  // printf("\n topo %d", intTopo2);
 
   return EXIT_SUCCESS;
 }
