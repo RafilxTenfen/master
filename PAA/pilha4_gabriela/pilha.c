@@ -34,7 +34,7 @@ void destroy(ppPilha stack) {
   int i;
   void *p_element;
 
-  for (i = 0; i <= (*stack)->head; i++) {
+  for (i = 0; i < (*stack)->head; i++) {
     p_element = (*stack)->data + (i * (*stack)->data_size);
     free(p_element);
   }
