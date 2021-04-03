@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "pilha_privado.h": "c",
+    "stdio.h": "c"
+  }
+}

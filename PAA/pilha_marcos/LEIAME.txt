@@ -1,0 +1,20 @@
+ --------------------------------------------------------------------------------------------
+|# Sobre o arquivo de texto lido pelo programa:                                              |
+|	* Identifica e armazena apenas as palavras que INICIAM com vogal 'A' ou 'a'          |
+|	* As palavras do arquivo DEVEM estar uma abaixo da outra (conforme o modelo enviado) |
+ --------------------------------------------------------------------------------------------
+|# As ações disponíveis neste programa são:                                                  |
+|       * Ler um arquivo de texto do tipo .txt                                               |
+|	* Criar uma pilha                                                                    |   
+|		Pilha* inicia_pilha(int quantidadeElementosPilha)                            |                         
+|	* empilha(stack, novoItem)                                                           |
+|	* desempilha(stack)                                                                  |
+|	* pega_topo(stack)                                                                   | 
+|	* mostra_pilha(stack)                 		                                     |	
+|	* destroi_pilha(&stack)               			                             |
+ --------------------------------------------------------------------------------------------
+|# Instruções para compilar o programa (GCC - Linux - Ubuntu):                               |
+|	No terminal digite:                                                                  |
+|		gcc -o "nomeDoPrograma" Pilha.c main.c -lm                                   |
+|		./"nomeDoPrograma"                                                           |
+ --------------------------------------------------------------------------------------------

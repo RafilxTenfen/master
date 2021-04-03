@@ -2,6 +2,12 @@
   "files.associations": {
     "stack_public.h": "c",
     "pilha_interface.h": "c",
-    "stdlib.h": "c"
+    "stdlib.h": "c",
+    "cstdio": "cpp",
+    "type_traits": "cpp",
+    "typeinfo": "cpp",
+    "fila_publica.h": "c",
+    "fila_privado.h": "c",
+    "fila_privada.h": "c"
   }
 }

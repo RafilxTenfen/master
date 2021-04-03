@@ -1,5 +1,5 @@
 #include "pilha_interface.h"
-#include "pilha_privado.h"
+#include "pilha_privada.h"
 
 #define SIZE 100
 
