@@ -8,6 +8,7 @@
     "typeinfo": "cpp",
     "fila_publica.h": "c",
     "fila_privado.h": "c",
-    "fila_privada.h": "c"
+    "fila_privada.h": "c",
+    "cstdlib": "c"
   }
 }

@@ -7,6 +7,9 @@
 
 ### Métodos Publicos
 ```c
+#define SUCCESSO 0
+#define ERRO 1
+
 typedef struct PE *pPilha, **ppPilha;
 
 // alloca memoria para pilha
