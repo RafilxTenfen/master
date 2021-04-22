@@ -1,0 +1,273 @@
+---
+title: "Exercícios de R com R Markdown"
+author: "Rafael Tenfen"
+date: "21/04/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width = '75%', fig.align = 'center')
+```
+
+## Descrição da Atividade
+
+Nesta atividade você irá realizar algumas análises de dados na forma de um documento reproduzível com R Markdown. Você deve usar o RStudio para editar este arquivo .Rmd e processá-lo em um arquivo HTML. 
+
+Algumas recomendações:
+
+- Se você não estiver habituado com R Markdown, acostume-se a processar com frequência o  documento, usando o botão **Knit**. Isso permitirá que eventuais erros no documento ou no código R sejam identificados rapidamente, pouco depois de terem sido cometidos, o que facilitará sua correção. Na verdade, é uma boa ideia você fazer isso **agora**, para garantir que seu ambiente esteja configurado corretamente. Se você receber uma mensagem de erro do tipo `Error in library(foo)`, isso significa que o pacote `foo` não está instalado. Para instalar um pacote, execute o comando `install.packages("foo")` no Console, ou clique em _Tools_ -> _Install Packages_.
+- **Não esqueça** de colocar seu nome e a data no cabeçalho do arquivo .Rmd (onde diz "Insira seu nome aqui" e "Insira a data").
+- As variáveis usadas no código R devem ser usadas para tornar o relatório mais reproduzível, eliminando uma fonte de erros. Em vez de copiar valores manualmente, atribua os resultados a variáveis e exiba-os usando [código R _inline_](https://bookdown.org/yihui/rmarkdown-cookbook/r-code.html). Por exemplo, nas respostas você pode escrever algo como
+```{r eval=FALSE}
+Os tempos de execução ficam entre `r texec.min` e `r texec.max` ms.
+```
+- Após concluir a atividade, você deverá submeter no Moodle um arquivo ZIP contendo:
+    * o arquivo fonte .Rmd;
+    * a saída processada (PDF ou HTML) do arquivo .Rmd;
+    * outros arquivos necessários ao processamento do arquivo .Rmd (se houver).
+
+## Análise de Tempos de Execução
+
+O primeiro exercício consiste em analisar os dados de 92 tempos de execução de uma sub-rotina contidos no arquivo `texec-iops.dat`. Cada linha do arquivo representa uma execução, para a qual foram coletadas duas métricas:
+
+- `texec`: tempo de execução da sub-rotina, em ms;
+- `iops`: quantidade de operações de entrada/saída realizadas pela sub-rotina.
+
+Analise os dados e responda às seguintes questões:
+
+1. Qual o maior e o menor tempo de execução registrados?
+2. Qual o tempo médio de execução?
+3. Qual é a mediana do número de operações de E/S?
+4. Em quantas execuções não foi realizada nenhuma operação de E/S?
+5. Quantas execuções levaram 300 ms ou mais para executar? Qual o número médio de operações de E/S dessas execuções?
+6. Gere um gráfico de dispersão do tempo de execução em função do número de operações de E/S (ou seja, o eixo _x_ é o número de operações e o eixo _y_ é o tempo de execução). De que maneira o número de operações de E/S influencia o tempo de execução?
+
+> Neste exercício, o código R está parcialmente escrito abaixo. Como ele tem algumas lacunas que precisam ser preenchidas, ele não pode ser executado como está. Você só precisa fazer duas coisas: (1) completar as lacunas no código e (2) mudar `eval` no cabeçalho do bloco (_chunk_) para `TRUE` para que ele seja executado quando você processar o documento com **Knit**.
+
+Código e saídas do R:
+
+```{r analise-texec, eval = TRUE}
+# le os dados do arquivo para o data frame dados
+dados <- read.table("texec-iops.dat", header = TRUE)
+
+# 1
+# texec.min é o menor elemento da coluna texec
+texec.min <- min(dados$texec)
+# texec.max é o maior elemento da coluna texec
+texec.max <- max(dados$texec) 
+
+# 2
+# texec.avg é a média de texec
+texec.avg <- mean(dados$texec) 
+# arredonda para uma casa decimal
+texec.avg <- round(texec.avg, 1)
+
+# 3
+# iops.med é a mediana da coluna iops
+iops.med <- median(dados$iops)
+
+# 4
+# iops.0 é o número de valores 0 em iops
+iops.0 <- length(dados$iops[dados$iops == 0])
+
+# 5
+# dados.300 contém apenas as linhas com texec mínimo de 300
+# iops.300.avg é a média de iops em dados.300
+dados.300 <- dados[dados$texec >= 300,]
+iops.300.avg <- mean(dados.300$iops)
+iops.300.avg <- round(iops.300.avg, 1)   # arredonda para uma casa decimal
+
+# 6
+with(dados, plot(dados$iops, dados$texec))
+```
+
+Respostas:
+
+1. Resposta da questão 1: 
+  - Maior tempo: `r texec.max` 
+  - Menor tempo: `r texec.min`
+2. Resposta da questão 2: 
+  - Tempo médio de execução: `r iops.med`
+3. Resposta da questão 3: 
+  - Mediana: `r iops.med`
+4. Resposta da questão 4: 
+  - Em `r iops.0` execuções não foi realizada nenhuma operação
+5. Resposta da questão 5: 
+  - `r length(dados.300$texec)` execuções levaram 300ms ou mais para executar 
+  - `r iops.300.avg` e a media do numero de operaçoes
+6. Resposta da questão 6: 
+```{r eval=TRUE}
+with(dados, plot(dados$iops, dados$texec))
+```
+- O tempo de execução tende a aumentar de acordo com número de operações.
+
+## Análise do conjunto `mtcars`
+
+Diversos conjuntos de dados podem ser encontrados em qualquer instalação de R, e podem ser acessados diretamente pelo seu nome.^[O comando `data()` mostra uma lista dos conjuntos disponíveis.] Um deles é `mtcars`, que traz 11 características de 32 carros publicadas na revista americana _Motor Trend_. Você pode visualizar o conjunto com `View(mtcars)`, e consultar a descrição de cada variável usando o comando `?mtcars`. Neste exercício você irá analisar algumas dessas variáveis.
+
+Usando o conjunto `mtcars`, responda às seguintes questões:
+
+1. A variável `hp` representa a potência do motor. Qual carro tem o motor mais potente, e qual é a sua potência? E o motor menos potente?
+2. A variável `am` indica o tipo de transmissão (0=automática, 1=manual). Qual carro com transmissão automática é o mais potente?
+3. A variável `mpg` representa o consumo de combustível (em milhas por galão, 1 mpg = 0,425 km/l). É possível afirmar que o consumo médio de carros automáticos é maior que, menor que, ou igual ao consumo de carros com transmissão manual?
+4. Quais carros possuem consumo igual ou melhor que 12 km/l?
+5. A variável `qsec` representa o tempo (em segundos) para percorrer 1/4 de milha, e a variável `vs` indica a disposição dos cilindros do motor (0=cilindros em V, 1=cilindros em linha). Com base nos dados, é possível afirmar que motores com cilindros em V têm melhor desempenho (em termos de `qsec`) do que motores com cilndros em linha?
+6. A variável `wt` representa o peso (em milhares de libras). Com base nos dados, como você diria que o peso afeta o consumo? (Dica: faça um gráfico de dispersão de consumo x peso.)
+7. A variável `gear` representa o número de marchas. Com bsae nos dados, é possível afirmar que carros com mais marchas são mais (ou menos) potentes?
+
+Código e saídas do R:
+
+```{r analise-mtcars}
+# seu codigo R vai aqui
+mtcars.hp.max <- max(mtcars$hp)
+mtcars.hp.min <- min(mtcars$hp)
+
+mtcars.hp.maxcar <- mtcars[mtcars$hp == mtcars.hp.max,]
+mtcars.hp.mincar <- mtcars[mtcars$hp == mtcars.hp.min,]
+
+mtcars.automatic <- mtcars[mtcars$am == 0,]
+mtcars.automatic.hp.maxcar <- mtcars.automatic[mtcars.automatic$hp == max(mtcars.automatic$hp),]
+
+mtcars.manual <- mtcars[mtcars$am == 1,]
+mtcars.automatic.meanmpg <- mean(mtcars.automatic$mpg)
+mtcars.manual.meanmpg <- mean(mtcars.manual$mpg)
+
+mtcars.meanmpg.txt <- 'Maior' # is default
+if (mtcars.automatic.meanmpg == mtcars.manual.meanmpg) {
+  mtcars.meanmpg.txt <- 'Igual'
+}
+
+if (mtcars.automatic.meanmpg > mtcars.manual.meanmpg) {
+  mtcars.bigger.meanmpg <- 'Automáticos'
+  mtcars.minor.meanmpg <- 'Manuais'
+} else {
+  mtcars.bigger.meanmpg <- 'Manuais'
+  mtcars.minor.meanmpg <- 'Automáticos'
+}
+
+mpg_kg <- 0.425
+km_l_12 <- 12 / mpg_kg
+mtcars.mpg.km_l_12 <- mtcars[mtcars$mpg >= km_l_12,]
+
+mtcars.vs.v <- mtcars[mtcars$vs == 0,]
+mtcars.vs.line <- mtcars[mtcars$vs == 1,]
+
+mtcars.vs.v.mean <- mean(mtcars.vs.v$qsec)
+mtcars.vs.line.mean <- mean(mtcars.vs.line$qsec)
+
+mtcars.vs.type <- 'Maior'
+if (mtcars.vs.line.mean == mtcars.vs.v.mean) {
+  mtcars.vs.type <- 'Igual'
+}
+
+if (mtcars.vs.line.mean < mtcars.vs.v.mean) {
+  mtcars.bigger.qsecmean <- 'V'
+  mtcars.minor.qsecmean <- 'Linha'
+} else {
+  mtcars.bigger.qsecmean <- 'Linha'
+  mtcars.minor.qsecmean <- 'V'
+}
+
+with(mtcars, plot(mtcars$mpg, mtcars$wt))
+
+with(mtcars, plot(mtcars$gear, mtcars$hp, type = 'h', lwd = 50))
+
+gears <- sort(unique(mtcars$gear))
+```
+
+Respostas:
+
+1. Resposta da questão 1
+  - O carro mais pontente é o `r row.names(mtcars.hp.maxcar)`
+  - O carro menos potente é o `r row.names(mtcars.hp.mincar)`
+2. Resposta da questão 2
+  - Os carros com a transmissão automática mais potente são os `r row.names(mtcars.automatic.hp.maxcar)`
+3. Resposta da questão 3
+  - A média de consumo dos carros manuais é de `r mtcars.manual.meanmpg`
+  - A média de consumo dos carros automáticos é de `r mtcars.automatic.meanmpg`
+  - Os carros `r mtcars.bigger.meanmpg` tem uma média de consumo `r mtcars.meanmpg.txt` do que os `r mtcars.minor.meanmpg` 
+4. Resposta da questão 4
+  - Os carros que possuem consumo igual ou maior que 12 km/l são: `r row.names(mtcars.mpg.km_l_12)`
+5. Resposta da questão 5
+  - A média do tempo em segundos para percorrer 1/4 de milha dos carros de cilindro v é `r mtcars.vs.v.mean`
+  - A média do tempo em segundos para percorrer 1/4 de milha dos carros de cilindro em linha é `r mtcars.vs.line.mean`
+  - Os carros com cilindro em `r mtcars.bigger.qsecmean` tem a média do tempo em segundos `r mtcars.vs.type` do que os de cilindro `r mtcars.minor.qsecmean` para percorrer 1/4 de milha. Então, na média os carros com cilindro `r mtcars.minor.qsecmean` tem um desempenho melhor que os de cilindro `r mtcars.bigger.qsecmean`
+6. Resposta da questão 6
+```{r eval=TRUE}
+with(mtcars, plot(mtcars$mpg, mtcars$wt))
+```
+
+- O peso do carro tende a prejudicar o consumo do carro, então qual mais pesado o carro, maior a probabilidade que o consumo do carro tenha um desempenho pior
+
+7. Resposta da questão 7
+```{r eval=TRUE}
+with(mtcars, plot(mtcars$gear, mtcars$hp, type = 'h', lwd = 50))
+```
+- Na verdade, não é possível definir que carros com mais marchas tem mais potência no motor, pois temos carros com `r gears` marchas e na verdade, os carros com menor marchas `r min(gears)` tem uma potência melhor que os `r mean(gears)`, mas os carros com uma potência de motor maior são os com `r max(gears)`
+
+## Análise do conjunto `WWWusage`
+
+O conjunto `WWWusage` contém uma série de 100 medições do número de usuários conectados à Internet através de um servidor a cada minuto. Usando esse conjunto, responda às seguintes questões:
+
+1. Em que minuto o servidor teve a maior carga, e qual foi essa carga?
+2. Em que minuto o servidor teve a menor carga, e qual foi essa carga?
+3. Em que minuto o servidor teve o maior aumento de carga? Qual foi esse aumento (de quantos para quantos usuários)?
+4. Em que minuto o servidor teve a maior redução de carga? Qual foi essa redução (de quantos para quantos usuários)?
+5. Quantas vezes o número de usuários manteve-se constante em duas medições consecutivas?
+6. Determine o número de usuários para o minuto 101, supondo que um eventual aumento ou redução de carga não ultrapasse os valores máximos obtidos nas questões 3 e 4. (Dica: você deverá estimar uma faixa de valores.)
+
+Código e saídas do R:
+
+```{r analise-wwwusage}
+# seu codigo R vai aqui
+
+WWWusage.max <- max(WWWusage)
+WWWusage.max.which <- which(WWWusage == WWWusage.max)
+
+WWWusage.min <- min(WWWusage)
+WWWusage.min.which <- which(WWWusage == WWWusage.min)
+
+WWWusage.diff <- diff(WWWusage)
+WWWusage.diff.max <- max(WWWusage.diff)
+WWWusage.diff.max.which <- which(WWWusage.diff == WWWusage.diff.max)
+
+WWWusage.diff.min <- min(WWWusage.diff)
+WWWusage.diff.min.which <- which(WWWusage.diff == WWWusage.diff.min)
+
+WWWusage.diff.consecutive <- WWWusage.diff[WWWusage.diff == 0]
+WWWusage.last <- WWWusage[length(WWWusage)]
+  
+WWWusage.last.plusdif <- WWWusage.last + WWWusage.diff.max
+WWWusage.last.minusdif <- WWWusage.last - WWWusage.diff.max
+
+WWWusage.next.max <- min(WWWusage.last.plusdif, WWWusage.max)
+WWWusage.next.min <- max(WWWusage.last.minusdif, WWWusage.min)
+
+summary(WWWusage)
+HoltWinters(WWWusage, beta=FALSE, gamma=FALSE)
+```
+
+Respostas:
+
+1. Resposta da questão 1
+  - No minuto `r WWWusage.max.which` o servidor teve a maior carga de `r WWWusage.max`
+2. Resposta da questão 2
+  - No minuto `r WWWusage.min.which` o servidor teve a menor carga de `r WWWusage.min`
+3. Resposta da questão 3
+  - Nos minutos `r WWWusage.diff.max.which` para os `r WWWusage.diff.max.which + 1` teve um aumento de `r WWWusage.diff.max` usuários
+4. Resposta da questão 4
+  - No minuto `r WWWusage.diff.min.which` para o minuto `r WWWusage.diff.min.which + 1` teve uma redução de `r abs(WWWusage.diff.min)` usuários
+5. Resposta da questão 5
+  - `r length(WWWusage.diff.consecutive)` vezes o número de usuários manteve-se com duas medições consecutivas
+6. Resposta da questão 6  
+```{r eval=TRUE}
+plot(WWWusage)
+```
+
+- Para estimar o numero de usuarios para o minuto 101, levando em consideração o maior aumento de usuários ja registrado `r WWWusage.diff.max` e o ultimo valor registrado de `r WWWusage.last` usuários, e também a mínima `r WWWusage.min` e máxima ja registrado `r WWWusage.max`, o range provável será entre `r WWWusage.next.min` e `r WWWusage.next.max`.
+- Ja HoltWinters estima o seguinte valor: 
+```{r eval=TRUE}
+HoltWinters(WWWusage, beta=FALSE, gamma=FALSE)
+```  
