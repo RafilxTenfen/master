@@ -10,9 +10,9 @@ int main(int argc, char** argv) {
   enfileirar(f, &enf1, &result);
   printf("\nenfileirar result: %d -> %d", result, enf1);
 
-  int wrongResult;
-  enfileirar(f, 3, &wrongResult);
-  printf("\nenfileirar wrong wrongResult: 1 == %d", wrongResult);
+  // int wrongResult;
+  // enfileirar(f, 3, &wrongResult);
+  // printf("\nenfileirar wrong wrongResult: 1 == %d", wrongResult);
 
   int enf2 = 9;
   enfileirar(f, &enf2, &result);

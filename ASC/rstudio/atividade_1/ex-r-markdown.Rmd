@@ -3,8 +3,8 @@ title: "Exercícios de R com R Markdown"
 author: "Rafael Tenfen"
 date: "21/04/2021"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -266,7 +266,7 @@ Respostas:
 plot(WWWusage)
 ```
 
-- Para estimar o numero de usuarios para o minuto 101, levando em consideração o maior aumento de usuários ja registrado `r WWWusage.diff.max` e o ultimo valor registrado de `r WWWusage.last` usuários, e também a mínima `r WWWusage.min` e máxima ja registrado `r WWWusage.max`, o range provável será entre `r WWWusage.next.min` e `r WWWusage.next.max`.
+- Para estimar o numero de usuarios para o minuto 101, levando em consideração o maior aumento de usuários ja registrado `r WWWusage.diff.max` entre um minuto e outro e o ultimo valor registrado de `r WWWusage.last` usuários, e também a mínima `r WWWusage.min` e máxima `r WWWusage.max`, o range provável do minuto 101 será entre `r WWWusage.next.min` e `r WWWusage.next.max`.
 - Ja HoltWinters estima o seguinte valor: 
 ```{r eval=TRUE}
 HoltWinters(WWWusage, beta=FALSE, gamma=FALSE)
