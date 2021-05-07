@@ -1,0 +1,260 @@
+---
+title: "Intervalo de Confiança para o Tempo de Execução"
+author: "Rafael Tenfen"
+date: 'Data de entrega: 07/05/2021'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Descrição da atividade
+
+O objetivo desta atividade é aplicar o conceito de intervalo de confiança à medição do tempo de execução de uma função. 
+
+Algumas recomendações:
+
+- Se você não estiver habituado com R Markdown, acostume-se a processar com frequência o  documento, usando o botão **Knit**. Isso permitirá que eventuais erros no documento ou no código R sejam identificados rapidamente, pouco depois de terem sido cometidos, o que facilitará sua correção. Na verdade, é uma boa ideia você fazer isso **agora**, para garantir que seu ambiente esteja configurado corretamente. Se você receber uma mensagem de erro do tipo _Error in library(foo)_, isso significa que o pacote `foo` não está instalado. Para instalar um pacote, execute o comando `install.packages("foo")` no Console, ou clique em _Tools_ -> _Install Packages_.
+- Após concluir a atividade, você deverá submeter no Moodle um arquivo ZIP contendo:
+    * o arquivo fonte .Rmd;
+    * a saída processada (PDF ou HTML) do arquivo .Rmd;
+    * o(s) arquivo(s) de dados necessário(s) para o processamento do .Rmd, caso você opte por salvar os dados analisados separadamente. 
+
+# Configuração 
+
+Nesta atividade, a única configuração necessária consiste em carregar o arquivo `rand171.R`, que contém a função `rand171()`, cujo tempo de execução será medido.
+
+```{r config}
+source("rand171.R")         # carrega arquivo que contem a funcao
+```
+
+# Salvando seus dados
+
+Este é um experimento iterativo com dados que não se repetem: você irá realizar uma primeira rodada de execuções, analisar os dados dessa rodada para determinar quantas execuções adicionais serão necessárias, e analisar os dados da segunda rodada para saber se serão necessárias mais execuções. Nesse processo, você irá trabalhando com os dados à medida em que eles são obtidos. Ao final do processo, você precisa:
+
+- salvar seus dados em um arquivo;
+- escrever sua análise dos dados com base nos dados salvos.
+
+O salvamento dos dados é importante porque eles estarão disponíveis no seu ambiente, mas não para quem receber o seu arquivo .Rmd. Assim, os dados precisam ser fornecidos de alguma forma para que seja possível reprocessar o arquivo .Rmd e reproduzir a análise usando os dados originais.
+
+Você pode salvar seus dados de duas formas. A primeira é preservá-los no próprio arquivo .Rmd, e a segunda é usando um arquivo de dados auxiliar.
+
+## Salvando os dados no próprio arquivo .Rmd
+
+Supondo que seus tempos de execução estejam armazenados em um vetor `texec`, você pode usar a função `dput()` para mostrar o conteúdo do vetor de modo que possa ser atribuído a uma variável. O código abaixo demonstra isso com um vetor `x`:
+
+```{r dput}
+x <- 2^c(1:8)
+dput(x)
+```
+
+Veja que `dput()` enumera os elementos do vetor em um formato que permite a atribuição a uma variável: os valores de `x` poderiam ser preservados colocando `x <- c(2, 4, 8, 16, 32, 64, 128, 256)` em um bloco R no arquivo .Rmd. Você pode usar a mesma estratégia para preservar os valores de `texec`.
+
+
+## Salvando os dados em um arquivo auxiliar
+
+Supondo novamente que seus tempos de execução estejam armazenados em um vetor `texec`, o código abaixo mostra como salvá-los em um arquivo `texec-rand171.dat`.  
+
+```{r salva-arq, eval=FALSE}
+# texec contém os tempos de execução medidos no experimento
+df <- data.frame(texec)
+write.table(df, "texec-rand171.dat", row.names = FALSE, quote = FALSE)
+```
+
+O código abaixo pode ser usado para recuperar `texec` a partir do arquivo salvo pelo código anterior:
+
+```{r le-arq, eval=FALSE}
+texec <- read.table("texec-rand171.dat", header = TRUE)$texec
+```
+
+Caso você opte por salvar os dados em um arquivo separado, o comando que lê os dados do arquivo deve ser incluído no seu bloco R de análise.
+
+
+# Definição do experimento
+
+A função `rand171()` encontra `noc` ocorrências do número 171 em uma sequência de números aleatórios, e imprime e retorna o seu tempo de execução (em segundos). 
+
+```{r}
+
+#qnorm()
+
+#rand171(33)
+#rand171(33)
+#rand171(33)
+
+rand171(5)
+```
+
+1. Determine o número $n$ de execuções necessárias para obter, com 95% de confiança, o tempo médio de execução com uma margem de erro de $\pm 6\%$. Considere uma amostra inicial de 5 execuções. Se necessário, ajuste o parâmetro `noc` para que o tempo de execução fique na ordem de 3 a 5 s (o valor _default_ é 20, que deve ser adequado para o RStudio Cloud). Para obter $n$, use a equação 4.21 (pág. 53) do livro; adote $e=0.06$, e lembre-se que o coeficiente $z$ deve ser obtido da distribuição $t$ (pois a amostra inicial tem 5 elementos).
+
+
+2. Realize o número de execuções determinadas no passo anterior, e calcule o intervalo de confiança de 95% para a média. Observe que você deve considerar as 5 execuções iniciais: por exemplo, se no passo 1 você descobriu que são necessárias 25 execuções, execute a função mais 20 vezes, e calcule o IC usando todas as 25 execuções.
+3. O IC obtido no item anterior fica dentro da margem de erro desejada de $\pm 6\%$? Caso contrário, amplie a amostra até obter a margem pretendida, e informe o novo IC calculado e quantas execuções foram necessárias ao final. A margem de erro é dada por $$e = \frac{zs}{\bar{x}\sqrt{n}}$$ onde o coeficiente $z$ deve ser obtido da distribuição $t$ (se $n < 30$) ou da distribuição normal (se $n \geq 30$). Para obter uma porcentagem, multiplique $e$ por 100.
+4. Compare os histogramas dos tempos de execução obtidos nos passos 1, 2 e 3 (se houver).
+
+
+# Respostas
+
+Como explicado acima, você deve salvar os dados obtidos durante a realização do experimento e depois escrever sua análise com base nos dados salvos. *Trabalhe com os tempos já coletados, não é necessário realizar novas execuções de `rand171()`.* 
+
+A forma mais fácil de fazer isso é usando um bloco separado para cada uma das questões 1 a 4. Você pode adaptar a estrutura abaixo para isso.
+
+```{r recup-tempos}
+# código para recuperar os tempos de execução mensurados aqui
+
+randData <- c()
+noc3to5s <- 34
+initialExec <- 5
+
+# generate 5 initial executions
+for (i in 1:initialExec) {
+  randData <- c(randData, rand171(noc3to5s))
+}
+
+df5 <- data.frame(randData)
+write.table(df5, "randData5-rand171.dat", row.names = FALSE, quote = FALSE)
+dput(randData)
+```
+
+### Questão 1
+
+```{r analise-q1}
+# código para analisar os dados da questão 1 aqui
+
+xbar <- mean(randData)
+s <- sd(randData)
+e <- 0.06
+ic <- 0.95
+alfa <- 1 - ic
+p <- 1 - alfa/2
+
+
+z <- qnorm(p)
+if (initialExec < 30) {
+  z <- qt(p, initialExec - 1)
+}
+
+nest <- (z*s/(e*xbar))^2
+nestCeil <- ceiling(nest)
+nestCeil
+```
+
+Resposta para a questão 1: São necessários `r nestCeil` amostras
+
+### Questão 2
+
+```{r analise-q2}
+# código para analisar os dados da questão 2 aqui
+randDataN <- randData
+
+if (nestCeil < initialExec) { # to avoid negative numbers on for
+  # enter here and it would be 1:0, generating + 1 to randDataN
+  nestCeil <- initialExec
+}
+
+for (i in 1:(nestCeil - initialExec)) {
+  randDataN <- c(randDataN, rand171(noc3to5s))
+}
+
+dput(randDataN)
+dfN <- data.frame(randDataN)
+write.table(dfN, "randDataN-rand171.dat", row.names = FALSE, quote = FALSE)
+```
+
+```{r calc-q2}
+randDataN.ic <- t.test(randDataN, conf.level=0.95)
+#randDataN.ic
+
+#str(randDataN.ic)
+#randDataN.ic$conf.int
+```
+
+Resposta para a questão 2: IC `r randDataN.ic$conf.int`
+
+
+```{r analise-q3}
+# código para analisar os dados da questão 3 aqui
+randDataErrorMargin <- randDataN
+xbar <- mean(randDataErrorMargin)
+s <- sd(randDataErrorMargin)
+
+ic <- 0.95
+alfa <- 1 - ic
+p <- 1 - alfa/2
+
+z <- qnorm(p)
+if (length(randDataErrorMargin) < 30) {
+  z <- qt(p, length(randDataErrorMargin) - 1)
+}
+
+e = ((z * s) / (xbar * sqrt(length(randDataErrorMargin)))) * 100 
+
+e
+while (e > 6) {
+  randDataErrorMargin <- c(randDataErrorMargin, rand171(noc3to5s))
+  
+  xbar <- mean(randDataErrorMargin)
+  s <- sd(randDataErrorMargin)
+  z <- qnorm(p)
+  if (length(randDataErrorMargin) < 30) {
+    z <- qt(p, length(randDataErrorMargin) - 1)
+  }
+  e = ((z * s) / (xbar * sqrt(length(randDataErrorMargin)))) * 100 
+  e
+}
+
+dput(randDataErrorMargin)
+dfN <- data.frame(randDataErrorMargin)
+write.table(dfN, "randDataErrorMargin-rand171.dat", row.names = FALSE, quote = FALSE)
+```
+```{r calc-q3}
+randDataErrorMargin.ic <- t.test(randDataErrorMargin, conf.level=0.95)
+randDataErrorMargin.ic
+```
+
+Resposta para a questão 3: Foram necessário `r length(randDataErrorMargin)` amostras para ficar dentro da margem de erro desejada de 6% e o novo IC é `r randDataErrorMargin.ic$conf.int` 
+
+```{r get-data-q4}
+# código para buscar os dados da questão 4 aqui
+
+q1 <- read.table("randData5-rand171.dat", header = TRUE)$randData
+q1
+q2 <- read.table("randDataN-rand171.dat", header = TRUE)$randDataN
+q2
+q3 <- read.table("randDataErrorMargin-rand171.dat", header = TRUE)$randDataErrorMargin
+q3
+
+hist(q1, col = "GREEN", breaks=5)
+
+hist(q2, col = "BLUE", breaks=5)
+hist(q2, col = "BLUE", breaks=15)
+hist(q2, col = "BLUE", breaks=30)
+hist(q2, col = "BLUE", breaks=50)
+hist(q2, col = "BLUE", breaks=75)
+
+hist(q3, col = "RED", breaks=5)
+hist(q3, col = "RED", breaks=15)
+hist(q3, col = "RED", breaks=30)
+hist(q3, col = "RED", breaks=50)
+hist(q3, col = "RED", breaks=75)
+
+
+plot(ecdf(q3))
+boxplot(q3, horizontal = TRUE)
+```
+
+- Resposta para a questão 4:
+
+- Histograma da questão 1 não é possível concluir quase nada sobre ele pela falta de amostras
+`r hist(q1, col = "GREEN", breaks=5)`
+
+- Já no Histograma da questão 2 e 3 quanto maior o número de breaks, mais próximo de um gráfico uniforme fica
+`r hist(q2, col = "BLUE", breaks=50)`
+
+`r hist(q2, col = "BLUE", breaks=50)`
+
+- Contudo, ao utilizar o boxplot é possível indicar uma tendência de unimodal simétrica
+
+- Talvez, aumentando absurdos a quantidade de amostras, seja possível observar melhor a uniformidade no histograma
+
+
+...
