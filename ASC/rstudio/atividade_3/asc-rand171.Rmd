@@ -102,7 +102,7 @@ A forma mais fácil de fazer isso é usando um bloco separado para cada uma das 
 # código para recuperar os tempos de execução mensurados aqui
 
 randData <- c()
-noc3to5s <- 34
+noc3to5s <- 33
 initialExec <- 5
 
 # generate 5 initial executions

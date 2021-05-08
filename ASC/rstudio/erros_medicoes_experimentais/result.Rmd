@@ -1,0 +1,139 @@
+---
+title: "Exercicios"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Exercícios – Erros em Medidas Experimentais
+
+- 1.[Lilja 2000, 4.3]Por que nem sempre é razoável adotar um intervalo de confiança de 99%
+- R: Provavelmente sera um intervalo de confiança muito largo, ou irá precisar muitos dados para tornar o intervalo confiança mais curto
+
+- Pois significa que se repetíssemos o estudo inúmeras / infinitas vezes, em cada vez, fosse calculado o intervalo de confiança em 99% das vezes o valor estaria entre o intervalo de confiança
+
+
+2 - [Lilja 2000, 4.4]Descreva as diferenças entre exatidão, resolução e precisão para um instrumentousado para medir comprimento, como uma fita métrica
+- exatidão a fita métrica mede 10cm, esses 10cm medidos são exatamente 10cm universais 
+- resolução a escala da fita pode ser em cm ou mm
+- precisão, a fita métrica é 99% precisa para tamanhos de até 100cm
+
+3.[Lilja 2000, 4.5]Qual é a principal diferença entre erro sistemático e erro aleatório?
+- erro aleatório pode acontecer de forma aleatória, indeterminísticos, pode ser devido à ferramenta, ou experimentos e no fim, afetam a precisão e consequentemente a repetibilidade
+- erro sistemático  incorreção ou variação no processo experimental, pode ser controlado pelo experimentador
+#tende a introduzir lentidão constante, e também erros sistemáticos são devidos poderiam ser previstos ou encontrados com testes experimentais
+
+- Intervalo mais largo é aquele que executou menos vezes
+
+4.  O tempo de processamento de requisições em um servidor foi mensurado, resultando nas se-guintes observações:
+```{r}
+tempos = c(92.2, 76.8, 7.3, 16.4, 32.5, 37.0, 41.6, 50.9, 62.6, 50.7, 34.6, 36.4)
+#qnorm(tempos)
+#prof
+
+icr <- t.test(tempos, conf.level=0.9)
+str(icr)
+
+xbar <- mean(tempos)
+s <- sd(tempos)
+e <- 0.06
+z <-qnorm(0.975)
+z
+
+nest <- (z*s/(e*xbar))^2
+ceiling(nest)
+
+
+# Tenfen
+n <- length(tempos)
+t.m <- mean(tempos)
+t.v <- var(tempos)
+t.ic <- t.m + qt(c(0.050, 0.950), df = n-1) * sqrt(t.v/n)
+t.ic
+
+t.test(tempos, conf.level=0.9)
+```
+(a)  Baseado nessa amostra, calcule o intervalo de confiança de 90% para a média.
+- R: `r t.ic`
+
+b)  Determine  a  quantidade  de  medições  necessárias  para  obter,  com  95%  de  confiança,  otempo médio de processamento com uma margem de erro de±6%.
+
+```{r}
+prop.test(22, 80, conf.level=0.99)
+prop.test(22000, 80000, conf.level=0.99)
+# 0.275 média análisada
+0.275*80 # > 10 para ser valido
+(1 - 0.275) * 80 # > 10
+
+```
+
+- 5.  Um DBA analisou um conjunto de 80 consultas a um banco de dados e observou que 22 delasenvolviam quatro tabelas.
+(a)  Determine o intervalo de confiança de 99% para a proporção de consultas que envolvemquatro tabelas.
+
+(b)  O que aconteceria (qualitativa e quantitativamente) com o intervalo de confiança se a mesmaproporção tivesse sido observada em um conjunto de 80.000 consultas?
+
+
+```{r}
+consultas <- read.table("texec.txt", header = TRUE)
+summary(consultas)
+texec <- consultas$te
+
+xbar <- mean(texec)
+s <- sd(texec)
+z <- qnorm(0.9)
+n <- length(texec)
+
+# na mao
+xbar + c(-1, 1)*s*z/sqrt(n)
+
+
+# func
+t.test(texec, conf.level=0.8)
+
+t.test(texec, conf.level=0.999)
+```
+
+6.  O arquivo de dadostexec.txtcontém medições de tempo de execução de umbenchmarkem umsistema. Calcule intervalos de confiança de 80% e 99,9% para a média do tempo de execução.
+
+
+```{r}
+bechmark = read.table("rtt.txt", header = TRUE)
+summary(bechmark)
+rtt <- bechmark$RTT
+
+t.test(rtt, conf.level=0.95)
+
+hist(rtt, col = "GREEN")
+```
+
+7.  O arquivo de dadosrtt.txtcontém medições de RTT (round-trip time) entre um cliente e umservidor na Internet
+(a)  Calcule o intervalo de confiança de 95% para a média do RTT
+(b)  Gere o histograma das medições de RTT, e discuta se é razoável supor que 95% dos inter-valos de confiança conterão a média do RTT.
+R: sim
+
+```{r}
+hist(bechmark$RTT, col = "GREEN", breaks=5)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
