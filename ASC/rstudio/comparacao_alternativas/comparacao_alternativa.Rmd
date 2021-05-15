@@ -1,0 +1,281 @@
+---
+title: "comparativo"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+- 1.  Um desenvolvedor desoftwareestá avaliando usar um novoframework webem seu produto.  Aquantidade de memória usada pelosoftwarecom oframeworkatual e o novo quando submetidosa oito cargas de trabalho distintas é mostrada na tabela abaixo. Considerando um nível de con-fiança de 90%, determine qual dosframeworksé a melhor opção do ponto de vista do consumode memória
+
+```{r}
+f1 = c(289, 400, 249, 366, 235, 303, 402, 487)
+f2 = c(305, 413, 256, 368, 259, 315, 425, 479)
+
+
+shapiro.test(f2 - f1)
+t.test(f2, f1, conf.level=0.9, paired = TRUE)
+# se f2 - f1 > 0, então f2 é maior que f1
+```
+
+Então o framework atual é melhor
+
+
+- 2.  A latência de processamento de uma consulta foi medida em dois servidores de bancos de dadosdistintos. Os dados obtidos estão mostrados na tabela abaixo. Adotando um nível de confiançade 95%, determine qual o servidor com melhor desempenho.
+
+```{r}
+s1 = c(4.41, 5.19, 4.74, 5.20, 4.99, 4.95, 5.98)
+s2 = c(5.81, 4.20, 4.96, 5.21, 4.46, 4.75)
+
+s1
+
+s2
+
+shapiro.test(s1)
+shapiro.test(s2)
+shapiro.test(s1 - s2)
+# shapiro e > alfa, entao eh viavel fazer o test 
+
+t.test(s2, s1, conf.level=0.95)
+```
+
+
+- 3.  Uma  empresa  de  comércio  eletrônico  está  experimentando  algumas  variações  no  seusite.   Aversão atual foi monitorada durante 3 h, e se constatou que, de 96.402 visitantes, 832 compraramalgum produto.  Em um período experimental de 2h30min, 22.680 clientes que visitaram ositeforam redirecionados aleatoriamente para uma versão beta,  gerando 242 pedidos de compra.Com base nesses resultados, determine qual das versões oferece o melhor retorno de vendas.Adote um nível de significância de 5%
+
+```{r}
+#clientes1 <- c(96402)
+#clientes2 <- c(22680)
+
+#pedidos1 = c(832)
+#pedidos2 = c(242)
+#x = c(pedidos1, pedidos2)
+#n = c(clientes1, clientes2)
+#prop.test(x=, n=, conf.level=0.95)
+
+prop.test(c(832, 242), c(96402, 22680), conf.level=0.95)
+
+# não tem diferença pos as samples estimates são os 2 positivo ou os 2 negativo (nao incluem 0)
+```
+
+- 4.  Um analista deseja avaliar o impacto de uma otimização do compilador. Para isso, ele mediu ostempos de execução para osbenchmarksdo SPECint 2006 compilados com e sem a otimização,conforme a tabela abaixo
+
+(a)  Considerando esse conjunto debenchmarks, determine se a otimização melhora o desempe-nho do código compilado. Adote um nível de confiança de 99%
+
+(b)  A resposta permanece a mesma caso o nível de confiança seja reduzido para 95%?
+
+```{r}
+semOtimizacao = c(396, 527, 285, 191, 443, 497, 97, 591, 250, 394, 185)
+comOtimizacao = c(323, 481, 269, 187, 396, 294, 465, 94, 550, 215, 363, 185)
+
+wilcox.test(semOtimizacao, comOtimizacao, conf.level=0.99)
+# p
+
+t.test(semOtimizacao, comOtimizacao, conf.level=0.99)
+
+shapiro.test(semOtimizacao - comOtimizacao)
+# p > alfa pode usar
+
+```
+
+
+- 5.  Um analista de redes monitorou o servidor DNS de uma rede local e constatou que, de 9.824.364consultas recebidas pelo servidor, 23,4% eram inválidas.  Em seguida, ele fez uma alteração naconfiguração distribuída aos clientes pelo servidor DHCP e voltou a monitorar o servidor DNS,observando um total de 71.890 consultas, das quais 17.140 eram inválidas.  Considerando umnível de confiança de 95%, pode-se dizer que a alteração na configuração reduziu o índice deconsultas inválidas?
+
+
+```{r}
+
+consultas = 9824364
+consultas.invalidasPercentage = 0.234
+consultas.invalidas = consultas * consultas.invalidasPercentage
+consultas.invalidas
+
+consultas2 = 71890
+consultas2.invalidas = 17140
+
+
+n=c(consultas, consultas2)
+x=c(consultas.invalidas, consultas2.invalidas)
+
+prop.test(x, n, conf.level=0.95)
+```
+
+## ANOVA
+
+```{r}
+S1 <- c(0.0972, 0.0971, 0.0969, 0.1954, 0.0974)
+
+S2 <- c(0.1382, 0.1432, 0.1382, 0.1730, 0.1383)
+S3 <- c(0.7966, 0.5300, 0.5152, 0.6675, 0.5298)
+(subr <- data.frame(S1, S2, S3))
+(subr.dat <- stack(subr))
+subr.aov <- aov(values~ind, data=subr.dat)
+summary(subr.aov)
+#str(subr.aov)
+# nesse caso não é significativo
+# Se PR for inferior a alfa as diferenças são significativas alfa = 1 - confiança (ex.: 0.95)
+TukeyHSD(subr.aov, conf.level=0.9)
+plot(TukeyHSD(subr.aov, conf.level=0.9))
+# p adj > alfa não é diferença significativa
+```
+
+
+
+- 1. Para avaliar o efeito do chipset da placa de rede sobre a vazão de transmissão, um analista de
+redes realizou uma análise de variância. Foram avaliadas seis placas com chipsets distintos, e
+realizadas 10 medições com cada uma. As variações devidas às Alternativas (SSA) e Erros (SSE)
+encontradas foram, respectivamente, 5 e 15. Que porcentagem da variação total se deve às diferenças entre as alternativas? Que porcentagem da variação total se deve a ruído nas medições?
+O que se pode afirmar sobre as diferenças entre as alternativas? Se necessário, adote um nível
+de confiança de 95%.
+
+```{r}
+SSA = 5
+SSE = 15
+n = 10
+k = 6
+
+SST = SSA + SSE
+100*SSA/SST
+# variacao explicada pelas alternativas
+
+100 - (100*SSA/SST)
+# variacao explicada pelos erros de medicao
+
+(sa2 <- SSA/(k-1))
+(se2 <- SSE/(k * (n-1)))
+Fcalc = sa2/se2
+Fcalc
+Fcrit <- qf(0.95, k-1, k * (n - 1))
+Fcrit
+# existem diferencas
+
+```
+
+- 2. Para avaliar diferentes provedores de hospedagem web, uma empresa resolveu mensurar o tempo
+necessário (em ms) para fazer download de uma página hospedada em cada um desses provedores. Os resultados estão mostrados na tabela abaixo. Usando análise de variância e o método de
+Tukey, determine qual o melhor dentre os provedores avaliados. Considere níveis de confiança
+de 95% e 99%.
+
+
+```{r}
+
+p1 = c(195, 197, 200, 195, 202, 200, 191, 199)
+p2 = c(197, 207, 197, 194, 204, 199, 197, 202)
+p3 = c(196, 208, 203, 198, 207, 200, 196, 202)
+p4 = c(210, 206, 196, 205, 202, 204, 203, 204)
+
+(subp <- data.frame(p1, p2, p3, p4))
+
+stackP = stack(subp)
+
+aovP = aov(values~ind, stackP)
+summary(aovP)
+TukeyHSD(aovP, conf.level=0.95)
+# diferenças são significativas pois pr(>F) > alfa (1 - 0.95)
+
+(Fcrit <- qf(0.95, 3, 28))
+#F qf(1 - alfa, Df, Residuals)
+
+
+TukeyHSD(aovP, conf.level=0.99)
+# Não tem diferença significativas entre eles pois pr(>F) > alfa (1 - 0.99)
+
+
+```
+
+- 3. Uma empresa decidiu analisar o desempenho de três servidores de aplicação web comparando
+o throughput desses servidores para uma carga de trabalho fixa. Os resultados estão mostrados
+na tabela abaixo. Usando análise de variância e o método de Tukey, determine qual o melhor
+dentre os servidores avaliados. Considere um nível de confiança de 95%.
+
+```{r}
+s1 = c(78.5, 74.8, 83, 76.6, 73.1, 84.2, 69.5)
+s2 = c(61, 60.9, 66.6, 66.5, 69.5, 67, 69.3)
+s3 = c(52.5, 47.4, 55.8, 49.6, 48.3, 50.5, 46.5)
+
+q3 = data.frame(s1, s2, s3)
+q3
+q3.dat = stack(q3)
+
+q3.aov = aov(values~ind, q3.dat)
+summary(q3.aov)
+
+#tem diferença
+TukeyHSD(q3.aov, conf.level = 0.95)
+
+# p adj > alfa diferença é significativa
+```
+
+- 4. Um desenvolvedor web decidiu analisar o desempenho de uma aplicação em cinco servidores de banco de dados distintos. Os tempos de resposta (em ms) foram tabulados no arquivo
+tempos-anova.dat.
+(a) Qual seria a taxa de erro do experimento se fosse usado o teste t para comparar todos os
+pares de servidores?
+(b) Usando análise de variância e o método de Tukey, determine o melhor e o pior dentre os
+servidores avaliados.
+Considere um nível de confiança de 90%.
+
+```{r}
+
+q4 = read.table("tempos.dat", head=T)
+q4
+
+cmb = choose(5, 2)
+cmb
+
+erro = 1-0.9^cmb
+erro
+
+
+q4.dat <- stack(q4)
+q4.aov = aov(values~ind, q4.dat)
+summary(q4.aov)
+
+
+# diferença significativa
+
+TukeyHSD(q4.aov, conf.level = 0.9)
+
+apply(q4, 2, mean)
+# melhor: C - pior: E
+```
+
+- 5. Um desenvolvedor de aplicações está considerando a possibilidade de trocar de provedor de nuvem. Para avaliar as alternativas, ele fez testes com quatro provedores diferentes, sendo que em
+cada teste foram realizadas 30 medições do tempo de resposta de uma aplicação. Os resultados
+obtidos estão resumidos na tabela abaixo (x é a média e s o desvio padrão do tempo de resposta).
+Usando análise de variância e o método de Tukey, determine o melhor e o pior dentre os provedores avaliados, adotando um nível de confiança de 95%. Mostre ainda a tabela ANOVA e a
+alocação de variação
+
+```{r}
+
+# Olhar gravacao
+
+
+```
+
+
+- 6. Usuários de um website foram convidados a avaliar diferentes layouts usando notas em uma
+escala de 1 (pior) a 10 (melhor). As notas atribuídas pelos usuários estão mostradas na tabela
+abaixo. Faça uma análise de variância para identificar se existem diferenças entre os layouts,
+mostrando a tabela ANOVA. Caso existam diferenças, use o método de Tukey para classificar os
+layouts (do melhor para o pior). Adote um nível de confiança de 90%.
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

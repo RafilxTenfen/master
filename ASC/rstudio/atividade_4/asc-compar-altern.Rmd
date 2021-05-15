@@ -1,0 +1,265 @@
+---
+title: "Comparação de Alternativas"
+author: "Rafael Tenfen"
+date: 'Data de entrega: 15/05/2021'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Descrição da atividade
+
+O objetivo desta atividade é aplicar as técnicas de comparação de alternativas. A atividade é dividida em três partes:
+
+1. Comparação usando ICs vs. teste _t_
+2. Comparação de duas alternativas
+3. Comparação de múltiplas alternativas
+
+Algumas recomendações:
+
+- Se você não estiver habituado com R Markdown, acostume-se a processar com frequência o  documento, usando o botão **Knit**. Isso permitirá que eventuais erros no documento ou no código R sejam identificados rapidamente, pouco depois de terem sido cometidos, o que facilitará sua correção. Na verdade, é uma boa ideia você fazer isso **agora**, para garantir que seu ambiente esteja configurado corretamente. Se você receber uma mensagem de erro do tipo _Error in library(foo)_, isso significa que o pacote `foo` não está instalado. Para instalar um pacote, execute o comando `install.packages("foo")` no Console, ou clique em _Tools_ -> _Install Packages_.
+- Após concluir a atividade, você deverá submeter no Moodle um arquivo ZIP contendo:
+    * o arquivo fonte .Rmd;
+    * a saída processada (PDF ou HTML) do arquivo .Rmd;
+    * os arquivos de dados referentes às Partes 2 e 3, que são necessários para o processamento do .Rmd. 
+
+# Configuração 
+
+Nesta atividade, a única configuração necessária consiste em carregar o pacote `ggplot2` e o arquivo `compar-altern.R`, que são usados na Parte 1 da atividade.
+
+```{r config}
+library(ggplot2)
+source("compar-altern.R")
+```
+
+
+# Parte 1: Comparação usando ICs vs. teste _t_
+
+Uma das formas de determinar se duas variáveis são estatisticamente diferentes é observando os seus intervalos de confiança. Existem três resultados possíveis para essa comparação:
+
+1. _Não existe sobreposição entre os ICs._ Nesse caso, as variáveis são estatisticamente diferentes.  
+1. _Existe sobreposição entre os ICs, e ao menos um deles inclui a média da outra variável._ Nesse caso, as variáveis são estatisticamente equivalentes.
+3. _Existe sobreposição entre os ICs, mas nenhum deles inclui a média da outra variável._ Nesse caso não é possível afirmar nada, sendo necessário realizar um teste _t_ (ou equivalente) para determinar se a diferença é estatisticamente significativa.
+
+O gráfico abaixo ilustra os três resultados. As variáveis comparadas são as colunas A--F do conjunto de dados contido no arquivo `comparacao-ic.dat`, e os ICs têm um nível de confiança de 95%. As conclusões visuais são as seguintes:
+
+1. As variáveis A e B são estatisticamente diferentes, e A < B.
+2. As variáveis C e D são estatisticamente equivalentes.
+3. Não é possível afirmar se E < F ou não, é preciso realizar um teste _t_ para ver se a diferença é estatisticamente significativa.
+
+```{r p1-graf-ic}
+dados <- read.table("comparacao-ic.dat", head=TRUE)
+dados.ic <- geraIC(dados)
+plotaIC(dados.ic)
+```
+
+Para esta primeira parte, você deve comparar os pares de variáveis representados no gráfico (A/B, C/D, E/F) usando o teste _t_ com um nível de confiança de 95% (o mesmo usado para gerar os ICs). Para cada par de variáveis, indique claramente (a) o resultado da comparação (ou seja, se as variáveis são ou não estatisticamente diferentes) e (b) se esse resultado é idêntico ao obtido pela comparação visual dos ICs. Considere que as observações não são pareadas.
+
+### Análise e respostas
+
+```{r p1-analise}
+# seu código R aqui
+dados
+nc = 0.95
+alfa = 1 - nc
+(dados.A.shap = shapiro.test(dados$A))
+dados.A.shap$p.value > alfa
+
+(dados.B.shap = shapiro.test(dados$B))
+dados.B.shap$p.value > alfa
+
+# Mesmo o shapiro apontando que alguns nados não possuem a distribuição normal, será adotado o test t pois a questão aponta para utilizar ^^
+# P < alfa significa que tem diferença
+# P > alfa significa que não tem diferença
+
+(dados.AB.test = t.test(dados$A, dados$B, conf.level=nc, paired=FALSE))
+dados.AB.test$p.value < alfa
+
+(dados.CD.test = t.test(dados$C, dados$D, conf.level=nc, paired=FALSE))
+dados.CD.test$p.value < alfa
+
+(dados.EF.test = t.test(dados$E, dados$F, conf.level=nc, paired=FALSE))
+dados.EF.test$p.value < alfa
+
+dados.EF.test$conf.int
+```
+
+- _Respostas aqui_
+
+- a) Foi identificado que o par A/B é estatiscamente diferente, pois não inclui o valor 0 no seu intervalo de confiança e o valor p-value `r round(dados.AB.test$p.value, 4)` é menor que o alfa `r alfa`. Já os pares C/D e E/F são estatisticamente equivalentes, pois o valor 0 está contido no intervalo de confiança e o p-value de C/D é `r round(dados.CD.test$p.value, 3)` maior que o alfa `r alfa` e também o p-value do par E/F é `r round(dados.EF.test$p.value, 3)` maior que o alfa também.
+
+- b) No caso dos pares A/B e C/D de fato é identico ao que é possível visualizar na comparação visual dos ICs, A/B são estatisticamente diferentes, C/D são estisticamente equivalentes e no caso do par E/F é possível ter conclusões mais precisas com o test t e afirmar que eles também são estisticamente equivalentes pois o seu intervalo de confiança `r round(dados.EF.test$conf.int, 2)` contém o valor 0.
+
+# Parte 2: Comparação de dois algoritmos de ordenação
+
+Nesta segunda parte iremos comparar o tempo de execução de dois algoritmos de ordenação, ordenação por inserção (_InsertionSort_) e ordenação por seleção (_SelectionSort_). Esses dois algoritmos têm complexidade $O(n^2)$, e são considerados ineficientes. 
+
+Para essa comparação iremos usar tempos de execução medidos pelo script Python `sortcomp2.py`. Esse script mede o tempo que cada algoritmo leva para ordenar **o mesmo vetor** de `n` elementos. O número de rodadas pode ser passado como parâmetro na linha de comando (por _default_ são realizadas 3 rodadas). A cada rodada os elementos do vetor sofrem uma permutação aleatória; logo, é possível (mas pouco provável) que o vetor esteja (quase) em ordem (de)crescente. 
+
+O script pode ser executado no RStudio Cloud. Na janela inferior esquerda, normalmente usada para o console, há uma aba Terminal, na qual você pode executar comandos do Linux. 
+
+Os passos deste experimento são os seguintes: 
+
+1. Execute o script usando o comando `python sortcomp2.py 2`. O número de rodadas (2, no exemplo) fica a seu critério.
+2. Verifique se os dados obtidos satisfazem as premissas do teste _t_. Use o teste de Shapiro-Wilk como teste de normalidade.^[O procedimento correto em caso de falha das premissas seria usar um outro teste para comparação das observações, como o teste de postos sinalizados de Wilcoxon. **Nesta atividade**, porém, para simplificar, use o teste _t_, independentemente do resultado do teste de normalidade.]
+3. Analise os dados obtidos, e identifique qual dos algoritmos tem melhor desempenho, considerando níveis de confiança de 95% e 99%. 
+4. O que mudaria na análise dos dados caso os vetores ordenados pelos dois algoritmos tivessem o mesmo número de elementos mas não fossem idênticos? Modifique o script (você pode usar o editor do próprio RStudio), alterando a linha
+```
+    v2 = v[:]
+```
+para
+```
+    v2 = v[:]
+    random.shuffle(v2)
+```
+Refaça os passos 1, 2 e 3 e veja se as conclusões são as mesmas obtidas inicialmente.
+
+Lembre-se que os tempos de execução dos algoritmos devem ser salvos em um arquivo de dados para que sua análise seja reproduzível. Para facilitar essa tarefa, o script já gera a saída em um formato apropriado; você pode redirecionar a saída do script para um arquivo (por exemplo, `python sortcomp2.py 2 >parte2.dat`) ou simplesmente criar o arquivo de dados no próprio editor do RStudio Cloud (crie um novo arquivo texto e cole a saída do script).
+
+### Análise e respostas
+
+```{r p2-analise}
+# seu código R aqui
+nc = 0.95
+alfa = 1 - nc
+
+p2.dados.2 <- read.table("parte2.2.dat", head=TRUE)
+p2.dados.2
+
+#shapiro.test(p2.dados.2$insertion)
+
+p2.dados.5 <- read.table("parte2.5.dat", head=TRUE)
+p2.dados.5$insertion
+
+(p2.dados.5.insertion.shap = shapiro.test(p2.dados.5$insertion))
+p2.dados.5.insertion.shap$p.value > alfa
+
+(p2.dados.5.selection.shap = shapiro.test(p2.dados.5$selection))
+p2.dados.5.selection.shap$p.value > alfa
+
+# p-value de shapiro é > alfa, então é possível assumir que a distribuição é normal
+
+p2.dados.100 <- read.table("parte2.100.dat", head=TRUE)
+#p2.dados.100$insertion
+#p2.dados.100
+
+# P < alfa significa que tem diferença
+# P > alfa significa que não tem diferença
+
+(p2.dados.100.insertion.shap = shapiro.test(p2.dados.100$insertion))
+p2.dados.100.insertion.shap$p.value > alfa
+
+(p2.dados.100.selection.shap = shapiro.test(p2.dados.100$selection))
+p2.dados.100.selection.shap$p.value > alfa
+
+(p2.dados.100.test95 = t.test(p2.dados.100$insertion, p2.dados.100$selection, conf.level=0.95))
+(p2.dados.100.test99 = t.test(p2.dados.100$insertion, p2.dados.100$selection, conf.level=0.99))
+
+str(p2.dados.100.test95)
+round(p2.dados.100.test95$p.value, 4) < 0.05
+round(p2.dados.100.test99$p.value, 4) < 0.01
+
+
+p2.dados.100.shuffle <- read.table("parte2.shuffle.100.dat", head=TRUE)
+#p2.dados.100.shuffle
+
+(p2.dados.100.shuffle.insertion.shap = shapiro.test(p2.dados.100.shuffle$insertion))
+p2.dados.100.shuffle.insertion.shap$p.value > alfa
+
+(p2.dados.100.shuffle.selection.shap = shapiro.test(p2.dados.100.shuffle$selection))
+p2.dados.100.shuffle.selection.shap$p.value > alfa
+
+(p2.dados.100.shuffle.test95 = t.test(p2.dados.100.shuffle$insertion, p2.dados.100.shuffle$selection, conf.level=0.95))
+(p2.dados.100.shuffle.test99 = t.test(p2.dados.100.shuffle$insertion, p2.dados.100.shuffle$selection, conf.level=0.99))
+
+#str(p2.dados.100.shuffle.test95)
+round(p2.dados.100.shuffle.test95$p.value, 4) < 0.05
+round(p2.dados.100.shuffle.test99$p.value, 4) < 0.01
+
+```
+
+- _Respostas aqui_
+- 1: Executado com 2, 5 e 100
+
+- 2: Bom, com 2 dados não é possível executar, com 5 os foi registrado que tanto o 'selection' quanto o 'insertion' tem a distribuição normal, porém com 100 dados as amostras possuem distribuição normal para o 'selection' mas não é possível dizer o mesmo para o 'insertion', de todo modo as amostras com 100 dados serão utilizados por terem maior quantidade de dados
+
+- 3: Para 95% de nivel de confiança e 100 amostras é possível observar que os dados estatisicamente possuem diferença, pois o intervalo de confiança `r round(p2.dados.100.test95$conf.int, 2)` não contem o valor 0 e o p-value: `r round(p2.dados.100.test95$p.value, 4)` é menor que o alfa: `r 1 - 0.95`.
+Para 99% de nivel de confiança e 100 amostras é possível observar que os dados estatisicamente possuem diferença, pois o intervalo de confiança `r round(p2.dados.100.test99$conf.int, 2)` não contem o valor 0 e o p-value: `r round(p2.dados.100.test99$p.value, 4)` é menor que o alfa: `r 1 - 0.99`.
+A média de 'insertion' `r round(mean(p2.dados.100$insertion), 2)` é maior que a média de `r round(mean(p2.dados.100$selection), 2)` e como estamos com a métrica de tempo de execução, quanto menor melhor, então o algoritmo de 'selection' é melhor.
+
+- 4: A análise continou a mesma adicionando o shuffle ao script, até executei novamente pra certificar...
+Entao tanto para 95, quanto 99% de nivel de confiança para as 100 amostras e possivel observar estatisticamente que os dados possuem diferença e a média do 'insertion' é maior que a média do 'selection' e como estamos com a métrica de tempo de execução, quanto menor melhor, então o algoritmo de 'selection' é melhor.
+
+
+# Parte 3: Comparação de três algoritmos de ordenação
+
+Na terceira parte iremos comparar o tempo de execução de três algoritmos de ordenação, _QuickSort_, _MergeSort_ e _HeapSort_. Esses três algoritmos têm complexidade $O(n \log n)$ no caso médio, e são considerados eficientes. Para essa comparação iremos usar tempos de execução medidos pelo script Python `sortcomp3.py`, que é análogo ao script usado na segunda parte da atividade.
+
+Neste experimento, primeiro execute o script usando o comando `python sortcomp3.py 2`. O número de rodadas (2, no exemplo) fica a seu critério. 
+
+A seguir, faça uma análise de variância adotando um nível de confiança de 95%, e responda aos seguintes itens:
+
+1. Qual a porcentagem de variação que pode ser explicada pelas alternativas e qual a porcentagem explicada pelo ruído das medições?
+2. Mostre a tabela ANOVA (conforme o esquema abaixo) e determine se existem diferenças estatisticamente significativas entre os tempos médios de resposta de cada algoritmo. 
+    
+    Fonte de variação  | Alternativas | Erros | Total
+    -------------------+--------------+-------+-------
+    Soma de quadrados  |              |       | 
+    Graus de liberdade |              |       | 
+    Média quadrática   |              |       | 
+    _F_ calculado      |              |       | 
+    _F_ crítico        |              |       | 
+
+3. Caso a ANOVA indique que há diferenças estatisticamente significativas, ranqueie os algoritmos de acordo com o seu tempo médio de resposta (use o teste de Tukey).
+
+Novamente, lembre-se que os tempos de execução dos algoritmos devem ser salvos em um arquivo de dados para que sua análise seja reproduzível. Caso necessário, reveja as orientações ao final da Parte 2.
+
+### Análise e respostas
+
+```{r p3-analise}
+# seu código R aqui
+p3.dados <- read.table("parte3.100.dat", head=TRUE)
+#p3.dados
+p3.stack = stack(p3.dados)
+#p3.stack
+(p3.aov = aov(values~ind, p3.stack))
+summary(p3.aov)
+#str(p3.aov)
+
+ssa = 2.535
+sse = 0.008
+sst = ssa + sse
+(alt = ssa/sst * 100) 
+(ruido = sse/sst * 100) 
+
+
+ssa2 = ssa/2
+sse2 = sse/(2*297)
+
+(hsd = TukeyHSD(p3.aov, conf.level=0.95))
+
+(Fcrit = qf(0.95, p3.aov$rank - 1, p3.aov$df.residual))
+
+Fcalc = 47302
+Fcalc > Fcrit
+
+apply(p3.dados, 2, mean)
+
+plot(hsd)
+```
+
+- _Respostas aqui_
+- 1: A porcentagem de variação explicada devido a diferença entre as alternativas é de `r round(alt, 2)`%. Já a porcentagem de variação explicada devido a ruido nas medições é de `r round(ruido, 2)`%.
+
+
+- 2: 
+    
+    Fonte de variação  | Alternativas | Erros | Total
+    -------------------+--------------+-------+-------
+    Soma de quadrados  |   `r ssa`    |`r sse`|`r sst` 
+    Graus de liberdade |      2       | 297   | 299
+    Média quadrática   |  `r ssa2`    |`r round(sse2, 5)`| 
+    _F_ calculado      |    47302     |       | 
+    _F_ crítico        |`r round(Fcrit, 2) `|       | 
+
+- 3: Fcalc > Fcrit: `r Fcalc > Fcrit`, entao aov indica que existe uma diferença significativa. Utilizando TukeyHSD para verificar a diferença entre os pares p adj é sempre 0 que é menor que o alfa 0.05. Assim, de acordo com a métrica de tempo de execução, ou seja quanto menor melhor, a ordem fica 'quick' sendo o melhor, 'merge' o próximo e 'heap' o pior.
