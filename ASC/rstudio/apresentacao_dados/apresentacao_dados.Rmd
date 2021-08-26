@@ -1,0 +1,139 @@
+---
+title: "project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- 1.[Jain 1991, 10.1]Que tipo de gráfico (de linha ou de barras) você usaria para apresentar
+
+- (a)  A utilização de CPU nos 12 meses do ano
+R: barra
+
+(b)  A utilização de CPU em função do tempo em meses
+R: linha
+
+(c)  O número de operações de E/S em três discos A, B e C
+R: barra
+
+(d)  O número de operações de E/S em função do número de discos no sistema
+R: barra
+
+
+- 2.[Jain 1991, 10.2]Liste os problemas com os gráficos da figura abaixo.
+
+- a) não saber oq é U ou N e falta de legenda das linhas, escala no eixo
+
+- b) eixo y, começa no 200, escala não proporcional no eixo x
+
+- c) legenda das linhas, e os valores
+
+- d) valores do eixo y, valores do eixo x não ta em ordem
+
+
+- 3.  O gráfico Kiviat abaixo ilustra a utilização de processador, memória, rede e disco em três siste-mas diferentes submetidos à mesma carga de trabalho.
+
+- (a)  Preencha a tabela abaixo com valores inferidos do gráfico.
+
+- Sistema A
+ - CPU: 75
+ - memória: 80
+ - rede: 75
+ - disco: 75
+- Sistema B
+ - CPU: 98
+ - memória: 95
+ - rede: 50
+ - disco: 70
+- Sistema C
+ - CPU: 60
+ - memória: 87
+ - rede: 92
+ - disco: 90
+ 
+- (b)  Supondo que a carga de trabalho usada no experimento seja considerada típica para o am-biente de produção, diga qual dos três sistemas deveria ser usado, justificando a escolha.
+R: Sistema A, pois ele esta melhor equilibrado
+ 
+ 
+- 4. A tabela abaixo mostra a utilização média de CPU em um servidor. Crie um gráfico que permitauma boa visualização do uso de processador.
+- Gráfico de histograma
+```{r}
+q4 = read.table('q4.dat', header = TRUE)
+q4
+
+plot(q4)
+hist(q4$utilizacao, col="GREEN", ylab="Utilização %")
+```
+ 
+- 5.  A tabela abaixo mostra os tempos médios de leitura e escrita para arquivos de diferentes ta-manhos em um sistema.  Mostre graficamente a relação entre tamanho de arquivo e tempo deleitura/escrita, comentando os resultados.
+
+- linha 
+ 
+ 
+- 6.  O arquivo de dadosthroughput.datcontém medidas dothroughputde um servidor de aplicaçãoem função do número de usuários simultâneos.
+
+## Throughput
+
+```{r}
+  
+throughput = read.table('throughput.dat', header = TRUE)
+plot(throughput)
+
+```
+
+- (a)  Crie um gráfico que permita uma boa visualização dothroughput. Linha
+- (b)  Qual a tendência esperada para othroughputcomn>150 usuários? Justifique sua resposta. Não da pra determinar com os dados atuais
+
+- 7.  O arquivo de dadosfilesizes.datcontém medidas do tamanho dos arquivos em um diretório,em bytes. Ilustre graficamente os tamanhos encontrados.
+## Filesizes
+
+```{r}
+  
+filesizes = read.table('filesizes.dat')
+plot(filesizes)
+```
+
+
+## Aula 20/05
+
+- 1. Considere duas métricas de desempenho para um dado sistema de interesse. Que tipos de
+eventos (segundo a classificação da seção 6.1.1) correspondem a essas métricas? Quais estratégias de medição (segundo a classificação da seção 6.1.2) podem ser usadas para obtê-las?
+
+- 2. Em um determinado sistema, dotado de um temporizador de intervalo com resolução de 50 µs,
+sabe-se que o tempo gasto para tratar uma interrupção de rede é inferior a 30 µs, mas deseja-se
+ter uma noção mais precisa de qual é esse tempo. Foi feito então um experimento, onde, em
+um conjunto de 244.918 interrupções, em 98.765 delas observou-se um avanço de um tick do
+temporizador em um determinado sistema. Determine um intervalo de confiança de 99% para
+o tempo de processamento de uma interrupção de rede nesse sistema.
+
+- 3. Uma empresa monitora o uptime do seu enlace Internet usando a ferramenta ping, com intervalo de 10 s. Ao longo de cinco dias de monitoramento, foram observados os seguintes valores:
+
+```{r}
+  
+pings = read.table('q3_pings.dat', header = TRUE)
+pings
+plot(pings)
+```
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

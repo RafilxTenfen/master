@@ -1,0 +1,249 @@
+---
+title: "Regressão Linear"
+author: "Rafael Tenfen"
+date: 'Data de entrega: 28/05/2021'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width='70%', fig.align="center")
+```
+
+# Descrição da atividade
+
+O objetivo desta atividade é aplicar as técnicas de regressão linear. A atividade é dividida em três partes:
+
+1. Adivinhe a correlação
+2. Análise da relação entre variáveis
+3. Análise de regressão com dados experimentais
+
+Algumas recomendações:
+
+- Se você não estiver habituado com R Markdown, acostume-se a processar com frequência o  documento, usando o botão **Knit**. Isso permitirá que eventuais erros no documento ou no código R sejam identificados rapidamente, pouco depois de terem sido cometidos, o que facilitará sua correção. Na verdade, é uma boa ideia você fazer isso **agora**, para garantir que seu ambiente esteja configurado corretamente. Se você receber uma mensagem de erro do tipo _Error in library(foo)_, isso significa que o pacote `foo` não está instalado. Para instalar um pacote, execute o comando `install.packages("foo")` no Console, ou clique em _Tools_ -> _Install Packages_.
+- Após concluir a atividade, você deverá submeter no Moodle um arquivo ZIP contendo:
+    * o arquivo fonte .Rmd;
+    * a saída processada (PDF ou HTML) do arquivo .Rmd;
+    * a imagem da Parte 1 e os arquivos de dados referentes à Parte 3, que são necessários para o processamento do .Rmd. 
+
+# Configuração 
+
+Nesta atividade, nenhuma configuração é necessária por padrão, mas você pode usar o bloco abaixo para incluir o que julgar necessário.
+
+```{r config}
+# insira seus comandos de configuração aqui
+```
+
+
+# Parte 1: Adivinhe a Correlação
+
+Nesta parte você irá exercitar a sua familiaridade com o coeficiente de correlação de Pearson, que é uma medida da correlação linear entre duas variáveis. Para isso, basta jogar _Guess the Correlation_, um jogo online em que você faz pontos ao adivinhar de forma aproximada o coeficiente de correlação para um dado gráfico de dispersão. O jogo está disponível em [`http://guessthecorrelation.com/`](http://guessthecorrelation.com/). Tire uma selfie onde apareçam **seu rosto e seu resultado** no jogo (**só vale escore de 25 ou mais!**), e insira-a no lugar do meu resultado de 59 pontos abaixo: 
+
+![Guess the Correlation](guessthecorrelation-59pts.jpg)
+
+
+38pts! 
+![Guess the Correlation](guess_correlation_38pts.jpg)
+
+# Parte 2: Análise da Relação entre Variáveis
+
+Uma etapa preliminar em uma análise de regressão é estabelecer se as variáveis consideradas efetivamente possuem a relação esperada pelo modelo de regressão. Para isso, utiliza-se o ferramental da análise exploratória de dados.
+
+O arquivo `variaveis.dat` possui cinco pares de variáveis (`x1`-`y1`, `x2`-`y2`, ..., `x5`-`y5`). Nesta parte da atividade, você deve determinar para quais desses pares parece possível construir um modelo de regressão linear. Use o bloco R abaixo para realizar as análises de dados, e nas respostas indique, **para cada par x-y**, se seria viável uma regressão ou não, **justificando sua resposta**. Algumas observações:
+
+- **não é necessário construir o modelo**, apenas realizar a análise exploratória dos dados;
+- em cada par, considere sempre _y_ como variável de resposta e _x_ como variável preditora.
+
+
+### Análise e respostas
+
+```{r p2-analise}
+pares <- read.table("variaveis.dat", header = TRUE)
+```
+
+_Respostas aqui_
+
+## Parte 2 - Relacionamento entre os pares 
+
+- Adotado 95% de nível de confiança
+ 
+### x1 - y1
+```{r p2-analise-pares-x1-y1}
+plot(pares$x1, pares$y1)
+(cor.x1y1 = cor(pares$x1, pares$y1))
+(test.x1y1 = cor.test(pares$x1, pares$y1))
+#summary(test.x1y1)
+```
+
+- __Resposta x1 - y1__ A correlação entre os dados é significativamente baixa `r round(cor.x1y1, 3)`. Além da análise dos dados apresentar alta dispersão e o p-value `r round(test.x1y1$p.value, 3)` é maior que um alfa de 0.05 para um nível de confiaça de 95%, assim não seria viável construir um modelo de regressão.
+
+### x2 - y2
+```{r p2-analise-pares-x2-y2}
+plot(pares$x2, pares$y2)
+(cor.x2y2 = cor(pares$x2, pares$y2))
+(test.x2y2 = cor.test(pares$x2, pares$y2))
+```
+
+- __Resposta x2 - y2__ A correlação entre os dados é significativamente alta `r round(cor.x2y2, 3)`. Além da análise exploratória apresentar baixa dispersão entre os dados e o p-value `r round(test.x2y2$p.value, 15)` é menor que o alfa 0.05 para um nível de confiaça de 95%, assim possuindo um grau significativo elevado assim sendo viável construir um modelo de regressão.
+
+
+### x3 - y3
+```{r p2-analise-pares-x3-y3}
+plot(pares$x3, pares$y3)
+(cor.x3y3 = cor(pares$x3, pares$y3))
+(test.x3y3 = cor.test(pares$x3, pares$y3))
+
+#sd(pares$x3)
+#sd(pares$y3)
+```
+
+- __Resposta x3 - y3__ A correlação entre os dados é relativamente alta `r round(cor.x3y3, 3)`, não é aquilo tudo mas da pra considerar correlaçao de alguma forma entre os dados. A análise exploratória dos dados apresenta uma dispersão aceitável e o p-value `r round(test.x3y3$p.value, 6)` é menor que o alfa 0.05 para um nível de confiaça de 95%. Assim, acredito ser viável construir um modelo de regressão.
+
+### x4 - y4
+```{r p2-analise-pares-x4-y4}
+plot(pares$x4, pares$y4)
+(cor.x4y4 = cor(pares$x4, pares$y4))
+(test.x4y4 = cor.test(pares$x4, pares$y4))
+```
+
+- __Resposta x4 - y4__ A correlação entre os dados é significativamente alta `r round(cor.x4y4, 3)`. A análise entre os dados apresenta baixa dispersão e o p-value `r round(test.x4y4$p.value, 15)` é menor que o alfa 0.05 para um nível de confiaça de 95%, assim possuindo um grau significativo elevado e é viável construir um modelo de regressão.
+
+### x5 - y5
+```{r p2-analise-pares-x5-y5}
+plot(pares$x5, pares$y5)
+(cor.x5y5 = cor(pares$x5, pares$y5))
+(test.x5y5 = cor.test(pares$x5, pares$y5))
+```
+
+- __Resposta x5 - y5__ A correlação entre os dados é baixa `r round(cor.x5y5, 3)`. A análise dos dados apresentar alta dispersão e o p-value `r round(test.x5y5$p.value, 3)` é maior que o alfa 0.05 para um nível de confiaça de 95%, assim não seria viável construir um modelo de regressão.
+
+
+
+# Parte 3: Análise de Regressão com Dados Experimentais
+
+Para essa comparação iremos usar tempos de execução medidos pelo script Python `fibo.py`. Esse script mede o tempo necessário para encontrar N vezes o quinquagésimo termo da série de Fibonacci. O script varia o valor de N de acordo com três parâmetros na linha de comando:
+~
+- o valor inicial de N;
+- o valor final de N;
+- o passo de incremento.
+
+O quarto parâmetro na linha de comando é quantas repetições são realizadas para cada valor testado; se o parâmetro não for especificado, cada valor de N é mensurado apenas uma vez. Por exemplo, o comando
+
+```
+python3 fibo.py 100 200 25 2
+```
+1200000 - 1000000 - 120000
+executa o script com N valendo 100, 125, 150, 175 e 200, com duas repetições para cada valor de N.
+
+O script pode ser executado no RStudio Cloud. Na janela inferior esquerda, normalmente usada para o console, há uma aba Terminal, na qual você pode executar comandos do Linux. 
+
+Os passos deste experimento são os seguintes: 
+
+1. Execute o script `fibo.py`. Os parâmetros devem ser ajustados a seu critério, respeitando as seguintes considerações:
+
+    - o valor inicial de N deve produzir um tempo de execução superior a 0,5 s (em testes no RStudio Cloud, 100.000 mostrou-se um valor satisfatório, mas verifique);
+    - o valor final deve ser pelo menos 10 vezes o valor inicial;
+    - pelo menos oito valores distintos de N (incluindo o inicial e o final) devem ser usados;
+    - devem ser realizadas pelo menos quatro medições para cada valor de N.
+
+2. Especifique um modelo de regressão para o tempo de execução em função de N e ajuste-o aos dados coletados no passo 1. Qual a equação de regressão obtida?
+3. Verifique a qualidade do ajuste e faça o diagnóstico dos resíduos do modelo. Determine se o modelo é adequado ou não. 
+4. Use o modelo para obter predições para quatro valores de N **diferentes** dos usados no script, sendo **dois valores dentro do intervalo** mensurado para N e **dois valores fora** desse intervalo (por exemplo, considerando o exemplo de execução do script, onde o intervalo era 100-200, os valores poderiam ser 51, 123, 171 e 500). Além das estimativas pontuais, obtenha também os intervalos de confiança de 95% para as predições.
+5. Execute novamente o script para obter uma medida para cada um dos valores de N usados no item anterior. Calcule os erros $e_i=y_i-\hat{y}_i$ correspondentes a essas medidas, e verifique se as medidas estão dentro dos intervalos de confiança obtidos no item 4. 
+6. De acordo com o modelo, qual o valor de N correspondente a um tempo de execução de 23 segundos? Execute o script para obter o tempo de execução para esse valor de N, e determine o erro $e_i$ dessa medida.
+
+Lembre-se que os dados experimentais devem ser salvos em arquivos para que sua análise seja reproduzível. Para facilitar essa tarefa, o script já gera a saída em um formato apropriado; você pode redirecionar a saída do script para um arquivo (por exemplo, `python3 fibo.py 100 200 25 2 >fibo.dat`) ou simplesmente criar o arquivo de dados no próprio editor do RStudio Cloud (crie um novo arquivo texto e cole a saída do script). Para as execuções dos passos 5 e 6 você pode gerar um único arquivo de dados.
+
+### Análise e respostas
+
+```{r p3-analise}
+# seu código R aqui
+# python3 fibo.py 120000 1000000 5000 5 > part3.dat
+# python3 fibo.py 90000 1300000 5000 5 > part3_12.dat
+part3 <- read.table("part3.dat", header = TRUE)
+#length(part3)
+str(part3)
+
+lmp3 = lm(tempo ~ n, data=part3)
+lmp3
+#str(lmp3)
+
+(lmp3.summary = summary(lmp3))
+
+#str(lmp3.summary)
+
+#par(mfrow=c(2,2)); 
+plot(lmp3)
+plot(part3)
+abline(lmp3, col='red')
+
+diffResidxFitted = 100*resid(lmp3)/fitted(lmp3)
+max(diffResidxFitted)
+
+(lmp3.predict = predict(lmp3, newdata = data.frame(n=c(100000, 400000, 800000, 1200000)), conf.level=0.95))
+
+
+(tempo.400000 = part3$tempo[part3$n == 400000])
+#tempo.400000.diff = diff(tempo.400000, lmp3.predict[2])
+tempo.400000.diff = abs(tempo.400000 - lmp3.predict[2])
+(tempo.800000 = part3$tempo[part3$n == 800000])
+#tempo.800000.diff = diff(tempo.800000, lmp3.predict[3])
+tempo.800000.diff = abs(tempo.800000 - lmp3.predict[3])
+
+part312 <- read.table("part3_12.dat", header = TRUE)
+(tempo.100000 = part312$tempo[part312$n == 100000])
+tempo.100000.diff = abs(tempo.100000 - lmp3.predict[1])
+(tempo.1200000 = part312$tempo[part312$n == 1200000])
+tempo.1200000.diff = abs(tempo.1200000 - lmp3.predict[4])
+
+
+(lmp3.predict.confinterval = lmp3.predict - (lmp3.predict * 0.95))
+lmp3.predict[4]
+tempo.100000.diff < lmp3.predict.confinterval[1]
+tempo.400000.diff < lmp3.predict.confinterval[2]
+tempo.800000.diff < lmp3.predict.confinterval[3]
+tempo.1200000.diff < lmp3.predict.confinterval[4]
+
+
+(tempo.23s = (lmp3.summary$coefficients[1] - 23) / (-lmp3.summary$coefficients[2]))
+predict(lmp3, newdata = data.frame(n=c(tempo.23s)), conf.level=0.95)
+
+tempo.23s 
+#tempo.23s = 
+part23s <- read.table("part3_4850068.dat", header = TRUE)
+part23s
+tempo.23s
+(part23s.conf = (23 * 100) / part23s$tempo)
+(part23s.err = 100 - part23s.conf)
+```
+
+_Respostas aqui_
+1 - CLI: 120000 inicia em 0.54 e 1200000 termina em 5.4
+- python3 fibo.py 120000 1000000 5000 5 > part3.dat
+
+2 - Formula = tempo ~ n. Equaçao de regressão obtida: tempo = `r round(lmp3.summary$coefficients[1], 4)` + `r round(lmp3.summary$coefficients[2], 6)` n
+
+3 - O resíduo do modelo, está meio disperso como se fosse um cone pelo apresentado no gráfico, contudo ao mensurar a máxima diferença entre os resíduos e ajustes chega só a `r round(max(diffResidxFitted), 2)` %, e os resíduos na normal, ficou bacana como se fosse um normal ou no máximo 'light tailed' com pequenas mudanças nas caudas, o R-squared é bom e o modelo é significativo então meu veredito final é que o modelo é adequado.
+
+- 4: N x Estimativa
+- 100000 x `r round(lmp3.predict[1], 3)`s, Nível de Confiança 95%: `r round(lmp3.predict.confinterval[1], 3)`s
+- 400000 x `r round(lmp3.predict[2], 3)`s, Nível de Confiança 95%: `r round(lmp3.predict.confinterval[2], 3)`s
+- 800000 x `r round(lmp3.predict[3], 3)`s, Nível de Confiança 95%: `r round(lmp3.predict.confinterval[3], 3)`s
+- 1200000 x `r round(lmp3.predict[4], 3)`s, Nível de Confiança 95%: `r round(lmp3.predict.confinterval[4], 3)`s
+
+- Comparando as duas predições (400000, 800000) com as medicoes executadas
+- `r round(lmp3.predict[2], 3)` - `r round(tempo.400000, 3)` = `r round(tempo.400000.diff, 3)`
+- `r round(lmp3.predict[3], 3)` - `r round(tempo.800000, 3)` = `r round(tempo.800000.diff, 3)`
+
+- Devo reconhecer que eu esperava uma diferença menor da predição que ja existia nos dados utilizados para especificação do modelo, mas em todos os dois casos, a predição fica dentro do intervalo de confiança de 95%
+
+- 5: Acredito que o modelo se adaptou bem para os valores que não estavam contemplados nos dados coletados e todos foram validos para um Nível de confiança de 95%, porem se fosse para 99% nenhuma prediçao seria valida
+- 100000: `r round(lmp3.predict[1], 3)`s `r round(tempo.100000, 3)` = `r round(tempo.100000.diff, 3)` < Nível de Confiança 95%: `r tempo.100000.diff < lmp3.predict.confinterval[1]`
+- 1200000: `r round(lmp3.predict[4], 3)`s - `r round(tempo.1200000, 3)` = `r round(tempo.1200000.diff, 3)` < Nível de Confiança 95%: `r tempo.1200000.diff < lmp3.predict.confinterval[4]`
+
+
+- 6: De acordo com o modelo, o valor de N correspondente a 23s é de `r round(tempo.23s, 3)`, Ja testando o mesmo N `r tempo.23s` no script `python3 fibo.py 4850068 4850068 5000 5`, gera os tempos de `r part23s$tempo` s. E os erros relacionado ao 23s são de `r round(part23s.err, 2)` % respectivamente. O que é considerado algo bom utilizando um Nível de confiança de 95%, porém invalido para algumas medidas utilizando 99%.
+
+
+

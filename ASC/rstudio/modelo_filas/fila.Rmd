@@ -1,0 +1,411 @@
+---
+title: "modelo_fila"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Exercícios – Modelos de Filas
+
+- 1. [Freitas, 8.1] Interprete o significado da notação de Kendall para a fila Ek/G/6/30/500/LCFS.
+
+- Ek: Erlang com parâmetro k;
+- G: Tempos de serviço distribuídos de forma arbitrária;
+- 6: Número de servidores;
+- 30: capacidade do sistema (tamanho da fila);
+- 500: tamanho da população;
+- LCFS: LCFS (Last Come First Serve) mesmo LIFO (Last In First Out) Ultimo a entrar, primeiro a sair
+
+2. [Jain, 30.2] Por que não é uma boa ideia ter uma fila Hk/G/12/10/5/LCFS?
+
+- Hk: Hiperexponencial com parâmetro k;
+- G: Tempos de serviço distribuídos de forma arbitrária;
+- 12: Número de servidores;
+- 10: capacidade do sistema (tamanho da fila);
+- 5: tamanho da população;
+- LCFS: LCFS (Last Come First Serve) mesmo LIFO (Last In First Out) Ultimo a entrar, primeiro a sair
+
+Pois o tamanho da população é hiperexponencial de 5, e a capacidade do sistema (tamanho da fila) é 10
+
+3. [Jain, 30.3] Qual sistema de filas teria o melhor desempenho: um sistema M/M/3/300/100 ou
+um sistema M/M/3/100/100?
+
+- M: Tempos entre chegadas com distribuição exponencial
+- M: Tempo de serviço com distribuição exponencial
+- 3: Número de servidores;
+- 300 x 100: capacidade do sistema (tamanho da fila);
+- 100: tamanho da população;
+- FIFO(First in Fist out)
+
+__3. Ambas as filas têm o mesmo desempenho. Aumentar o tamanho máximo de fila além do tamanho da população não tem nenhum efeito.__
+Acredito que o desempenho deva ser o mesmo, considerando que a unica diferença entre eles é o tamanho da fila, se a fila nunca chegar a um limite de 100, os sistemas terão o mesmo desempenho, caso ultrapasse a capacidade do sistema de 100 no seu tamanho de fila, acredito que o sistema "M/M/3/300/100" tenha um desempenho melhor
+
+4. [Jain, 30.4mod] Durante um intervalo de observação de uma hora, o servidor de nomes de um
+sistema distribuído recebeu 10.800 requisições. Observou-se que o tempo médio de resposta
+dessas requisições foi de 1/3 de segundo. Qual o número médio de consultas no servidor?
+Suponha que o servidor pode ser modelado por um sistema M/M/1.
+
+- M: Tempos entre chegadas com distribuição exponencial
+- M: Tempo de serviço com distribuição exponencial
+- 1: Número de servidores;
+- infinito: capacidade do sistema (tamanho da fila);
+- infinito: tamanho da população;
+- FIFO(First in Fist out)
+
+
+Taxa de chegada = 10800 requisicoes
+Taxa de servico = 3 req/segundo
+
+```{r}
+taxChegadaY = 10800 / 3600
+taxServico = 3
+
+utilizacao = taxChegadaY / taxServico
+medio = utilizacao / (abs(1 - utilizacao))
+
+medio
+```
+
+
+5. Mostre o que aconteceria com o tempo de resposta do exercício 4 se fosse colocado mais um
+servidor de nomes para aliviar a carga sobre o sistema. Suponha que os tempos entre chegadas
+e os tempos de serviço são distribuídos exponencialmente, e considere dois casos distintos:
+(a) cada servidor tem sua própria fila de requisições;
+(b) a fila de requisições é compartilhada entre os servidores.
+
+(a) cada servidor tem sua própria fila de requisições;
+
+Negative!
+
+6. [Lilja, 11.1+11.2] Considere que o tempo médio necessário para servir uma requisição em uma
+interface de rede é 250 µs
+(a) Qual a maior taxa de requisições que essa interface é capaz de processar? `r  1000000 / 250` req / segundo
+(b) Qual a utilização da interface de rede se a taxa de requisições for a metade da taxa máxima
+calculada no item (a)?  ???? pq 50%
+
+7. [Lilja, 11.3] Se o tempo médio de resposta de um sistema de tempo compartilhado for 60 ms,
+qual a maior taxa média de chegadas que pode ser tolerada para garantir que não mais que 100
+jobs em média estejam no servidor em um dado instante?
+
+Nao consegui...
+
+```{r}
+(req7 = 1000 / 60)
+
+
+```
+
+
+Taxa de servico = 1 req / 60 ms = `r  floor(req7)` requisicao / segundo
+
+8. [Lilja, 11.6] Determine o tempo médio de resposta para um sistema com um único servidor no
+qual o tempo médio entre chegadas é de 230 µs e o tempo médio necessário para atender um
+job é de 52 µs.
+
+```{r}
+taxaChedada = 1 / (0.000001 * 230)
+taxaChedada
+
+
+taxaServico = 1 / (0.000001 * 52)
+taxaServico
+
+
+tempoMedio = 1 / (taxaServico - taxaChedada)
+tempoMedio
+```
+
+11. Tempo de resposta medio: ´ E[r] =
+1
+µ
+1 − ρ
+=
+1
+µ − λ
+
+`r tempoMedio` req / segundo  
+
+9. Em um balanceador de carga web, medições mostram que requisições chegam a uma taxa média de 125 requisições por segundo, e o balanceador leva em média 2 ms para encaminhá-las.
+Usando um modelo M/M/1, analise o balanceador, descrevendo sua utilização, sua taxa máxima de serviço, o número médio de requisições no balanceador e o tempo médio dispendido
+no balanceador. Qual a probabilidade de ocorrer overflow se o balanceador tiver espaço em buffer para apenas 13 requisições? Qual o tamanho de buffer que seria necessário para manter o
+descarte de requisições abaixo de uma por um milhão?
+
+```{r}
+
+taxaServico = 1 / (2 * 0.001)
+taxaServico
+```
+
+λ = 125 req / segundo
+µ = 2
+
+
+10. [Jain, 31.3mod] O tempo médio de resposta de um sistema de banco de dados é de 3 s. Durante
+um intervalo de observação de um minuto, o tempo ocioso do sistema foi de 10 s. Usando um
+modelo M/M/1 para o sistema, determine:
+(a) a utilização do sistema;
+(b) o tempo médio de serviço por consulta;
+(c) o número de consultas completadas durante o intervalo de observação;
+(d) o número médio de jobs no sistema;
+(e) a probabilidade do número de jobs no sistema ser superior a 10.
+```{r}
+
+E.r = 3 #second
+```
+10. T = 60 s B = 60 − 10 = 50 s E[r] = 3 s
+Onde saiu o T e B
+
+
+
+
+11. [Jain, 31.4mod] Um sistema de armazenamento consiste de três discos que compartilham uma
+fila comum. O tempo médio para atender a uma requisição de E/S é de 50 ms. As requisições de
+E/S chegam no sistema de armazenamento a uma taxa de 30 requisições por segundo. Usando
+um modelo M/M/3 para o sistema, determine:
+(a) a utilização média do disco;
+(b) a probabilidade do sistema estar ocioso, p0;
+(c) a probabilidade de enfileiramento, PQ;
+(d) o número médio de requisições no sistema, E[n];
+(e) o tempo médio de resposta, E[r];
+(f) o tempo médio de espera na fila, E[w].
+```{r}
+tempo = 50 / 1000
+
+(taxaChegadaY = 30) # segundo
+(taxaServicoU = 1/tempo)
+
+intensidadeP = taxaChegadaY / (taxaServicoU * 3)
+intensidadeP
+
+fact <- function( no ) {
+  # check if no negative, zero or one then return 1
+  if( no <= 1) {
+    return(1)
+  } else {
+    return(no * fact(no-1))
+  }
+}
+
+m = 3
+
+ociosoP0 = (1 + (
+    ((m * intensidadeP) ^ m) / (fact(m) * (1 - intensidadeP))
+)  + (
+  (((m * intensidadeP)^2)/fact(2)) + (((m * intensidadeP)^1)/fact(1))
+)) ^-1
+
+ociosoP0
+probabilidadeEnfileiramento = (((m * intensidadeP) ^ m) / (fact(m) * (1 - intensidadeP))) * ociosoP0
+probabilidadeEnfileiramento
+
+numeroMedioReq = (m * intensidadeP) + ((intensidadeP * probabilidadeEnfileiramento) / (1 - intensidadeP))
+numeroMedioReq
+
+tempoMedioResposta = (1 / taxaServicoU) * (1 + (probabilidadeEnfileiramento / (m * (1 - intensidadeP))))
+tempoMedioResposta
+  
+tempoMediaEsperaFila = probabilidadeEnfileiramento / (m * taxaServicoU * (1 - intensidadeP))
+tempoMediaEsperaFila
+# Intensidade de trafego (utilizac¸ ´ ao): intensidadeP
+```
+
+(a) a utilização média do disco; `r taxaServicoU` req/sec
+(b) a probabilidade do sistema estar ocioso, p0; `r ociosoP0`
+(c) a probabilidade de enfileiramento, PQ; `r probabilidadeEnfileiramento`
+(d) o número médio de requisições no sistema, E[n]; `r round(numeroMedioReq, 2)`
+(e) o tempo médio de resposta, E[r]; `r round(tempoMedioResposta, 4)` segundos
+(f) o tempo médio de espera na fila, E[w]. `r round(tempoMediaEsperaFila, 4)` segundos
+
+12. [Jain, 31.5mod] Repita o exercício 11, considerando que cada disco possui uma fila separada,
+com taxa de chegada λ/3. Com base no tempo médio de resposta, determine se, em um sistema
+com K recursos idênticos, é melhor ter uma fila única compartilhada ou filas separadas para
+cada recurso.
+
+```{r}
+(taxaChegadaY = 30/3) # segundo
+
+intensidadeP = taxaChegadaY / (taxaServicoU * 3)
+intensidadeP
+
+m = 3
+
+ociosoP0 = (1 + (
+    ((m * intensidadeP) ^ m) / (fact(m) * (1 - intensidadeP))
+)  + (
+  (((m * intensidadeP)^2)/fact(2)) + (((m * intensidadeP)^1)/fact(1))
+)) ^-1
+
+ociosoP0
+probabilidadeEnfileiramento = (((m * intensidadeP) ^ m) / (fact(m) * (1 - intensidadeP))) * ociosoP0
+probabilidadeEnfileiramento
+
+numeroMedioReq = (m * intensidadeP) + ((intensidadeP * probabilidadeEnfileiramento) / (1 - intensidadeP))
+numeroMedioReq
+
+tempoMedioResposta = (1 / taxaServicoU) * (1 + (probabilidadeEnfileiramento / (m * (1 - intensidadeP))))
+tempoMedioResposta
+  
+tempoMediaEsperaFila = probabilidadeEnfileiramento / (m * taxaServicoU * (1 - intensidadeP))
+tempoMediaEsperaFila
+# Intensidade de trafego (utilizac¸ ´ ao): intensidadeP
+```
+
+
+(a) a utilização média do disco; `r taxaServicoU` req/sec
+(b) a probabilidade do sistema estar ocioso, p0; `r ociosoP0`
+(c) a probabilidade de enfileiramento, PQ; `r probabilidadeEnfileiramento`
+(d) o número médio de requisições no sistema, E[n]; `r round(numeroMedioReq, 2)`
+(e) o tempo médio de resposta, E[r]; `r round(tempoMedioResposta, 4)` segundos
+(f) o tempo médio de espera na fila, E[w]. `r round(tempoMediaEsperaFila, 10)` segundos
+
+
+13. [Freitas, 8.7mod] Repita o exercício 11, considerando que a área de espera é limitada a 4 buffers.
+Usando um modelo M/M/3/4 para o sistema, determine:
+
+```{r}
+
+```
+
+
+(a) a utilização média do disco; `r taxaServicoU` req/sec
+(b) a probabilidade pn de haver n requisições no sistema, para n = 0, 1, 2, 3, 4.
+(c) a probabilidade de enfileiramento, PQ;
+(d) o número médio de requisições no sistema, E[n];
+(e) o número médio de requisições na fila, E[nq];
+(f) o tempo médio de resposta, E[r];
+(g) a taxa de perdas.
+
+
+14. [Lilja, 11.7] Quantos servidores idênticos precisariam ser acrescentados ao sistema do exercício 8 para reduzir o seu tempo médio de resposta por um fator de 10?
+
+
+15. [Lilja, 11.8] Se cinco servidores idênticos forem acrescentados ao sistema do exercício 8, quantos
+jobs adicionais poderiam ser atendidos mantendo-se o tempo médio de resposta igual ao da
+configuração com um único servidor?
+
+
+
+16. Considere uma fila M/M/1 que representa um disco, com taxa de chegada de jobs λ, taxa de
+serviço µ > λ e tempo médio de resposta r. Suponha que, em um futuro próximo, prevê-se que
+a taxa de chegada irá dobrar, e pretende-se substituir o disco por um novo, de modo a manter
+o tempo médio de resposta em r (ou seja, os usuários não devem sentir os efeitos do aumento
+na taxa de chegada). Quão rápido deverá ser o novo disco?
+(a) O dobro do disco atual;
+(b) Mais que o dobro do disco atual;
+(c) Menos que o dobro do disco atual.
+
+
+17. Em uma aplicação multithreaded, requisições chegam pela rede e são recebidas por thread despachante que as insere em uma fila. As requisições da fila são processadas por conjunto de threads
+operárias, que levam em média 80 ms para atender a uma requisição. Considerando que os
+tempos entre chegadas e os tempos de serviço são distribuídos exponencialmente, estime o
+tempo de resposta nas seguintes situações:
+
+```{r}
+taxaServicoU = 1 / (80 / 1000)
+taxaServicoU # req / sec
+
+100 / (8 * taxaServicoU)
+
+
+```
+
+
+(a) Chegam 100 requisições por segundo e existem 8 threads operárias;
+(b) Chegam 40 requisições por segundo e existem 4 threads operárias.
+
+
+- 19. Suponha que em um período de cinco minutos, observou-se que a CPU esteve ocupada durante 180 segundos. Um total de 9.000 transações são observadas chegando ao sistema. O
+total de transações concluídas também foi 9.000 (i.e., todas as transações que chegaram foram
+concluídas no período de observação). Determine:
+(a) a utilização da CPU;
+(b) a vazão do sistema;
+(c) o tempo médio de serviço por transação.
+
+```{r}
+
+tempoTotal =  5 * 60
+utilizacao = 180 / tempoTotal
+
+vazao = 9000 / tempoTotal
+tempoMedio = tempoTotal / 9000
+```
+
+a) `r utilizacao * 100` %¨
+b) `r vazao` tx/sec
+c) `r tempoMedio * 1000` ms/tx
+
+- 20. [Jain, 33.1] Durante um período de observação de 10 segundos, 400 pacotes foram processados por um roteador capaz de atender 200 pacotes por segundo (pps). Qual a utilização do
+roteador?
+
+```{r}
+tempoOcupado = 400 / 200
+
+(utilizacao = tempoOcupado / 10) 
+```
+
+- 21. [Jain, 33.2] Observou-se que a vazão de um sistema de tempo compartilhado foi de cinco jobs
+por segundo, ao longo de um período de observação de 10 minutos. Se em média quatro jobs
+estavam no sistema durante esse período, qual foi o tempo médio de resposta?
+`r 5 / 4`
+
+
+- 22. [Jain, 33.3] Durante um período de observação de 10 segundos, 40 requisições foram atendidas
+por um servidor de arquivos. Cada requisição exige dois acessos a disco. O tempo médio de
+serviço no disco foi de 30 ms. Qual a utilização média do disco durante esse período?
+```{r}
+tempoMedioServico = (10 / 40) * 1000
+
+utilizacaoDisco = (30 * 2) / tempoMedioServico 
+
+utilizacaoDisco
+```
+
+- 23. [Jain, 33.4] Um sistema distribuído tem um servidor de impressão que é capaz de imprimir 60
+páginas por minuto. Observou-se que o servidor imprimiu 500 páginas em um intervalo de
+observação de 10 minutos. Se cada job imprime uma média de cinco páginas, qual a taxa de
+atendimento de jobs do servidor?
+```{r}
+xP = 500 / 10
+xP / 5 
+```
+
+
+- 24. [Jain, 33.5mod] Em um sistema de tempo compartilhado, cada job realiza em média 10 visitas
+à CPU, 7,5 visitas ao disco A e 1,5 visitas ao disco B. O think time foi medido em 5 segundos,
+os tempos de serviço nos discos foram 30 e 25 ms, e o tempo médio de serviço em cada visita à
+CPU foi de 40 ms. Usando o modelo de filas da figura 1, determine:
+(a) Qual a demanda total de serviço para cada recurso?
+(b) Se a utilização do disco A for 50%, qual a utilização da CPU e do disco B?
+(c) Se a utilização do disco B for 8%, qual o tempo médio de resposta quando existem 20
+usuários no sistema? ?? 
+```{r}
+visita = 7.5 
+
+```
+
+- 25. [Jain, 33.6mod] Para o sistema do exercício 24, determine:
+(a) Qual o recurso de gargalo?
+(b) Qual o limite inferior para o tempo de resposta médio?
+(c) Qual a maior utilização possível para o disco A nessa configuração?
+(d) Qual a maior vazão possível para o sistema?
+(e) Que mudanças na velocidade de CPU você recomendaria para obter um tempo de resposta
+de 7 segundos com 40 usuários? Seria também necessário usar discos mais rápidos em A
+ou B?
+(f) Escreva as expressões para os limites assintóticos de vazão e tempo de resposta desse
+sistema.
+
+
+- 26. [Jain, 33.7] Para o sistema do exercício 24, qual recurso seria o gargalo se
+(a) A CPU fosse substituída por um modelo com o dobro da velocidade?
+(b) O disco A fosse substituído por um modelo duas vezes mais lento?
+(c) O disco B fosse substituído por um modelo duas vezes mais lento?
+(d) A capacidade de memória fosse reduzida de modo que os jobs fizessem 25 vezes mais
+visitas ao disco B devido ao incremento de faltas de página?
+
+
+
+
+
+

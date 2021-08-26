@@ -1,0 +1,15 @@
+(
+  ("DDoS" OR "DRDoS") AND
+  ("attack?" OR "ataque?") AND
+  ("distributed honeypot?" OR "multiple honeypot?" OR "honeypot? distribuído?" OR  "honeypot? distribuido?" OR "multiplo? honeypot?") AND
+  ("analyses" OR "analysis" OR "analise?" OR "análise?") AND
+  ("high interaction" OR "alta interatividade" OR "low interaction" OR "baixa interatividade")
+)
+
+
+text:(("DDoS" OR "DRDoS") AND ("attack?" OR "ataque?") AND ("distributed honeypot?" OR "multiple honeypot?" OR  "honeypot? distribuido?" OR "multiplo? honeypot?") AND ("analyses" OR "analysis" OR "analise?")) AND year:[2016 TO 2021]
+
+
+text:(("DDoS" OR "DRDoS") AND ("attack?" OR "ataque?") AND ("distributed honeypot?" OR "multiple honeypot?" OR "honeypot? distribuido?" OR "multiplo? honeypot?") AND ("analyses" OR "analysis" OR "analise?")) AND year:[2016 TO 2021]
+
+("DDoS" OR "DRDoS") AND ("attack?" OR "ataque?") AND ("distributed honeypot?" OR "multiple honeypot?" OR "honeypot? distribuÃÂÃÂ­do?" OR "honeypot? distribuido?" OR "multiplo? honeypot?") AND ("analyses" OR "analysis" OR "analise?" OR "anÃÂÃÂ¡lise?") AND year:[2016 TO 2021]

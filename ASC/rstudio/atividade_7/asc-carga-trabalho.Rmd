@@ -1,0 +1,404 @@
+---
+title: "Modelagem de Carga de Trabalho"
+author: "Rafael Tenfen"
+date: 'Data de entrega: 18/06/2021'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, out.width='70%', fig.align="center")
+```
+
+# Descrição da atividade
+
+O objetivo do exercício é obter um modelo da carga de trabalho de uma determinada aplicação, a partir de um _trace_ coletado durante um período de execução.
+
+### Descrição do _trace_
+
+A aplicação de interesse processa requisições de escrita e leitura. Cada requisição transfere um determinado número de bytes. O arquivo `wl-rdwr.dat` contém o registro de 10.000 requisições processadas pela aplicação. Cada requisição é representada pelos seguintes campos:
+
+- `tstamp`: o _timestamp_ da requisição, em milissegundos (o _timestamp_ 0 corresponde ao início da   monitoração);
+- `tipo`: o tipo da requisição, que pode ser leitura (`read`) ou escrita (`write`);
+- `bytes`: o número de bytes lidos ou escritos.
+
+### Modelagem da carga de trabalho
+
+A obtenção do modelo da carga de trabalho pode ser subdividida em duas etapas:
+
+1. Modelagem das classes de requisições;
+2. Modelagem dos tempos entre chegadas para cada classe.
+
+
+```{r}
+reqs <- read.table("wl-rdwr.dat", head=T)
+
+
+str(reqs)
+head(reqs)
+reqs.diff = diff(reqs$tstamp)
+head(reqs.diff)
+str(reqs.diff)
+#reqs$tstamp[1]
+reqs$texec = c(reqs$tstamp[1], reqs.diff)
+head(reqs)
+tail(reqs)
+
+#reqs.std <- scale(reqs[-1])
+
+#reqs$diff = diff(reqs$tstamp)
+#cbind(reqs, diff(reqs$tstamp))
+
+reqs.split <- split(reqs, reqs$tipo)
+str(reqs.split)
+
+
+reqs.split$read$tipo = 1
+reqs.split$read.std = scale(reqs.split$read[c('nbytes')])
+
+reqs.split$write$tipo = 2
+reqs.split$write.std = scale(reqs.split$write[c('nbytes')])
+
+head(reqs.split$write)
+head(reqs.split$write.std)
+
+length(reqs.split$read)
+length(reqs.split$write)
+
+
+```
+ 
+
+```{r}
+# Commented to avoid execute again
+library(NbClust) 
+
+#reqs.split$read.nc = NbClust(reqs.split$read.std, min.nc=2, max.nc=7, method="kmeans")
+#table(reqs.split$read.nc$Best.n[1,])
+
+## ******************************************************************* 
+## * Among all indices:                                                
+## * 1 proposed 2 as the best number of clusters 
+## * 5 proposed 4 as the best number of clusters 
+## 
+##                    ***** Conclusion *****                            
+##  
+## * According to the majority rule, the best number of clusters is  4 
+##  
+##  
+## *******************************************************************
+
+#reqs.split$write.nc = NbClust(reqs.split$write.std, min.nc=2, max.nc=7, method="kmeans")
+#table(reqs.split$write.nc$Best.n[1,])
+
+## ******************************************************************* 
+## * Among all indices:                                                
+## * 5 proposed 3 as the best number of clusters 
+## * 1 proposed 7 as the best number of clusters 
+## 
+##                    ***** Conclusion *****                            
+##  
+## * According to the majority rule, the best number of clusters is  3 
+##  
+##  
+## *******************************************************************
+```
+ 
+```{r}
+# K-means
+set.seed(1130)
+
+reqs.split$read.km <- kmeans(reqs.split$read.std, 4, nstart=25)
+
+reqs.split$read.km$centers
+
+str(reqs.split$read)
+length(reqs.split$read$nbytes)
+length(reqs.split$read.km$cluster)
+
+head(reqs.split$read.km$cluster)
+head(reqs.split$read)
+#reqs.split$read.km$cluster
+
+
+str(reqs.split$read)
+head(reqs.split$read[c('nbytes', 'texec')])
+head(reqs.split$read[3])
+head(reqs.split$read[4])
+
+(reqs.split$read.group.nbytes.mean <- aggregate(reqs.split$read[c('nbytes', 'texec')], by=list(cluster=reqs.split$read.km$cluster), mean))
+reqs.split$read.group.nbytes.sd <- aggregate(reqs.split$read[c('nbytes')], by=list(cluster=reqs.split$read.km$cluster), sd)
+reqs.split$read.group.texec.sum <- aggregate(reqs.split$read[c('texec')], by=list(cluster=reqs.split$read.km$cluster), sum)
+table(reqs.split$read.km$cluster)
+
+reqs.split$write.km <- kmeans(reqs.split$write.std, 3, nstart=25)
+
+(reqs.split$write.group.nbytes.mean <- aggregate(reqs.split$write[c('nbytes', 'texec')], by=list(cluster=reqs.split$write.km$cluster), mean))
+reqs.split$write.group.nbytes.sd <- aggregate(reqs.split$write[c('nbytes')], by=list(cluster=reqs.split$write.km$cluster), sd)
+reqs.split$write.group.texec.sum <- aggregate(reqs.split$write[c('texec')], by=list(cluster=reqs.split$write.km$cluster), sum)
+table(reqs.split$write.km$cluster)
+reqs.split$write.group.texec.sum$texec
+``` 
+
+
+```{r}
+# Modelo da carga de trabalho
+reqs.split$read.prop <- reqs.split$read.km$size/sum(reqs.split$read.km$size)
+#sum()
+(reqs.split$read.wlmod <- data.frame(
+  
+  texecpercentage=round(reqs.split$read.group.texec.sum$texec * 100 / sum(reqs.split$read.group.texec.sum$texec), 2), 
+  texec=round(reqs.split$read.group.nbytes.mean$texec, 2), 
+  nbytes=round(reqs.split$read.group.nbytes.mean$nbytes, 1), 
+  prop=reqs.split$read.prop)
+)
+reqs.split$read.wlmod$prop = round(reqs.split$read.wlmod$prop * 100, 2)
+
+head(reqs.split$read.wlmod)
+
+reqs.split$read.wlmod.print.i = data.frame(
+  'Número de bytes Lidos'=reqs.split$read.wlmod$nbytes,
+  "Frequência%"=reqs.split$read.wlmod$prop
+)
+
+reqs.split$read.wlmod.print.ii = data.frame(
+  'Porcentagem do Tempo de Execução do Grupo'=reqs.split$read.wlmod$texecpercentage,  
+  'Média Tempo de Execução (ms)'=reqs.split$read.wlmod$texec,  
+  'Número de bytes Lidos'=reqs.split$read.wlmod$nbytes,
+  "Frequência%"=reqs.split$read.wlmod$prop
+)
+
+reqs.split$write.prop <- reqs.split$write.km$size/sum(reqs.split$write.km$size)
+(reqs.split$write.wlmod <- data.frame(
+  texecpercentage=round(reqs.split$write.group.texec.sum$texec * 100 / sum(reqs.split$write.group.texec.sum$texec), 2), 
+  texec=round(reqs.split$write.group.nbytes.mean$texec, 2), 
+  nbytes=round(reqs.split$write.group.nbytes.mean$nbytes, 1), 
+  prop=reqs.split$write.prop)
+)
+
+reqs.split$write.wlmod$prop = round(reqs.split$write.wlmod$prop * 100, 2)
+#reqs.split$write.wlmod
+#print(reqs.split$write.wlmod, quote = FALSE, row.names = FALSE, column.names=c('tao', 'tao'))
+
+reqs.split$write.wlmod.print.i = data.frame(
+  'Número de bytes Escritos'=reqs.split$write.wlmod$nbytes,
+  "Frequência%"=reqs.split$write.wlmod$prop
+)
+
+reqs.split$write.wlmod.print.ii = data.frame(
+  'Porcentagem do Tempo de Execução do Grupo'=reqs.split$write.wlmod$texecpercentage,
+  'Média Tempo de Execução (ms)'=reqs.split$write.wlmod$texec,
+  'Número de Bytes Escritos'=reqs.split$write.wlmod$nbytes,
+  "Frequência%"=reqs.split$write.wlmod$prop
+)
+
+reqs.general.km.size = c(reqs.split$read.km$size, reqs.split$write.km$size)
+reqs.general.prop <- reqs.general.km.size/sum(reqs.general.km.size)
+
+reqs.general.texec.sum.texec = c(reqs.split$read.group.texec.sum$texec, reqs.split$write.group.texec.sum$texec)
+
+reqs.group.nbytes.mean.nbytes = c(reqs.split$read.group.nbytes.mean$nbytes, reqs.split$write.group.nbytes.mean$nbytes)
+reqs.group.nbytes.sd.nbytes = c(reqs.split$read.group.nbytes.sd$nbytes, reqs.split$write.group.nbytes.sd$nbytes)
+reqs.group.tipo=c(rep("Leitura", length(reqs.split$read.group.nbytes.sd$nbytes)), rep("Escrita", length(reqs.split$write.group.nbytes.sd$nbytes)))
+
+(reqs.general.wlmod <- data.frame(
+  texecpercentage=round(reqs.general.texec.sum.texec * 100 / sum(reqs.general.texec.sum.texec), 2), 
+  texec=round(reqs.general.texec.sum.texec, 2), 
+  nbytesmean=round(reqs.group.nbytes.mean.nbytes, 1), 
+  nbytessd=round(reqs.group.nbytes.sd.nbytes, 1),
+  tipo=reqs.group.tipo,
+  prop=reqs.general.prop)
+)
+
+length(reqs.split$read.group.nbytes.sd$nbytes)
+reqs.general.wlmod$prop = round(reqs.general.wlmod$prop * 100, 2)
+
+str(reqs.general.wlmod)
+reqs.general.wlmod = reqs.general.wlmod[order(reqs.general.wlmod$prop),]
+
+reqs.general.print.iii = data.frame(
+  'Classe'=seq(7),
+  'Frequência (%)'=reqs.general.wlmod$prop,
+  'Tipo'=reqs.general.wlmod$tipo,
+  'Número de Bytes Média'=reqs.general.wlmod$nbytesmean,
+  'Número de Bytes Desvio'=reqs.general.wlmod$nbytessd,
+  "Porcentagem do Tempo de Execução"=reqs.general.wlmod$texecpercentage
+)
+
+
+library(lemon)
+#knit_print.data.frame <- lemon_print
+```
+
+
+```{r caption="Leitura", render=lemon_print}
+reqs.split$read.wlmod.print.i
+```
+ 
+```{r caption="Escrita", render=lemon_print}
+reqs.split$write.wlmod.print.i
+```
+
+ 
+ 
+```{r}
+library(ggplot2)
+
+#str(reqs.split$read)
+
+#clusters <- factor(reqs.split$read.km$cluster)
+#ggplot(data=reqs.split$read, aes(x=nbytes, color=clusters, shape=clusters))
+```
+
+# Etapa 1: Modelagem das classes de requisições
+
+O primeiro passo é descobrir as classes de requisições processadas pela aplicação. Para isso, deve-se (i) obter as requisições representativas de cada classe usando _clustering_ e (ii) descobrir a frequência relativa de cada classe.
+
+Requisições de leitura e de escrita devem ficar em grupos separados. Para realizar o agrupamento das requisições, recomenda-se separar as requisições de leitura das requisições de escrita, e processar cada subconjunto individualmente. Supondo que sejam encontradas $k_r$ classes de requisições de leitura e $k_w$ classes de requisições de escrita, os números das classes de escrita $(1, 2, \ldots, k_w)$ podem ser mapeados em $k_r+1, k_r+2, \ldots, k_r + k_w$.
+
+Uma vez encontradas as classes de requisições, é necessário associar cada requisição a sua respectiva classe e calcular a frequência relativa de cada classe, isto é, a porcentagem de requisições em cada uma.
+
+
+__Respostas__
+
+## (i) 
+
+#### Obter as requisições representativas de cada classe usando clustering 
+- Os centroides são as requisiçoes representativas, porém não estão na escala original, então será apresentado a média dos grupos
+```{r caption="Leitura", render=lemon_print}
+round(reqs.split$read.group.nbytes.mean[c('cluster', 'nbytes')], 1)
+```
+```{r caption="Escrita", render=lemon_print}
+round(reqs.split$write.group.nbytes.mean[c('cluster', 'nbytes')], 1)
+```
+
+## (ii) 
+
+#### Descobrir a frequência relativa de cada classe
+  Obs.: Frequência em %
+
+```{r caption="Leitura", render=lemon_print}
+reqs.split$read.wlmod.print.i
+```
+ 
+```{r caption="Escrita", render=lemon_print}
+reqs.split$write.wlmod.print.i
+```
+
+# Etapa 2: Modelagem dos tempos entre chegadas
+
+A caracterização das classes de requisições é o primeiro passo para modelar a carga. O segundo passo consiste em encontrar a distribuição dos tempos entre chegadas das requisições em cada classe. Sabe-se que, para a aplicação de interesse, esses tempos podem ser distribuídos normalmente ou exponencialmente.
+
+Neste ponto, ressalta-se que o arquivo de dados não contém tempos entre chegadas, mas _timestamps_. Os tempos entre chegadas $\tau_i$ são as diferenças entre os _timestamps_ $t_i$ e $t_{i-1}$ de requisições consecutivas:
+
+\[ \tau_i = t_i - t_{i-1} \]
+
+A função `diff()` do R pode ser útil para obter os tempos entre chegadas a partir dos _timestamps_.
+
+Uma vez obtidos os tempos entre chegadas de uma classe de requisições, é possível ajustar uma distribuição de probabilidade para esse parâmetro.
+
+__Respostas__
+
+- Os tempos de chegada, acredito que seria como se fosse o tempo de execução de cada requisição, então adicionei a coluna ao data frame e em todo o processo 
+- Obs.: Frequência e Porcentagem do Tempo de Execução do Grupo em %
+
+- Porcentagem do Tempo de Execução do Grupo: Seria a porcentagem do tempo de execução levado para executar aquele grupo, separado por leitura e escrita 
+
+```{r caption="Leitura", render=lemon_print}
+reqs.split$read.wlmod.print.ii
+```
+ 
+```{r caption="Escrita", render=lemon_print}
+reqs.split$write.wlmod.print.ii
+```
+
+# Etapa 3
+
+Ao final do processo, será obtido um modelo de carga, que poderá ser resumido em uma tabela que combina as anteriores, conforme o exemplo abaixo (com dados fictícios):
+
+classe | frequência (%) | tipo    | no. bytes (média) | no. bytes (desvio) | distribuição de TEC
+-------|----------------|---------|-------------------|--------------------|--------------------
+1      | 31.6           | leitura | 514.08            | 49.52              | Exp(0.098)
+2      | 45.9           | leitura | 2001.32           | 125.48             | Exp(0.021)
+3      | 22.5           | escrita | 1034.67           | 262.73             | N(99.6, 18.3)
+
+__Respostas__
+
+- Os tempos de chegada, acredito que seria como se fosse o tempo de execução de cada requisição, então adicionei a coluna ao data frame e em todo o processo 
+- Obs.: Frequência e Porcentagem do Tempo de Execução em %
+
+```{r caption="Geral Combinado", render=lemon_print}
+reqs.general.print.iii
+```
+
+#### Fim respostas
+
+- Bom, é necessário fazer outro para todo o conjunto, para que as frequências aparecam de modo correto. # negative...
+
+```{r}
+head(reqs)
+
+reqs$tiponum = as.numeric(reqs$tipo)
+
+reqs.std = scale(reqs[c('nbytes', 'tiponum', 'texec')])
+#reqs.nc = NbClust(reqs.std, min.nc=2, max.nc=10, method="kmeans")
+#table(reqs.nc$Best.n[1,])
+## ******************************************************************* 
+## * Among all indices:  only nbytes                                              
+## * 3 proposed 3 as the best number of clusters 
+## * 3 proposed 5 as the best number of clusters 
+## 
+##                    ***** Conclusion *****                            
+##  
+## * According to the majority rule, the best number of clusters is  3 
+##  
+##  
+## *******************************************************************
+## *** : The D index is a graphical method of determining the number of clusters. 
+##                 In the plot of D index, we seek a significant knee (the significant peak in Dindex
+##                 second differences plot) that corresponds to a significant increase of the value of
+##                 the measure. 
+##  
+## ******************************************************************* 
+## * Among all indices:  'nbytes', 'tiponum', 'texec'                                              
+## * 1 proposed 2 as the best number of clusters 
+## * 6 proposed 3 as the best number of clusters 
+## * 8 proposed 4 as the best number of clusters 
+## * 2 proposed 6 as the best number of clusters 
+## * 3 proposed 7 as the best number of clusters 
+## * 3 proposed 9 as the best number of clusters 
+## 
+##                    ***** Conclusion *****                            
+##  
+## * According to the majority rule, the best number of clusters is  4 
+##  
+##  
+## *******************************************************************
+
+# Notei que assim não conseguiria distinguir se era escrita ou leitura, então de fato devo combinas os dados gerados anteriormente
+ggplot(
+  data = reqs,
+  aes(x=nbytes, y=tiponum)
+) + geom_point( size = 3) + labs(
+  x = "Número de bytes",
+  y = "Tipo"
+) + theme(legend.position = "none")
+
+reqs.km <- kmeans(reqs.std, 3, nstart=25)
+
+(reqs.group.nbytes.mean <- aggregate(reqs[c('nbytes')], by=list(cluster=reqs.km$cluster), mean))
+(reqs.group.nbytes.sd <- aggregate(reqs[c('nbytes')], by=list(cluster=reqs.km$cluster), sd))
+(reqs.group.texec.sum <- aggregate(reqs[c('texec')], by=list(cluster=reqs.km$cluster), sum))
+
+reqs.prop <- reqs.km$size/sum(reqs.km$size)
+
+#(reqs.wlmod <- data.frame(
+#    texecpercentage=round(reqs.group.texec.sum$texec * 100 / sum(reqs.group.texec.sum$texec), 2), 
+#    texec=round(reqs.group.nbytes.mean$texec, 2), 
+#    nbytesmean=round(reqs.group.nbytes.mean$nbytes, 1), 
+#    nbytessd=round(reqs.group.nbytes.sd$nbytes, 1), 
+#    prop=reqs.prop
+#  )
+#)
+```

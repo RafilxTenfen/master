@@ -1,0 +1,134 @@
+---
+title: "Anova"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+- 1. [Jain, 16.1mod] O desempenho de um sistema que está sendo projetado depende dos três fatores que seguem:
+
+(1) Processador: Xeon, SPARC T5, POWER8
+(2) Sistema operacional: Windows, Linux, NetBSD
+(3) Tipo de armazenamento: disco rígido, SSD
+Quantos experimentos são necessários para analisar o desempenho do sistema se
+(a) Existe interação significativa entre os fatores; = 18 = 3 ( Xeon, SPARC T5, POWER8) * 3 (Windows, Linux, NetBSD) * 2 (disco rígido, SSD)
+(b) Não existe interação entre os fatores. = 6
+
+- 2. [Jain, 18.1] A tabela abaixo lista os tempos de CPU medidos para dois processadores com duas
+cargas de trabalho. Cada experimento foi repetido três vezes. Analise o experimento, identificando os fatores estatisticamente significativos e o percentual de variação explicada pelo fator dominante.
+
+```{r}
+dados <- read.table("q2.dat", head=T, colClasses=c("factor", "factor", "numeric"))
+dados
+str(dados) # Colunas tem de sempre ser factor
+(dados.aov <- aov(tempo ~ carga * proc, data=dados))
+summary(dados.aov)
+
+(SS <- anova(dados.aov)['Sum Sq'])
+(SST <- sum(SS))
+ 100*SS/sum(SS)
+ 
+plot(dados.aov) 
+with(dados, interaction.plot(carga, proc, tempo, col=c("red", "blue")))
+fligner.test(tempo ~ interaction(carga, proc), dados) # p-value > alfa
+TukeyHSD(dados.aov) # carga nao eh significativo p adj > alfa
+```
+
+- R: O fator carga não é significativo, mas os fatores 'proc' e 'carga:proc' são significativos, a relação entre carga:proc responde por 62,8% da variação observada.
+
+3. [Jain, 22.1mod] Os tempos de CPU medidos com três processadores A1, A2 e A3 e cinco cargas
+de trabalho B1–B5 estão mostrados na tabela abaixo. Foram realizadas três replicações de cada
+experimento. Analise os dados e responda:
+
+```{r}
+dados <- read.table("q3.dat", head=T)
+str(dados)
+#dados
+(dados.aov <- aov(tempo ~ carga * proc, data=dados))
+summary(dados.aov)
+
+
+(SS <- anova(dados.aov)['Sum Sq'])
+(SST <- sum(SS))
+(SST.percentage = 100*SS/sum(SS))
+# fator dominante é o processador, pois a porcentagem da concentração de variação é maior
+
+model.tables(dados.aov)
+model.tables(dados.aov, type="means")
+TukeyHSD(dados.aov)
+# Não tem diferença significativa qnd o range lwr e upr contém 0
+plot(dados.aov) 
+with(dados, interaction.plot(carga, proc, tempo, col=c("red", "blue")))
+
+fligner.test(tempo ~ interaction(carga, proc), dados)
+```
+
+- (a) Os processadores são diferentes entre si, considerando um nível de confiança de 90%? R: sim, pois é o fator dominante
+
+- (b) Qual a porcentagem da variação explicada pela interação entre processador e carga de
+trabalho? R: `r round(SST.percentage$'Sum Sq'[3], 2)`%
+
+- (c) Quais fatores no modelo não são significativos com confiança de 90%? R: todos os fatores do modelo são significativos
+
+
+4. Um analista resolveu comparar o desempenho de roteadores sem fio de três marcas diferentes (D-Link, Linksys e TP-Link). Ele mediu a latência de carga de uma página web quando o roteador tinha 10, 20 e 50 usuários simultâneos. Para averiguar uma possível influência do
+sistema operacional, as medições foram realizadas em Windows e Linux, no mesmo hardware, sendo quatro replicações de cada experimento. Os dados coletados estão disponíveis no arquivo doe-wifi-routers.dat. Utilizando análise de variância, identifique os fatores estatisticamente significativos e realize a alocação da variação entre os fatores. Considere um nível de confiança de 95%.
+
+
+```{r}
+dados <- read.table("doe-wifi-routers.dat", head=T)
+dados$usuarios <- as.factor(dados$usuarios)
+dados
+str(dados)
+(dados.aov <- aov(lat ~ roteador * usuarios * so, data=dados))
+summary(dados.aov)
+
+(SS <- anova(dados.aov)['Sum Sq'])
+(SST <- sum(SS))
+(SST.percentage = round(100*SS/SST, 2))
+(users = SST.percentage$'Sum Sq'[1])
+(router = SST.percentage$'Sum Sq'[3])
+(users.router = SST.percentage$'Sum Sq'[4])
+#model.tables(dados.aov)
+#model.tables(dados.aov, type="means")
+#TukeyHSD(dados.aov)
+
+
+```
+
+- R: Os fatores 'usuarios', 'roteador' e 'usuarios:roteador' são significativos, ja ao fazer a alocação da variação entre os fatores, apresentou que os usuários possuem `r round(users, 2)`% da interação entre usuários, e os roteadores cerca de `r round(router, 2)`%
+
+
+- 5. Um físico usa uma aplicação de processamento de alto desempenho, a qual está disponível
+em duas versões, uma escrita em C++ e outra escrita em Go. Para executar sua aplicação, ele
+dispõe de computadores com dois tipos de GPUs, Nvidia e Radeon. Ele deseja saber qual a
+melhor combinação de linguagem de programação e GPU para executar sua aplicação. Para
+isso, ele realizou 10 execuções das duas versões da aplicação com as duas GPUs, e armazenou
+os dados no arquivo doe-lp-gpu.dat. Utilizando análise de variância, identifique os fatores
+estatisticamente significativos, realize a alocação da variação entre os fatores e determine a
+melhor combinação de linguagem de programação e GPU para a aplicação. Considere um
+nível de confiança de 95%.
+
+
+```{r}
+dados <- read.table("doe-lp-gpu.dat", head=T)
+#dados
+(dados.aov <- aov(texec ~ lp * gpu, data=dados))
+summary(dados.aov)
+
+(SS <- anova(dados.aov)['Sum Sq'])
+(SST <- sum(SS))
+(SST.percentage = 100*SS/sum(SS))
+model.tables(dados.aov)
+model.tables(dados.aov, type="means")
+#TukeyHSD(dados.aov)
+with(dados, interaction.plot(lp, gpu, texec, col=c("red", "blue")))
+```
+
+- R: Fatores estatisticamente significativos: 'lp', a alocação apresenta que o fator lp contém interação de `r round(SST.percentage$'Sum Sq'[1], 2)`% da variação observada, a melhor combinação pela média seria a linguagem Go para a placa de vídeo Radeon tendo a média de 110.2 texec
+
+# benchmarks.split <- split(benchmarks, factor(benchmarks$benchmark))

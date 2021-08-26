@@ -1,0 +1,1 @@
+("DDoS" OR "DRDoS") AND ("attack?" OR "ataque?") AND  ("distributed honeypot?" OR "multiple honeypot?" OR "honeypot? distribuído?" OR "honeypot? distribuido?" OR "multiplo? honeypot?") AND ("analyse" OR "analysis" OR "analyze" OR "analyses" OR "analise" OR "análise" OR "analisar") AND ("honeypot" OR "honeypots")
