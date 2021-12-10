@@ -1,0 +1,87 @@
+------------------- TCP graph -------------------
+
+a) TCP Tahoe: 1 ~ 4, 9 ~ 12, 17 ~ 19
+    TCP Reno: 1 ~ 4, 17 ~ 20
+
+b) TCP Tahoe: 4 ~ 8, 12 ~ 16, 19 ~ 25
+    TCP Reno: 4 ~ 8, 9 ~ 16, 20 ~ 25
+c) A perda de segmento será detectada por esgotamento de temporização, pois desse até o 1. Se fosse por três ACKs duplicados, desceria metade.
+
+--------------------------- Bit Torrent -----------------------
+a) O uso de um servidor de rastreamento tracker é utilizado para manter o controle de comunicação entre todos os seeds e peers, assim os peers envolvidos na rede P2P conseguem saber quais peers se conectar. Caso não houvesse a presença de tracker o BitTorrent poderia funcionar fazendo o intercâmbio da lista de pares com o Peer Exchange, ou com a utilização de tabelas hash distribuídas (DHTs)
+
+b) Quando o peer entra na rede e não possui nenhum bloco o BitTorrent aplica uma estratégia aleatoria (Random First), até que o peer tenha alguns pedaços do arquivo, após N pedaços de arquivo o protocolo utiliza-se do mecanismo Local Rarest First (LRF), que prioriza os pedaços mais raros dos arquivos, e para se tornar um dos quatro melhores exportadores de dados para outros peers, o peer deve conter o maior numero possível de blocos de arquivos, uma ótima conexão e continuar semeando.
+
+
+-------------------------- 802.15.4 ------------------------
+Motivação: A tecnologia 802.15.4 é um padrão LR-WPAN, que são redes de comunicação sem fio de baixa taxa de transmissão, de fácil instalação, com transferência de dados confiável, custo baixo e maior duração da bateria, sendo um protocolo simples e flexível ideal para o cenário das aplicações de IoT.
+Topologias de rede:  em estrela e peer-to-peer.
+
+Na topologia em estrela, a comunicação é estabelecida apenas entre os dispositivos e um único nó central (que conecta todos os dispositivos).
+Topologia peer-to-peer também possui um nó central, no entanto, difere da topologia em estrela, pois qualquer dispositivo é capaz de se comunicar com outro dispositivo, desde que eles estejam atuando no mesmo canal de comunicação, permitindo dessa forma implementar formações de rede mais complexas.
+
+-------------------- 
+a) o algoritmo de estado de enlace requer que cada nó saiba o custo de cada enlace da rede. Isso exige que sejam enviadas N mensagens. Já o algoritmo vetor de distância requer troca de mensagens entre vizinhos diretamente conectados a cada iteração. O tempo necessário para que o algoritmo convirja pode depender de muitos fatores. Quando o custo do enlace muda, o algoritmo de vetor de distância precisa propagar os resultados do custo modificado do enlace apenas se o novo custo resultar em mudança no caminho de menor custo para um dos nós ligado ao enlace. Além disso, Os algoritmos vetor de distâncias e estado de enlace adotam abordagens complementares em relação ao cálculo do roteamento. No algoritmo vetor de distâncias, cada nó fala somente com os vizinhos diretamente conectados a ele, mas informa a esses vizinhos as estimativas de menor custo entre ele mesmo e todos os outros nós da rede (isto é, todos os que ele sabe que existem). No algoritmo estado de enlace, cada nó fala com todos os outros nós (por difusão), mas informa somente os custos dos enlaces diretamente ligados a ele.
+
+
+
+b) 3 - 2804:331C:EA22:E1AD:03FA::1
+
+
+
+c) Os principais problemas estão basicamente em se manter a conexão estabelecida enquanto os nós se movimentam entre diferentes pontos de rede. Além de que, estar em movimento, dificulta muito manter a conexão estável.
+
+
+---------------------
+Pois pode haver uma confirmação de um ou mais segmentos em apenas uma confirmação, confirmando os bytes contidos em um ou mais segmentos. O TCP oferece um serviço de ACK cumulativo, então um ack cumulativo reconhece o ack anterior perdido. 
+
+
+
+Imagine dois peers se comunicando e acontece o evento de chegada de segmento na ordem com número de sequência esperado e após isso outro segmento na ordem esperando por transmissão de ACK. Ai o outro peer pode responder um envio imediato de um único ACK cumulativo, reconhecendo ambos os segmentos.
+
+Pois pode haver uma confirmação de um ou mais segmentos em apenas uma confirmação, confirmando os bytes contidos em um ou mais segmentos. O TCP oferece um serviço de ACK cumulativo, então um ack cumulativo reconhece o ack anterior perdido. 
+
+
+
+Imagine dois peers se comunicando e acontece o evento de chegada de segmento na ordem com número de sequência esperado e após isso outro segmento na ordem esperando por transmissão de ACK. Ai o outro peer pode responder um envio imediato de um único ACK cumulativo, reconhecendo ambos os segmentos.
+
+Exemplo: suponha que o hospedeiro A envie dois segmentos. O reconhecimento do primeiro segmento é perdido na rede, mas, um pouco antes do evento de expiração, o hospedeiro A recebe um reconhecimento com número 120. O hospedeiro A, portanto, sabe que hospedeiro B recebeu tudo até o byte 119; logo, ele não reenvia nenhum dos dois segmentos.
+
+=-----------
+
+a) O IEEE 802.11 utiliza o acesso aleatório que é denominado CSMA com prevenção de colisão ou, mais sucintamente, CSMA/CA. Do mesmo modo que o CSMA/CD da Ethernet, o “CSMA” de CSMA/CA quer dizer “acesso múltiplo por detecção de portadora”, o que significa que cada estação sonda o canal antes de transmitir e abstém-se de transmitir quando percebe que o canal está ocupado. Ao contrário do protocolo Ethernet 802.3, o protocolo MAC 802.11 não implementa detecção de colisão. Isso se deve a duas razões importantes: A capacidade de detectar colisões exige as capacidades de enviar (o próprio sinal da estação) e de receber (para determinar se alguma outra estação está transmitindo) ao mesmo tempo. Como a potência do sinal recebido em geral é muito pequena em comparação com a potência do sinal transmitido no adaptador 802.11, é caro construir um hardware que possa detectar colisões. Como LANs 802.11 sem fio não usam detecção de colisão, uma vez que uma estação comece a transmitir um quadro, ela o transmite integralmente; isto é, tão logo uma estação inicie, não há volta. Como é de se esperar, transmitir quadros inteiros (em particular os longos) quando existe grande possibilidade de colisão pode degradar significativamente o desempenho de um protocolo de acesso múltiplo. Para reduzir a probabilidade de colisões, o 802.11 emprega diversas técnicas de prevenção de colisão.
+
+--------------
+
+a) O IEEE 802.11 utiliza o acesso aleatório que é denominado CSMA com prevenção de colisão ou, mais sucintamente, CSMA/CA. Do mesmo modo que o CSMA/CD da Ethernet, o “CSMA” de CSMA/CA quer dizer “acesso múltiplo por detecção de portadora”, o que significa que cada estação sonda o canal antes de transmitir e abstém-se de transmitir quando percebe que o canal está ocupado. Ao contrário do protocolo Ethernet 802.3, o protocolo MAC 802.11 não implementa detecção de colisão. Isso se deve a duas razões importantes: A capacidade de detectar colisões exige as capacidades de enviar (o próprio sinal da estação) e de receber (para determinar se alguma outra estação está transmitindo) ao mesmo tempo. Como a potência do sinal recebido em geral é muito pequena em comparação com a potência do sinal transmitido no adaptador 802.11, é caro construir um hardware que possa detectar colisões. Como LANs 802.11 sem fio não usam detecção de colisão, uma vez que uma estação comece a transmitir um quadro, ela o transmite integralmente; isto é, tão logo uma estação inicie, não há volta. Como é de se esperar, transmitir quadros inteiros (em particular os longos) quando existe grande possibilidade de colisão pode degradar significativamente o desempenho de um protocolo de acesso múltiplo. Para reduzir a probabilidade de colisões, o 802.11 emprega diversas técnicas de prevenção de colisão.
+
+
+
+b)  Se houver uma colisão a Ethernet abortará a transmissão e tentará novamente após uma pequena unidade de tempo aleatória.
+
+
+
+c) Protocolo ARP (protocolo de resolução de endereços)
+
+--------------------
+
+Figura 1, protocolo HTTP:
+- Cliente tenta acessar o recurso /foo usando o método GET, recebe resposta código 200 (OK)
+
+- Cliente tenta acessar o recurso em /bar usando o método GET, recebe resposta código 404 (Not found)
+
+- Depois o cliente tenta acessar o recurso /foo e recebe códido 000 (Erro de rede), porém no final após várias tentativa, é enviado um RST confirmando o recebimento dos pacotes anteriores.
+
+Figura 2, se refere ao protocolo MQTT:
+
+- O cliente envia uma mensagem com QOS 2, o nível mais alto de serviço, onde a garantia de entrega de uma única mensagem para os todos os receptores.
+
+- A mensagem é armazenada pelo servidor e então publicada para os subscribers daquele tópico.
+
+- O cliente recebe um PUBREC do servidor, isso é a confirmação de que a mensagem foi publicada, depois disso o cliente envia um pubrel que permite que o servidor exclua a mensagem, por fim o servidor envia um pubcomp ao cliente para sinalizar que o processo foi completado.
+
+---------------------------
+
+a) 976 X 1 0, 976	X	1	122, 528	X	0	244
+b) Não há fragmentação neste segundo enlace porque os pacotes fragmentados não excedem o limite da mtu (1500), eles só serão remontados no roteador de destino.
+c) O destinatário sabe que recebeu o último fragmento porque no último pacote campo o FLAG vai com o valor 0.

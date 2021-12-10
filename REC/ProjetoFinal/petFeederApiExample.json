@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "sizeGrams": 3000,
+  "gramsAvailable": 2400,
+  "lastTimeDispensed": "TIMESTAMP",
+  "dispensedTimes": 2,
+  "configuredPortionGrams": 300,
+  "animal": "Dog"
+}

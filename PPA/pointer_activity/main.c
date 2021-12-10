@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <string.h>
 
 // void pass_valor(int *par1, float *par2) {
 //     *par1 = 10;
@@ -166,6 +168,13 @@ int quest20(char *p3, char *nome) {
 int main(int argc, char **argv) {
     // int i = 7;
     // int *ptr_i = NULL;
+
+
+    time_t now = time(0);
+    printf("Secconds: %ld", now);
+    // char * time_str = ctime(&now);
+    // time_str[strlen(time_str)-1] = '\0';
+    // printf("Current Time : %s\n", time_str);
 
     // ptr_i = &i;
     // i++;
