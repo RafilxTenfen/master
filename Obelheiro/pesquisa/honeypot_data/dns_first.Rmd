@@ -37,19 +37,12 @@ options("scipen"=100, "digits"=4)
 
 
 db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
-dns_data <-dbSendQuery(db, 
-"SELECT strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.*, DNS_PAYLOAD_DICT.payload
-  FROM DNS_MEMORY_DICT
-  JOIN DNS_PAYLOAD_DICT
-    ON DNS_MEMORY_DICT.payloadID == DNS_PAYLOAD_DICT.payloadID
- LIMIT 5;")
+dns_data <-dbSendQuery(db, "SELECT * FROM DNS_ANALYSIS;")
 dns_data_fetched <- fetch(dns_data)
 dns_data_fetched
 
-str(dns_data_fetched)
-str(dns_data_fetched$payload)
-    
-print(dns_data_fetched$payload)    
+#str(dns_data_fetched)
+#str(dns_data_fetched$payload)
     
 ```
 
