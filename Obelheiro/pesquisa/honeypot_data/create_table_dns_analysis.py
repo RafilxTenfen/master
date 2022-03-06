@@ -1,8 +1,5 @@
 import sqlite3
-import binascii
 import dnslib
-# from github_com.paulc import dnslib
-# from './src/dnslib' import DNSRecord
 
 con = sqlite3.connect('dnstor_statistics_dns.sqlite', timeout=10)
 cur = con.cursor()
