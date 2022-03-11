@@ -33,7 +33,13 @@ for row in cur.execute("""
   bytePayloadUnscaped = bytes(strQuotedPacket[2:-1], encoding="utf-8")
   # decode and encode again to change "\\" to "\"
   bytePayload = bytePayloadUnscaped.decode("unicode_escape").encode("raw_unicode_escape")
-  dnsRecordPayload = dnslib.DNSRecord.parse(bytePayload)
+  # print("\n bytePayload", bytePayload, "len(bytePayload) ", len(bytePayload))
+
+  try:
+    dnsRecordPayload = dnslib.DNSRecord.parse(bytePayload)
+  except:
+    print("could not parse", bytePayload)
+    continue
 
   for dnsQuestion in dnsRecordPayload.questions:
     # print("\n", dnsQuestion.qname, type(dnsQuestion.qname.idna()))

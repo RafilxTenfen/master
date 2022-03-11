@@ -4,32 +4,9 @@ output: html_document
 date: '2022-03-05'
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-
-```{r read}
+```{r}
 library('RSQLite')
 library('ggplot2')
 library(DBI)
@@ -37,12 +14,152 @@ options("scipen"=100, "digits"=4)
 
 
 db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
-dns_data <-dbSendQuery(db, "SELECT * FROM DNS_ANALYSIS;")
+dns_data <-dbSendQuery(db, "  
+  SELECT count(*) as countGrouped, year, period, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period , qname, qtype, SUM(count) as quantity
+    FROM DNS_ANALYSIS
+GROUP BY year_period, year, period, qname, qtype
+ORDER BY quantity DESC;
+")
 dns_data_fetched <- fetch(dns_data)
-dns_data_fetched
+#dns_data_fetched
 
 #str(dns_data_fetched)
 #str(dns_data_fetched$payload)
     
 ```
 
+
+```{r}
+library(dplyr)
+library(tibble)
+
+dns_data.year_period.ungrouped <- group_split(dns_data_fetched, year_period) 
+
+N = 10
+dns_data.topNconsultas <- head(dns_data.year_period.ungrouped[[1]], N)
+dns_data.year_period.ungrouped.len = length(dns_data.year_period.ungrouped)
+
+for (i in c(2:dns_data.year_period.ungrouped.len)) {
+  dns_data.topNconsultas <- rbind(dns_data.topNconsultas, head(dns_data.year_period.ungrouped[[i]], N))
+}
+
+#dns_data.year_period.ungrouped[[1]]
+#ggplot(dns_data.year_period.ungrouped[[1]], aes(x=qname, y=quantity), ) + geom_histogram(fill="skyblue", alpha=0.5) 
+#ggplot(data = dns_data.year_period.ungrouped[[1]], aes(x = qname, y = quantity)) +
+ #geom_boxplot()
+
+#dns_data.topNconsultas
+
+#dns_data.year_period.ungrouped
+
+#dns_data_fetched[order(dns_data_fetched$year, dns_data_fetched$period, -dns_data_fetched$quantity),]
+
+#dns_data_fetched
+
+# ggplot(request, aes(x=rt, fill=Type)) + geom_density(alpha=0.4) + scale_x_log10() + xlab("Number Request (log 10)") + ylab("Density") + ggtitle("Request per DRDoS Attacks")
+# barplot
+#  ggplot(nlme::Oxboys, aes(age, height))
+
+# Top N consultas por período N = 10
+dns_data.topNconsultas
+ggplot(dns_data_fetched, aes(x=year_period), ) + geom_histogram(fill="skyblue", alpha=0.5) 
+
+ggplot(dns_data.topNconsultas, aes(qname,quantity, group = 1)) + geom_line() + facet_grid(year_period ~ .)
+
+#ggplot(data = dns_data.topNconsultas) + 
+ # geom_point(mapping = aes(x = year_period, y = quantity)) + 
+  #facet_wrap(~ class, nrow = 2)
+
+#ggplot(data = dns_data.topNconsultas) + 
+ # geom_bar(mapping = aes(x = year_period, y = count, fill = year_period), position = "fill")
+
+
+## ------ Quantos ataques com cada tipo de qtype foi utilizado, por trimestre ? 
+#dns_data_fetched
+
+dns_data_fetched.quarter_type_quantity = select(dns_data_fetched, c('year_period', 'qtype', 'quantity'))
+
+#dns_data_fetched.quarter_type_quantity
+#typeof(dns_data_fetched$year_period)
+#dns_data_fetched$year_period
+
+#dns_data_fetched.quarter_type_quantity
+
+dns_data_fetched.sum_attacks_quarterly = dns_data_fetched.quarter_type_quantity %>%
+  group_by(qtype, year_period) %>%
+  summarise(quantity = sum(quantity))
+  
+dns_data_fetched.sum_attacks_quarterly[order(-dns_data_fetched.sum_attacks_quarterly$quantity, dns_data_fetched.sum_attacks_quarterly$year_period),]
+
+ggplot(data = dns_data_fetched.sum_attacks_quarterly, aes(x = year_period, y = quantity, color = qtype)) +
+    geom_line()
+
+ggplot(data = dns_data_fetched.sum_attacks_quarterly, aes(x = year_period, y = quantity)) +
+    geom_line() +
+    facet_wrap(facets = vars(qtype))
+
+#aggregate(x = dns_data_fetched.quarter_type_quantity, FUN = "sum", drop = TRUE)
+
+# ------ Quantos qtypes novos aprecem em cada trimestre
+
+quarter_qtype_aux = dns_data.year_period.ungrouped[[1]] %>%
+  group_by(qtype) %>%
+  summarise(quantity = sum(quantity))
+
+#quarter_qtype_2 = dns_data.year_period.ungrouped[[2]] %>%
+#  group_by(qtype) %>%
+#  summarise(quantity = sum(quantity))
+
+#quarter_qtype_2
+#merged = merge(x = quarter_qtype_aux, y = quarter_qtype_2, by = "qtype", all = TRUE)
+#merged.new_quantity = merged$quantity.x - merged$quantity.y
+#merged
+
+
+
+
+quarter_new_qtype = data.frame()
+
+
+
+for (i in c(2:dns_data.year_period.ungrouped.len)) {
+  quarter_qtype = dns_data.year_period.ungrouped[[i]] %>%
+    group_by(qtype) %>%
+    summarise(quantity = sum(quantity))
+  
+  merged = merge(x = quarter_qtype_aux, y = quarter_qtype, by = "qtype", all = TRUE)
+  merged.new_quantity = merged$quantity.x - merged$quantity.y
+  
+  perio_to_period = paste(head(dns_data.year_period.ungrouped[[i - 1]]['year'], 1), '.',  head(dns_data.year_period.ungrouped[[i - 1]]['period'], 1), '->' , head(dns_data.year_period.ungrouped[[i]]['year'], 1), '.', head(dns_data.year_period.ungrouped[[i]]['period'], 1))
+  quarter_new_qtype <- rbind(quarter_new_qtype, data.frame(quarter_to_quarter=perio_to_period, merged$qtype, sum_quantity=merged$quantity.y - merged$quantity.x))
+  
+  quarter_qtype_aux = quarter_qtype
+}
+
+quarter_new_qtype
+na.omit(quarter_new_qtype)
+
+# ------ Quantos qname novos aprecem em cada trimestre
+
+quarter_qname_aux = dns_data.year_period.ungrouped[[1]] %>%
+  group_by(qname) %>%
+  summarise(quantity = sum(quantity))
+
+quarter_new_qname = data.frame()
+for (i in c(2:dns_data.year_period.ungrouped.len)) {
+  quarter_qname = dns_data.year_period.ungrouped[[i]] %>%
+    group_by(qname) %>%
+    summarise(quantity = sum(quantity))
+  
+  merged = merge(x = quarter_qname_aux, y = quarter_qname, by = "qname", all = TRUE)
+  merged.new_quantity = merged$quantity.x - merged$quantity.y
+  
+  perio_to_period = paste(head(dns_data.year_period.ungrouped[[i - 1]]['year'], 1), '.',  head(dns_data.year_period.ungrouped[[i - 1]]['period'], 1), '->' , head(dns_data.year_period.ungrouped[[i]]['year'], 1), '.', head(dns_data.year_period.ungrouped[[i]]['period'], 1))
+  quarter_new_qname <- rbind(quarter_new_qname, data.frame(quarter_to_quarter=perio_to_period, merged$qname, sum_quantity=merged$quantity.y - merged$quantity.x))
+  
+  quarter_qname_aux = quarter_qname
+}
+
+na.omit(quarter_new_qname)
+
+```

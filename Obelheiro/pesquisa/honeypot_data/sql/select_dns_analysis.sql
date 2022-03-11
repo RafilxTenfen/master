@@ -1,4 +1,4 @@
-  SELECT year, period, qname, qtype, SUM(count) as count
+  SELECT count(*) as countGrouped, year, period, qname, qtype, SUM(count) as quantity
     FROM DNS_ANALYSIS
 GROUP BY year, period, qname, qtype
-ORDER BY count DESC;
+ORDER BY quantity DESC;
