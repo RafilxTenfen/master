@@ -1,8 +1,8 @@
 ---
 title: "dns_first"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 date: '2022-03-05'
 ---
 
@@ -19,14 +19,13 @@ db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
 dns_data <-dbSendQuery(db, "  
   SELECT count(*) as countGrouped, year, period, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period , qname, qtype, SUM(count) as quantity
     FROM DNS_ANALYSIS
+   WHERE QTYPE != 0
 GROUP BY year_period, year, period, qname, qtype
 ORDER BY quantity DESC;
 ")
 dns_data_fetched <- fetch(dns_data)
-#dns_data_fetched
-
-#str(dns_data_fetched)
-#str(dns_data_fetched$payload)
+#dns_data_fetched %>%
+ # filter(qtype == 0)
     
 ```
 
@@ -81,11 +80,16 @@ ggplot(dns_data.topNconsultas, aes(qname,quantity, group = 1)) + geom_line() + f
 
 dns_data_fetched.quarter_type_quantity = select(dns_data_fetched, c('year_period', 'qtype', 'quantity'))
 
+#dns_data_fetched.quarter_type_count = select(dns_data_fetched, c('year_period', 'qtype', 'countGrouped'))
+#dns_data_fetched.quarter_type_count
 #dns_data_fetched.quarter_type_quantity
 #typeof(dns_data_fetched$year_period)
 #dns_data_fetched$year_period
 
 #dns_data_fetched.quarter_type_quantity[order(dns_data_fetched.quarter_type_quantity$year_period),]
+#dns_data_fetched.quarter_type_count.grouped_qtype_period = dns_data_fetched.quarter_type_count %>%
+#  group_by(qtype, year_period) %>%
+#  summarise(count = sum(countGrouped))
 
 dns_data_fetched.sum_attacks_quarterly = dns_data_fetched.quarter_type_quantity %>%
   group_by(qtype, year_period) %>%
@@ -100,7 +104,58 @@ ggplot(data = dns_data_fetched.sum_attacks_quarterly, aes(x = year_period, y = q
     geom_line() +
     facet_wrap(facets = vars(qtype))
 
-#aggregate(x = dns_data_fetched.quarter_type_quantity, FUN = "sum", drop = TRUE)
+dns_data_fetched.sum_attacks_quarterly %>% 
+  filter(qtype != "ANY") %>%
+  ggplot(aes(x = year_period, y = quantity)) +
+    geom_line() +
+    facet_wrap(facets = vars(qtype))
+
+# ------------------------------------------- quantity with percentage
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity = dns_data_fetched.sum_attacks_quarterly %>%
+  group_by(year_period) %>%
+  summarise(sum_period_quantity = sum(quantity), qtype=qtype, quantity=quantity)
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity['quantity_percentage'] = (dns_data_fetched.sum_attacks_quarterly.sum_period_quantity$quantity * 100) / dns_data_fetched.sum_attacks_quarterly.sum_period_quantity$sum_period_quantity
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>% 
+  ggplot(aes(x = year_period, y = quantity_percentage)) +
+    geom_line() +
+    facet_wrap(facets = vars(qtype))
+
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>% 
+  filter(qtype != "ANY") %>%
+  ggplot(aes(x = year_period, y = quantity_percentage)) +
+    geom_line() +
+    facet_wrap(facets = vars(qtype))
+
+
+# ------------------------------------------- filter any
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any = dns_data_fetched.sum_attacks_quarterly %>%
+  group_by(year_period) %>%
+  filter(qtype != "ANY") %>%
+  summarise(sum_period_quantity = sum(quantity), qtype=qtype, quantity=quantity)
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any['quantity_percentage'] = (dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any$quantity * 100) / dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any$sum_period_quantity
+
+dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any %>% 
+  ggplot(aes(x = year_period, y = quantity_percentage)) +
+    geom_line() +
+    facet_wrap(facets = vars(qtype))
+
+```
+
+```{r}
+# Tiago
+# - A e MX devem ser olhados junto com o ANY pra ver se existe alguma relação com esse crescimento 
+# - RRSIG tem um pico legal (descobrir qual ataque/relação pra tentar entender seria interessante)
+# - todos os outros qtype deveriam ser gerados em outro grafico pra ver se o padrão d RRSIG n aparece tbm
+```
+
+
+```{r}
 
 # ------------ Quantos qtypes novos aprecem em cada trimestre ------------
 # > Diferenças percentuais são mais relevantes que absolutas
@@ -182,7 +237,7 @@ head(na.omit(quarter_new_qname[-order(quarter_new_qname$quantity_percentage_diff
 #library(hrbrthemes)
 library(viridis)
 
-dns_data_fetched.sum_attacks_quarterly.quantity_percentage = dns_data_fetched.sum_attacks_quarterly$quantity / 2
+#dns_data_fetched.sum_attacks_quarterly.quantity_percentage = dns_data_fetched.sum_attacks_quarterly$quantity / 2
 #dns_data_fetched.sum_attacks_quarterly
 
 dns_data_fetched.sum_attacks_quarterly.sum_period = dns_data_fetched.sum_attacks_quarterly %>%
@@ -259,5 +314,23 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
     scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
     ggtitle("Any QTYPE > 1% - stacked bars")
+
+
+dns_data_fetched.sum_attacks_quarterly.sum_period %>%
+  mutate(year_period=as.factor(year_period)) %>%
+  ggplot( aes(x=year_period, y=period_quantity)) +
+    geom_bar(stat="identity", width = 0.5) +
+    scale_fill_viridis(discrete=TRUE, name="") +
+    ylab("Quantity of attacks") +
+    ggtitle("Attacks by period")
+
+# if each line on db were a request
+#dns_data_fetched.quarter_type_count.grouped_qtype_period %>%
+#  mutate(year_period=as.factor(year_period)) %>%
+#  ggplot( aes(x=year_period, y=count)) +
+#    geom_bar(stat="identity", width = 0.5) +
+#    scale_fill_viridis(discrete=TRUE, name="") +
+#    ylab("Quantity of request") +
+#    ggtitle("Request by period")
 ```
 
