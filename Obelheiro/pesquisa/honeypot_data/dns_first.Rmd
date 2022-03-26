@@ -40,65 +40,37 @@ N = 10
 dns_data.topNconsultas <- head(dns_data.year_period.ungrouped[[1]], N)
 dns_data.year_period.ungrouped.len = length(dns_data.year_period.ungrouped)
 
+select(dns_data.topNconsultas, c('year_period', 'qtype', 'quantity', 'qname'))
+select(head(dns_data.year_period.ungrouped[[2]], N), c('year_period', 'qtype', 'quantity', 'qname'))
+select(head(dns_data.year_period.ungrouped[[3]], N), c('year_period', 'qtype', 'quantity', 'qname'))
+select(head(dns_data.year_period.ungrouped[[4]], N), c('year_period', 'qtype', 'quantity', 'qname'))
+select(head(dns_data.year_period.ungrouped[[5]], N), c('year_period', 'qtype', 'quantity', 'qname'))
+select(head(dns_data.year_period.ungrouped[[6]], N), c('year_period', 'qtype', 'quantity', 'qname'))
+
 for (i in c(2:dns_data.year_period.ungrouped.len)) {
   dns_data.topNconsultas <- rbind(dns_data.topNconsultas, head(dns_data.year_period.ungrouped[[i]], N))
 }
 
-#dns_data.year_period.ungrouped[[1]]
-#ggplot(dns_data.year_period.ungrouped[[1]], aes(x=qname, y=quantity), ) + geom_histogram(fill="skyblue", alpha=0.5) 
-#ggplot(data = dns_data.year_period.ungrouped[[1]], aes(x = qname, y = quantity)) +
- #geom_boxplot()
-
-#dns_data.topNconsultas
-
-#dns_data.year_period.ungrouped
-
-#dns_data_fetched[order(dns_data_fetched$year, dns_data_fetched$period, -dns_data_fetched$quantity),]
-
-#dns_data_fetched
-
-# ggplot(request, aes(x=rt, fill=Type)) + geom_density(alpha=0.4) + scale_x_log10() + xlab("Number Request (log 10)") + ylab("Density") + ggtitle("Request per DRDoS Attacks")
-# barplot
-#  ggplot(nlme::Oxboys, aes(age, height))
-
-# Top N consultas por período N = 10
-head(dns_data.topNconsultas)
-ggplot(dns_data_fetched, aes(x=year_period), ) + geom_histogram(fill="skyblue", alpha=0.5) 
-
-ggplot(dns_data.topNconsultas, aes(qname,quantity, group = 1)) + geom_line() + facet_grid(year_period ~ .)
-
-#ggplot(data = dns_data.topNconsultas) + 
- # geom_point(mapping = aes(x = year_period, y = quantity)) + 
-  #facet_wrap(~ class, nrow = 2)
-
-#ggplot(data = dns_data.topNconsultas) + 
- # geom_bar(mapping = aes(x = year_period, y = count, fill = year_period), position = "fill")
 
 
+#print(select(dns_data.topNconsultas, c('year_period', 'qtype', 'quantity', 'qname')), nrow = length(dns_data.topNconsultas$year_period))
+```
+
+
+```{r}
 ## ------------ Quantos ataques com cada tipo de qtype foi utilizado, por trimestre ? ------------
 #dns_data_fetched
 
 dns_data_fetched.quarter_type_quantity = select(dns_data_fetched, c('year_period', 'qtype', 'quantity'))
 
-#dns_data_fetched.quarter_type_count = select(dns_data_fetched, c('year_period', 'qtype', 'countGrouped'))
-#dns_data_fetched.quarter_type_count
-#dns_data_fetched.quarter_type_quantity
-#typeof(dns_data_fetched$year_period)
-#dns_data_fetched$year_period
-
-#dns_data_fetched.quarter_type_quantity[order(dns_data_fetched.quarter_type_quantity$year_period),]
-#dns_data_fetched.quarter_type_count.grouped_qtype_period = dns_data_fetched.quarter_type_count %>%
-#  group_by(qtype, year_period) %>%
-#  summarise(count = sum(countGrouped))
-
 dns_data_fetched.sum_attacks_quarterly = dns_data_fetched.quarter_type_quantity %>%
   group_by(qtype, year_period) %>%
   summarise(quantity = sum(quantity))
-  
-#dns_data_fetched.sum_attacks_quarterly[order(-dns_data_fetched.sum_attacks_quarterly$quantity, dns_data_fetched.sum_attacks_quarterly$year_period),]
 
-ggplot(data = dns_data_fetched.sum_attacks_quarterly, aes(x = year_period, y = quantity, color = qtype)) +
-    geom_line()
+dns_data_fetched.sum_attacks_quarterly %>%
+#  mutate(year_period=as.factor(year_period)) %>%
+  ggplot(aes(x = year_period, y = quantity, color = qtype)) +
+  geom_line()
 
 ggplot(data = dns_data_fetched.sum_attacks_quarterly, aes(x = year_period, y = quantity)) +
     geom_line() +
@@ -229,16 +201,11 @@ head(na.omit(quarter_new_qname[-order(quarter_new_qname$quantity_percentage_diff
 
 
 
-```{r}
+```{r fig.width = 12}
 # Vale um gráfico de barras (dois, um agrupado e outro empilhado) da porcentagem de QTYPEs por período
 # https://www.data-to-viz.com/graph/barplot.html
 # Libraries
-#library(tidyverse)
-#library(hrbrthemes)
 library(viridis)
-
-#dns_data_fetched.sum_attacks_quarterly.quantity_percentage = dns_data_fetched.sum_attacks_quarterly$quantity / 2
-#dns_data_fetched.sum_attacks_quarterly
 
 dns_data_fetched.sum_attacks_quarterly.sum_period = dns_data_fetched.sum_attacks_quarterly %>%
   group_by(year_period) %>%
@@ -246,35 +213,37 @@ dns_data_fetched.sum_attacks_quarterly.sum_period = dns_data_fetched.sum_attacks
 
 dns_data_fetched.sum_attacks_quarterly.sum_period['quantity_percentage'] = (dns_data_fetched.sum_attacks_quarterly.sum_period$quantity * 100) / dns_data_fetched.sum_attacks_quarterly.sum_period$period_quantity
 
-#dns_data_fetched.sum_attacks_quarterly.sum_period
-
-
 dns_data_fetched.sum_attacks_quarterly.sum_period %>% 
   mutate(year_period=as.factor(year_period)) %>%
-  ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
+  ggplot( aes(x=reorder(qtype, -quantity_percentage), y=quantity_percentage, fill=qtype)) +
     geom_bar(stat="identity", position="dodge") +
     scale_fill_viridis(discrete=TRUE, name="") +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), vjust = +0.25, ) +
+    facet_grid(~year_period) +
     ylab("Percentage of attacks") +
     ggtitle("All QTYPES - ungrouped bar")
-
 
 dns_data_fetched.sum_attacks_quarterly.sum_period %>% 
   mutate(year_period=as.factor(year_period)) %>%
   ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
     geom_bar(stat="identity", width = 0.5) +
-    scale_fill_viridis(discrete=TRUE, name="") +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), position = position_stack(vjust = 0.1)) +
+    #scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
     ggtitle("All QTYPES - stacked bars")
 
-
+```
+```{r fig.align="center", fig.width = 12}
 
 ## Filter data using qtype quantity percentage bigger than 1
 
 dns_data_fetched.sum_attacks_quarterly.sum_period %>%
   filter(quantity_percentage > 1) %>%
   mutate(year_period=as.factor(year_period)) %>%
-  ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
+  ggplot( aes(x=reorder(qtype, -quantity_percentage), y=quantity_percentage, fill=qtype)) +
     geom_bar(stat="identity", position="dodge") +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), vjust = -0.25) +
+    facet_grid(~year_period) +
     scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
     ggtitle("QTYPES > 1% by period - ungrouped bars")
@@ -284,6 +253,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
   mutate(year_period=as.factor(year_period)) %>%
   ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
     geom_bar(stat="identity", width = 0.5) +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), position = position_stack(vjust = 0.1)) +
     scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
     ggtitle("QTYPES > 1% by period - stacked bars")
@@ -301,19 +271,30 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
   filter(qtype %in% qtypes_bigger_1) %>%
   mutate(year_period=as.factor(year_period)) %>%
   ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
-    geom_bar(stat="identity", position="dodge") +
+    geom_bar(stat="identity", width = 0.5) +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), position = position_stack(vjust = 0.1)) +
     scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
-    ggtitle("Any QTYPE > 1% - ungrouped bars")
+    ggtitle("Any QTYPE > 1% - stacked bars")
+```
+
+
+```{r fig.align="center", fig.width = 12}
 
 dns_data_fetched.sum_attacks_quarterly.sum_period %>%
   filter(qtype %in% qtypes_bigger_1) %>%
   mutate(year_period=as.factor(year_period)) %>%
-  ggplot( aes(x=year_period, y=quantity_percentage, fill=qtype)) +
-    geom_bar(stat="identity", width = 0.5) +
+  ggplot( aes(x=reorder(qtype, -quantity_percentage), y=quantity_percentage, fill=qtype)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), vjust = -0.25) +
+    facet_grid(~year_period) +
     scale_fill_viridis(discrete=TRUE, name="") +
     ylab("Percentage of attacks") +
-    ggtitle("Any QTYPE > 1% - stacked bars")
+    ggtitle("Any QTYPE > 1% - ungrouped bars")
+
+```
+
+```{r}
 
 
 dns_data_fetched.sum_attacks_quarterly.sum_period %>%
@@ -332,5 +313,6 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
 #    scale_fill_viridis(discrete=TRUE, name="") +
 #    ylab("Quantity of request") +
 #    ggtitle("Request by period")
+
 ```
 
