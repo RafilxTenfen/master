@@ -19,6 +19,8 @@ db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
 dns_data <-dbSendQuery(db, "  
   SELECT count(*) as countGrouped, year, period, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period , qname, qtype, SUM(count) as quantity
     FROM DNS_ANALYSIS
+    JOIN DNS_ANALYSIS_QUESTION
+      ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
    WHERE QTYPE != 0
 GROUP BY year_period, year, period, qname, qtype
 ORDER BY quantity DESC;
@@ -56,6 +58,58 @@ for (i in c(2:dns_data.year_period.ungrouped.len)) {
 #print(select(dns_data.topNconsultas, c('year_period', 'qtype', 'quantity', 'qname')), nrow = length(dns_data.topNconsultas$year_period))
 ```
 
+
+```{r}
+## ------------ ataques que repetem o query_id ------------
+top_10_repeated_query_data <-dbSendQuery(db, "  
+  SELECT count(*) as qnt_repeat_query_id, year, period, count, query_id, qname, qtype
+    FROM DNS_ANALYSIS
+    JOIN DNS_ANALYSIS_QUESTION
+      ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+GROUP BY query_id
+  HAVING qnt_repeat_query_id > 1
+ORDER BY qnt_repeat_query_id desc
+   LIMIT 10;
+")
+top_10_repeated_query <- fetch(top_10_repeated_query_data)
+
+qnames = top_10_repeated_query['qname']
+
+top_10_repeated_query.1 = head(dns_data.year_period.ungrouped[[1]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+top_10_repeated_query.2 = head(dns_data.year_period.ungrouped[[2]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+top_10_repeated_query.3 = head(dns_data.year_period.ungrouped[[3]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+top_10_repeated_query.4 = head(dns_data.year_period.ungrouped[[4]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+top_10_repeated_query.5 = head(dns_data.year_period.ungrouped[[5]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+top_10_repeated_query.6 = head(dns_data.year_period.ungrouped[[6]], N) %>%
+    filter(qname %in% top_10_repeated_query$qname)
+
+
+top_10_repeated_query = rbind(top_10_repeated_query.1, top_10_repeated_query.2, top_10_repeated_query.3,
+                              top_10_repeated_query.4, top_10_repeated_query.5, top_10_repeated_query.6)
+
+top_10_repeated_query %>% 
+  arrange(desc(quantity))
+
+
+select(top_10_repeated_query.1, c('year_period', 'qtype', 'quantity', 'qname'))
+select(top_10_repeated_query.2, c('year_period', 'qtype', 'quantity', 'qname'))
+select(top_10_repeated_query.3, c('year_period', 'qtype', 'quantity', 'qname'))
+select(top_10_repeated_query.4, c('year_period', 'qtype', 'quantity', 'qname'))
+select(top_10_repeated_query.5, c('year_period', 'qtype', 'quantity', 'qname'))
+select(top_10_repeated_query.6, c('year_period', 'qtype', 'quantity', 'qname'))
+
+
+```
 
 ```{r}
 ## ------------ Quantos ataques com cada tipo de qtype foi utilizado, por trimestre ? ------------

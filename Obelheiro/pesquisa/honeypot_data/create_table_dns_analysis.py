@@ -1,3 +1,4 @@
+from email import header
 import sqlite3
 import dnslib
 
@@ -7,16 +8,29 @@ cur = con.cursor()
 cur.execute("DROP TABLE IF EXISTS DNS_ANALYSIS;")
 cur.execute("""
 CREATE TABLE DNS_ANALYSIS (
+	id INTEGER NOT NULL,
 	year INTEGER NOT NULL,
 	period INTEGER NOT NULL,
-	qname TEXT,
-	qtype TEXT,
-	count INTEGER NOT NULL
+	count INTEGER NOT NULL,
+	query_id INTEGER NOT NULL
 );
 """)
 con.commit()
 
+cur.execute("DROP TABLE IF EXISTS DNS_ANALYSIS_QUESTION;")
+cur.execute("""
+CREATE TABLE DNS_ANALYSIS_QUESTION (
+	dns_analysis_id INTEGER NOT NULL,
+	qname VARCHAR(255),
+	qtype VARCHAR(255)
+);
+""")
+con.commit()
+
+dnsId = int(1)
 dnsAnalysis = []
+dnsAnalysisQuestions = []
+unableToParse = 0
 
 for row in cur.execute("""
   SELECT strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.ip, DNS_MEMORY_DICT.count, CAST(DNS_PAYLOAD_DICT.payload as TEXT) as payload
@@ -37,15 +51,33 @@ for row in cur.execute("""
 
   try:
     dnsRecordPayload = dnslib.DNSRecord.parse(bytePayload)
-  except:
-    print("could not parse", bytePayload)
+    # print("\ndnsRecordPayload:", dnsRecordPayload)
+    dnsHeader = dnsRecordPayload.header
+    if dnsHeader:
+      queryId = dnsHeader.id
+      dnsAnalysis.append((dnsId, year, period, count, queryId))
+    else:
+      dnsAnalysis.append((dnsId, year, period, count, -1))
+  except Exception as e:
+    print("\ncould not parse", bytePayload)
+    print("\nError msg", e)
+    unableToParse += 1
     continue
 
   for dnsQuestion in dnsRecordPayload.questions:
     # print("\n", dnsQuestion.qname, type(dnsQuestion.qname.idna()))
-    dnsAnalysis.append((year, period, dnsQuestion.qname.idna(), dnslib.QTYPE.get(dnsQuestion.qtype), count))
+    dnsAnalysisQuestions.append((dnsId, dnsQuestion.qname.idna(), dnslib.QTYPE.get(dnsQuestion.qtype)))
+    # print("\n", "dnsQuestion", dnsQuestion)
+
+  dnsId += 1
+
+if unableToParse:
+  print("\nUnable to DNSRecord:", unableToParse, "payloads")
 
 cur.executemany('INSERT INTO DNS_ANALYSIS VALUES (?,?,?,?,?)', dnsAnalysis)
+con.commit()
+
+cur.executemany('INSERT INTO DNS_ANALYSIS_QUESTION VALUES (?,?,?)', dnsAnalysisQuestions)
 con.commit()
 con.close()
 
