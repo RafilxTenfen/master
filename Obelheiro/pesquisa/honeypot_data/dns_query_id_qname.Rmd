@@ -1,0 +1,20 @@
+---
+title: "dns_query_id_qname"
+output:
+  pdf_document: default
+  html_document: default
+date: '2022-03-31'
+---
+
+## R Markdown
+
+
+- Executar as seguintes availiações por quarter
+  - verificar se o mesmo queryid existe por vários periodos
+  - verificar se o mesmo qname aparece por vários periodos
+  - olhar as tabelas antes de plotar
+  - Olhar o período passado para verificar o surgimento de novos casos de qname / query_id
+  - verificar se tirar ou não o " HAVING qnt_repeat_query_id > 1"
+  - quero gráficos de barra
+ant
+

@@ -11,7 +11,7 @@ CREATE TABLE DNS_ANALYSIS (
 	id INTEGER NOT NULL,
 	year INTEGER NOT NULL,
 	period INTEGER NOT NULL,
-	count INTEGER NOT NULL,
+	requests_per_attack INTEGER NOT NULL,
 	query_id INTEGER NOT NULL
 );
 """)
@@ -72,7 +72,7 @@ for row in cur.execute("""
   dnsId += 1
 
 if unableToParse:
-  print("\nUnable to DNSRecord:", unableToParse, "payloads")
+  print("\nUnable to parse DNSRecord:", unableToParse, "payloads")
 
 cur.executemany('INSERT INTO DNS_ANALYSIS VALUES (?,?,?,?,?)', dnsAnalysis)
 con.commit()

@@ -31,3 +31,36 @@ GROUP BY query_id
   HAVING qnt_repeat_query_id > 1
 ORDER BY count desc
    LIMIT 10
+
+DROP TABLE IF EXISTS GROUP_BY_QUERYID;
+CREATE TEMPORARY TABLE GROUP_BY_QUERYID AS
+	  SELECT count(*) as qnt_repeat_query_id, requests_per_attack, year, period, query_id, qname, qtype
+		FROM DNS_ANALYSIS
+		JOIN DNS_ANALYSIS_QUESTION
+		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+	GROUP BY query_id
+	  HAVING qnt_repeat_query_id > 1
+	ORDER BY qnt_repeat_query_id desc
+;
+
+DROP TABLE IF EXISTS GROUP_BY_QUERYID_QNAME;
+CREATE TEMPORARY TABLE GROUP_BY_QUERYID_QNAME AS
+	  SELECT count(*) as qnt_repeat_query_id, requests_per_attack, year, period, query_id, qname, qtype
+		FROM DNS_ANALYSIS
+		JOIN DNS_ANALYSIS_QUESTION
+		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+	GROUP BY query_id, qname
+	  HAVING qnt_repeat_query_id > 1
+	ORDER BY qnt_repeat_query_id desc
+;
+
+
+  SELECT qnt_repeat_query_id / requests_per_attack AS same_attack_ratio, *
+    FROM GROUP_BY_QUERYID
+   WHERE same_attack_ratio > 1
+ORDER BY same_attack_ratio DESC
+
+  SELECT qnt_repeat_query_id / requests_per_attack AS same_attack_ratio, *
+    FROM GROUP_BY_QUERYID_QNAME
+   WHERE same_attack_ratio > 1
+ORDER BY same_attack_ratio DESC

@@ -17,7 +17,7 @@ options("scipen"=100, "digits"=4)
 
 db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
 dns_data <-dbSendQuery(db, "  
-  SELECT count(*) as countGrouped, year, period, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period , qname, qtype, SUM(count) as quantity
+  SELECT count(*) as countGrouped, year, period, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period , qname, qtype, SUM(requests_per_attack) as quantity
     FROM DNS_ANALYSIS
     JOIN DNS_ANALYSIS_QUESTION
       ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
