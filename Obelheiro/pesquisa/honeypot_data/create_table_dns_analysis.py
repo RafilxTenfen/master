@@ -12,7 +12,8 @@ CREATE TABLE DNS_ANALYSIS (
 	year INTEGER NOT NULL,
 	period INTEGER NOT NULL,
 	requests_per_attack INTEGER NOT NULL,
-	query_id INTEGER NOT NULL
+	query_id INTEGER NOT NULL,
+  tempo_final TEXT NOT NULL
 );
 """)
 con.commit()
@@ -33,7 +34,7 @@ dnsAnalysisQuestions = []
 unableToParse = 0
 
 for row in cur.execute("""
-  SELECT strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.ip, DNS_MEMORY_DICT.count, CAST(DNS_PAYLOAD_DICT.payload as TEXT) as payload
+  SELECT strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.ip, DNS_MEMORY_DICT.count, CAST(DNS_PAYLOAD_DICT.payload as TEXT) as payload, tempoFinal
     FROM DNS_MEMORY_DICT
     JOIN DNS_PAYLOAD_DICT
       ON DNS_MEMORY_DICT.payloadID == DNS_PAYLOAD_DICT.payloadID;
@@ -42,6 +43,7 @@ for row in cur.execute("""
   period = int(row[1])
   count = int(row[3])
   strQuotedPacket = row[4]
+  tempoFinal = row[5]
 
   # removes B' at the beginning, remove ' from the end and cast it to bytes
   bytePayloadUnscaped = bytes(strQuotedPacket[2:-1], encoding="utf-8")
@@ -55,9 +57,9 @@ for row in cur.execute("""
     dnsHeader = dnsRecordPayload.header
     if dnsHeader:
       queryId = dnsHeader.id
-      dnsAnalysis.append((dnsId, year, period, count, queryId))
+      dnsAnalysis.append((dnsId, year, period, count, queryId, tempoFinal))
     else:
-      dnsAnalysis.append((dnsId, year, period, count, -1))
+      dnsAnalysis.append((dnsId, year, period, count, -1, tempoFinal))
   except Exception as e:
     print("\ncould not parse", bytePayload)
     print("\nError msg", e)
@@ -74,7 +76,7 @@ for row in cur.execute("""
 if unableToParse:
   print("\nUnable to parse DNSRecord:", unableToParse, "payloads")
 
-cur.executemany('INSERT INTO DNS_ANALYSIS VALUES (?,?,?,?,?)', dnsAnalysis)
+cur.executemany('INSERT INTO DNS_ANALYSIS VALUES (?,?,?,?,?,?)', dnsAnalysis)
 con.commit()
 
 cur.executemany('INSERT INTO DNS_ANALYSIS_QUESTION VALUES (?,?,?)', dnsAnalysisQuestions)

@@ -1,0 +1,132 @@
+---
+title: "dns_query_id_qname"
+output:
+  pdf_document: default
+  html_document: default
+date: '2022-03-31'
+---
+
+## R Markdown
+
+
+- Executar as seguintes availiações por quarter
+  - verificar se o mesmo queryid existe por vários periodos
+  - verificar se o mesmo qname aparece por vários periodos
+  - olhar as tabelas antes de plotar
+  - Olhar o período passado para verificar o surgimento de novos casos de qname / query_id
+  - verificar se tirar ou não o " HAVING qnt_repeat_query_id > 1"
+  - quero gráficos de barra
+  - group por qname, qtype e queryid para verificar a ocorrência de grupo de ataques
+  
+verificar rfc1034,1035 para queryid repetidos
+
+
+```{r}
+library('RSQLite')
+library('ggplot2')
+library(DBI)
+options("scipen"=100, "digits"=4)
+library(dplyr)
+library(tibble)
+library(viridis)
+```
+
+```{r}
+db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
+
+data_unfetch <-dbSendQuery(db, "  
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+    FROM DNS_ANALYSIS
+		JOIN DNS_ANALYSIS_QUESTION
+		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+	 WHERE QTYPE != 0
+")
+data <- fetch(data_unfetch)
+
+dbDisconnect(db)
+```
+
+- Contar a frequência que query_id aparece em cada year_period
+
+```{r}
+data_split_year_period = data %>%
+  group_split(year_period)
+
+N=10
+
+period_query_id = data.frame()
+for (i in c(1:length(data_split_year_period))) {
+  query_id_frequency = data_split_year_period[[i]] %>%
+    count(query_id) 
+  
+  query_id_frequency['year_period'] = data_split_year_period[[i]]$year_period[1]
+  
+  period_query_id = rbind(period_query_id, head(query_id_frequency[order(-query_id_frequency$n),], N) )
+}
+```
+
+### Os `r N` query_id mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
+
+```{r}
+period_query_id %>%
+  group_split(year_period)
+```
+
+
+### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos
+- Caso o query_id 13213 fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
+
+```{r}
+period_query_id %>%
+  count(query_id) %>%
+  arrange(desc(n)) %>%
+  filter(n > 1)
+```
+
+### Group by qname, query_id
+
+```{r}
+period_query_id_qname = data.frame()
+for (i in c(1:length(data_split_year_period))) {
+  query_id_qname_frequency = data_split_year_period[[i]] %>%
+    count(qname, qtype, query_id, year_period, sort = TRUE) %>%
+    filter(n > 1)   
+  
+  period_query_id_qname = rbind(period_query_id_qname, head(query_id_qname_frequency, N) )
+}
+```
+
+
+### Os `r N` query_id, qname, qtype mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
+
+```{r}
+period_query_id_qname %>%
+  group_split(year_period)
+```
+### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos, agrupados por qname e qtype
+- Caso o query_id 13213 de qname = "isc.org." e qtype = "ANY" fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
+
+```{r}
+period_query_id_qname %>%
+  count(query_id, qtype, qname) %>%
+  arrange(desc(n)) %>%
+  filter(n > 1)
+```
+
+
+```{r fig.width = 12, echo=FALSE}
+#period_query_id
+
+#period_query_id %>% 
+#  mutate(year_period=as.factor(year_period)) %>%
+#  mutate(query_id=as.factor(query_id)) %>%
+#  ggplot( aes(x=reorder(query_id, -n), y=n)) +
+#    geom_bar(stat="identity", position="dodge") +
+#    scale_fill_viridis(discrete=TRUE, name="") +
+    #geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), vjust = +0.25, ) +
+#    facet_grid(~year_period) +
+#    ylab("Percentage of attacks") +
+#    ggtitle("All QTYPES - ungrouped bar")
+```
+
+

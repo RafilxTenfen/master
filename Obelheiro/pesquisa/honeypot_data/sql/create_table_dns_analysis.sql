@@ -5,5 +5,6 @@ CREATE TABLE DNS_ANALYSIS (
 	year INTEGER NOT NULL,
 	period INTEGER NOT NULL,
 	requests_per_attack INTEGER NOT NULL,
-	query_id INTEGER NOT NULL
+	query_id INTEGER NOT NULL,
+  tempo_final TEXT NOT NULL
 );

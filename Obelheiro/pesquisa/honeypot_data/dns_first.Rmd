@@ -62,7 +62,7 @@ for (i in c(2:dns_data.year_period.ungrouped.len)) {
 ```{r}
 ## ------------ ataques que repetem o query_id ------------
 top_10_repeated_query_data <-dbSendQuery(db, "  
-  SELECT count(*) as qnt_repeat_query_id, year, period, count, query_id, qname, qtype
+  SELECT count(*) as qnt_repeat_query_id, year, period, requests_per_attack, query_id, qname, qtype
     FROM DNS_ANALYSIS
     JOIN DNS_ANALYSIS_QUESTION
       ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
