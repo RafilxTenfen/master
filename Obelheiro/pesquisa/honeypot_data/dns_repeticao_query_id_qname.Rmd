@@ -29,6 +29,9 @@ options("scipen"=100, "digits"=4)
 library(dplyr)
 library(tibble)
 library(viridis)
+library(lubridate)
+
+
 ```
 
 ```{r}
@@ -107,26 +110,87 @@ period_query_id_qname %>%
 - Caso o query_id 13213 de qname = "isc.org." e qtype = "ANY" fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
 
 ```{r}
-period_query_id_qname %>%
+top_queryid_qname = period_query_id_qname %>%
   count(query_id, qtype, qname) %>%
   arrange(desc(n)) %>%
   filter(n > 1)
+
+top_queryid_qname
 ```
 
 
-```{r fig.width = 12, echo=FALSE}
-#period_query_id
+### Mandar para csv
+```{r}
+period_query_id_qname
+data
+```
 
-#period_query_id %>% 
-#  mutate(year_period=as.factor(year_period)) %>%
-#  mutate(query_id=as.factor(query_id)) %>%
-#  ggplot( aes(x=reorder(query_id, -n), y=n)) +
-#    geom_bar(stat="identity", position="dodge") +
-#    scale_fill_viridis(discrete=TRUE, name="") +
-    #geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), vjust = +0.25, ) +
-#    facet_grid(~year_period) +
-#    ylab("Percentage of attacks") +
-#    ggtitle("All QTYPES - ungrouped bar")
+### Checar se houve sobreposição temporal entre ataques com o mesmo query_id, qtype e diferentes qnames entre os top em cada período
+
+```{r}
+
+#data['tempo_final']
+data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+data['tempo_final_date'] = date(data[['tempo_final_cast']])
+data['tempo_final_hour'] = hour(data[['tempo_final_cast']])
+
+
+data_overlap = select(data, 'query_id', 'qtype', 'qname', 'year_period', 'requests_per_attack', 'tempo_final_cast', 'tempo_final_date', 'tempo_final_hour')
+
+
+data_overlap
+top_repeated_query_id = top_queryid_qname %>%
+  count(query_id) %>%
+  filter(n > 1) %>%
+  select('query_id')
+
+
+top_repeated_qname = top_queryid_qname %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  select('qname')
+  
+
+data_overlap_split_qname = data_overlap %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  filter(qname %in% top_repeated_qname[['qname']]) %>%
+  arrange(tempo_final_cast) %>%
+  count(query_id, qname, tempo_final_date, tempo_final_hour) %>%
+  group_split(qname)
+
+top_overlap = data_overlap %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  filter(qname %in% top_repeated_qname[['qname']]) %>%
+  arrange(tempo_final_cast) %>%
+  select('query_id', 'qtype', 'qname', 'tempo_final_date', 'tempo_final_hour')
+
+
+top_overlap
+head(top_overlap, N)
+#all_equal(data_overlap_split_qname[[1]], data_overlap_split_qname[[2]], )
+
+#duplicated(top_overlap, incomparables = TRUE)
+
+#top_overlap[duplicated(top_overlap, incomparables = TRUE),]
+
+#all.equal(select(data_overlap_split_qname[[1]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), select(data_overlap_split_qname[[2]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), convert=TRUE)
+
+
+#merge(select(data_overlap_split_qname[[1]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), select(data_overlap_split_qname[[2]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), by=c("query_id", "tempo_final_date", "tempo_final_hour"))
+
+
+#data_overlap_split_qname[[1]] %>%
+ # anti_join(data_overlap_split_qname[[2]], by="qname")
+
+#data_overlap_split_qname[[2]] %>%
+ # distinct(tempo_final_date)
+
+#distinct(data_overlap_split_qname[[1]][['tempo_final_date']])
+
+#semi_join(data_overlap_split_qname[[1]], data_overlap_split_qname[[2]], by=c("tempo_final_date", "tempo_final_hour", "query_id"))
+
+#top_queryid_qname %>%
+  #filter(query_id )
+ # top_queryid_qname[['query_id']]
 ```
 
 
