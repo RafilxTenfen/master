@@ -214,3 +214,41 @@ CREATE TABLE TB_DATE_OVERLAP_QUERYID AS
 -- 				 )
 -- 		   ) as amount_overlap
 --     FROM TB_DATE_RANGE AS tbisc
+
+
+
+
+
+
+
+
+
+DROP TABLE IF EXISTS GROUP_BY_QUERYID_QNAME_QTYPE;
+CREATE TABLE GROUP_BY_QUERYID_QNAME_QTYPE AS
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+    FROM DNS_ANALYSIS
+	JOIN DNS_ANALYSIS_QUESTION
+	  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+   WHERE QTYPE != 0
+GROUP BY qname, qtype, query_id, year_period;
+
+
+DROP TABLE IF EXISTS TB_DATE_RANGE;
+CREATE TABLE TB_DATE_RANGE AS
+SELECT *, DATETIME(tempo_inicio) AS tempo_inicio_datetime, DATETIME(tempo_final) AS tempo_final_datetime, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+  FROM DNS_ANALYSIS
+  JOIN DNS_ANALYSIS_QUESTION
+    ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+ WHERE QTYPE != 0
+;
+
+
+SELECT *
+  FROM
+(
+   SELECT *
+     FROM TB_DATE_OVERLAP_QUERYID
+ ORDER BY amount_overlap DESC, ip
+    LIMIT 200
+) AS TOP200
+ORDER BY TOP200.ip

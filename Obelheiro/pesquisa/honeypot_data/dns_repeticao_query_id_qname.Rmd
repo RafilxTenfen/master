@@ -119,10 +119,46 @@ top_queryid_qname
 ```
 
 
-### Mandar para csv
+### Gerar tabela
+#### contador IP
+10        192.0.2.4
+100      192.0.2.5
+1000    10.3.4.5
+100000 5.6.7.8
+
+- Aqui saberíamos que 5.6.7.8 recebeu mais ataques (ou mais requisições, dependendo do que estamos contando), e poderíamos priorizá-lo.
 ```{r}
-period_query_id_qname
-data
+
+ip_group_data = data %>%
+  group_by(ip) %>%
+  summarise(requests_per_attack_sum = sum(requests_per_attack), attacks = n()) %>%
+  arrange(desc(requests_per_attack_sum)) %>%
+  head(30) %>%
+  select('ip')
+
+
+write.csv(ip_group_data, "ip_group_data")    
+```
+
+```{r}
+distinct_qname = period_query_id_qname %>%
+  distinct(qname)
+
+distinct_query_id = period_query_id_qname %>%
+  distinct(query_id)
+
+distinct_qname[['qname']]
+data %>%
+  filter(qname %in% distinct_qname[['qname']]) %>%
+  filter(query_id %in% distinct_query_id[['query_id']]) %>%
+  distinct(ip)
+
+period_query_id_qname %>%
+  inner_join(data, by=c("qname","qtype","query_id","year_period")) %>%
+    distinct(ip)
+
+merge(period_query_id_qname, data, by=c("qname","qtype","query_id","year_period"), all.x=TRUE) %>%
+  distinct(ip)
 ```
 
 ### Checar se houve sobreposição temporal entre ataques com o mesmo query_id, qtype e diferentes qnames entre os top em cada período
