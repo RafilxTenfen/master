@@ -36,11 +36,11 @@ library(lubridate)
 
 - Busca os dados no banco com o parse do DNS ja realizado, então temos:
   - qname que é o domínio 
-  - qtype tipo da query
+  - QTYPE tipo da query
   - query_id ID da transação definido pelo atacante
   - year_period ano e trimestre em que ocorreu o ataque exemplo "20212" o ataque ocorreu no segundo trimestre do 2021
 ```{r fetch_data}
-db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
+db <- dbConnect(RSQLite::SQLite(), dbname="../dnstor_statistics_dns.sqlite")
 
 data_unfetch <-dbSendQuery(db, "  
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
@@ -138,7 +138,7 @@ period_query_id %>%
 ```
 - Isso apresenta que um mesmo query_id esteve no top `r N` em "n" trimestres diferentes, o que levanta a possibilidade de que atacantes diferentes possam estar utilizando a mesma ferramenta para realizar ataques
 
-### Dados agrupados por qname, query_id, período e qtype
+### Dados agrupados por qname, query_id, período e QTYPE
 
 ```{r}
 period_query_id_qname = data.frame()
@@ -152,16 +152,16 @@ for (i in c(1:length(data_split_year_period))) {
 ```
 
 
-### Os `r N` query_id, qname, qtype mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
+### Os `r N` query_id, qname, QTYPE mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
 
 ```{r}
 period_query_id_qname %>%
   group_split(year_period)
 ```
-- Ao observar esses registros, é possível verificar que alguns deles se repetem durante o tempo utilizando o mesmo qname, qtype e query_id, e que possívelmente não fizeram nenhuma alteração na ferramenta de ataque durante o período observado que iniciou no ultimo trimestre de 2020 até o primeiro trimestre de 2022.
+- Ao observar esses registros, é possível verificar que alguns deles se repetem durante o tempo utilizando o mesmo qname, QTYPE e query_id, e que possívelmente não fizeram nenhuma alteração na ferramenta de ataque durante o período observado que iniciou no ultimo trimestre de 2020 até o primeiro trimestre de 2022.
 
-### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos, agrupados por qname e qtype
-- Caso o query_id 13213 de qname = "isc.org." e qtype = "ANY" fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
+### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos, agrupados por qname e QTYPE
+- Caso o query_id 13213 de qname = "isc.org." e QTYPE = "ANY" fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
 
 ```{r}
 top_queryid_qname = period_query_id_qname %>%
@@ -266,7 +266,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period_quantity.filter_any['quantity_
 
 ```
 
-- A quantidade de requests em % por trimestre por qtype
+- A quantidade de requests em % por trimestre por QTYPE
 ```{r}
 dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>% 
   ggplot(aes(x = year_period, y = quantity_percentage)) +
@@ -275,7 +275,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>%
 ```
 
 
-- A quantidade de requests em % por trimestre por qtype
+- A quantidade de requests em % por trimestre por QTYPE
   - lembrando que em 20213 teve um problema em armazenar os dados, por isso talvez essa discrepância
 ```{r}
 dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>%
@@ -286,7 +286,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period_quantity %>%
 ```
 - Com esse gráfico é possível observar a grande quantidade de ataques do tipo ANY sendo extremamente superior aos demais, até mesmo no trimestre em que houve problema de armazenamento e alguns registros foram perdidos
 
-- Quantos qnames e qtypes novos aparecem em cada trimestre
+- Quantos qnames e QTYPES novos aparecem em cada trimestre
 
 ```{r}
 
@@ -350,7 +350,7 @@ for (i in c(2:dns_data.year_period.ungrouped.len)) {
 ```
 
 
-- Top `r N` novos qtypes por trimestre 
+- Top `r N` novos QTYPES por trimestre 
 ```{r}
 quarter_new_qtype %>%
   arrange(desc(sum_quantity)) %>%
@@ -368,7 +368,7 @@ quarter_new_qname %>%
 ``` 
 - 
 
-- Gráfico de barras da porcentagem de qtypes por trimestre
+- Gráfico de barras da porcentagem de QTYPES por trimestre
 ```{r}
 
 dns_data_fetched.sum_attacks_quarterly.sum_period = dns_data_fetched.sum_attacks_quarterly %>%
@@ -379,7 +379,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period['quantity_percentage'] = (dns_
 
 ```
 
-- A porcentagem calculada pela quantidade de requisições em cada período por cada qtype
+- A porcentagem calculada pela quantidade de requisições em cada período por cada QTYPE
 ```{r fig.width = 12}
 dns_data_fetched.sum_attacks_quarterly.sum_period %>% 
   mutate(year_period=as.factor(year_period)) %>%
@@ -393,7 +393,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
     ggtitle("All QTYPES - ungrouped bar")
 ```
 
-- Novamente a porcentagem calculada pela quantidade de requisições em cada período por cada qtype, cada barra é um trimestre
+- Novamente a porcentagem calculada pela quantidade de requisições em cada período por cada QTYPE, cada barra é um trimestre
 ```{r fig.width = 12}
 dns_data_fetched.sum_attacks_quarterly.sum_period %>% 
   mutate(year_period=as.factor(year_period)) %>%
@@ -405,7 +405,7 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
     ylab("Percentage of attacks") +
     ggtitle("All QTYPES - stacked bars")
 ```
-- Porcentagem da quantidade de requisições por trimestre por qtype em que tenha no mínimo 1% de requisições totais realizadas 
+- Porcentagem da quantidade de requisições por trimestre por QTYPE em que tenha no mínimo 1% de requisições totais realizadas 
 
 ```{r fig.align="center", fig.width = 12}
 
@@ -463,18 +463,18 @@ dns_data_overlap_fetched %>%
 - Os datasets com os ataques DNS foram processados por um script em python que faz o parse do payload para recolher informações do DNS como:
   - O query_id que é o TX ID da transação definido pelo atacante; 
   - O qname que é o domínio em que o atacante realizou spoffing; 
-  - O qtype que é o tipo da query utilizada para realizar amplificação. 
+  - O QTYPE que é o tipo da query utilizada para realizar amplificação. 
 
 ## Questões
 - A ideia para esse documento é realizar uma análise longitudinal da evolução dos payloads somente para evoluções relacionadas a ataques DNS. 
 - Uma das analises destacadas é o uso do DNS com o QTYPE ANY. Pois, historicamente ataques DRDoS com DNS utilizam majoritariamente requisições para o QTYPE ANY, que retorna todos os tipos de registros para um dado nome. Assim, será que a incidência de requisições com ANY evoluiu ao longo do tempo? 
-- Para contexto, requisições com o QTYPE ANY tem um grande potencial de amplificação e o seu uso legítimo é apenas para debug do servidor e para verificar o estado de um servidor DNS, por esse motivo, foi introduzida uma recomendação para que servidores DNS reduzam ou limitem o tamanho na resposta das consultas com QTYPE ANY ([RFC8482](https://datatracker.ietf.org/doc/html/rfc8482)) para evitar o uso dessas requisições em ataques de negação de serviço por reflexão ou tornar essa forma de amplificação menos útil aos atacantes.
+- Para contexto, requisições com o QTYPE ANY tem um grande potencial de amplificação e o seu uso legítimo é apenas para debug do servidor e para verificar o estado de um servidor DNS, por esse motivo, foi introduzida uma recomendação para que servidores DNS limitem o tamanho na resposta das consultas com QTYPE ANY ([RFC8482](https://datatracker.ietf.org/doc/html/rfc8482)) para evitar o uso dessas requisições em ataques de negação de serviço por reflexão ou tornar essa forma de amplificação menos útil aos atacantes.
 
 ## Analises
 - Obs.: Tenha em mente que os dados referentes ao terceiro trimestre de 2021 podem não refletir a realidade, devido a alguns problemas de armazenamento durante esse período.
 
 ### Quantidade de requisições por QTYPE e trimestres
-- Para realizar a análise, foi realizado uma query agrupando os registros do DNS por (year_period, year, period, qname, qtype) e somado a quantidade total de requisições (request_per_attack) e renomeado para (quantity)
+- Para realizar a análise, foi realizado uma query agrupando os registros do DNS por (year_period, year, period, qname, QTYPE) e somado a quantidade total de requisições (request_per_attack) e renomeado para (quantity)
 - Dessa forma, foi analisado a porcentagem de cada QTYPE dentre as consultas por trimestre de DNS já processados, em que a porcentagem foi definida pela soma total das requisições por ataques de um mesmo tipo por trimestre. Então por exemplo se em um mesmo trimestre a soma total das requisições dos ataques com o QTYPE MX for 20 e o total das requisições dos ataques do tipo ANY for 80, a porcentagem de ANY será 80% e de MX será 20% naquele trimestre.
 
 ```{r fig.width = 12}
@@ -489,12 +489,14 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
     ggtitle("All QTYPES - stacked bars")
 ```
 
-- Esse gráfico apresenta que ANY é a maioria em todos os trimestre em que os dados foram coletados com uma predominância grande (98%+) nos três primeiros trimestres (2020/Q4, 2021/Q1, 2021/Q2) e teve uma queda nos dois últimos trimestres com 83.49% em 2021/Q4 e 80.52% 2022/Q1 liberando a entrada dos QTYPES A e MX que juntos somam 16.32% em 2021/Q4 e 19.36% em 2021/Q5.
-- Valores abaixo de 1.5% no gráfico foram desconsiderados
+- Esse gráfico apresenta que ANY é a maioria em todos os trimestre em que os dados foram coletados com uma predominância grande (98%+) nos três primeiros trimestres (20204, 20211, 20212), no trimestre 20213 os QTYPES tiveram uma paridade entre os diferentes QTYPES: A (24%), ANY (27%), MX (22%) e RRSIG (25%), lembrando que nesse trimestre teve um volume de tráfego bem abaixo do normal, o que prejudica a nálise. Além disso, teve uma queda nos dois últimos trimestres com 83% em 20214 e 80% em 20221 devido ao aumento do uso dos QTYPES A e MX que juntos somam 16% em 20214 e 19% em 20221.
+<!-- - Valores abaixo de 1.5% no gráfico foram desconsiderados -->
 
 ### Quantidade de ataques por query_id e sobreposição
-- Para iniciar essa análise de dados foi verificado que inúmeros ataques utilizavam o mesmo query_id, como apresentado no top 5 abaixo que o query_id "17767" foi utilizado em 87.924 ataques diferentes somando 9.063.853 requisições utilizando o mesmo query_id entre cerca de 30 domínios diferentes e isso levantou algumas dúvidas, pois o query_id deveria ser aletório conforme estabelecido na [RFC5452](https://datatracker.ietf.org/doc/html/rfc5452#section-9.2) em que resolvedores DNS precisam utilizar um número de query ID aleatório entre (0-65535), totalizando 2^16 possíveis valores para o query_id. Dessa forma, uma dúvida que surge é porque tantos ataques utilizam o mesmo query_id?
-  - Uma curiosidade é que o query_id mais utilizado "17767" em hexadecimal é 0x4567 que são 4 números consecutivos 
+- Conforme estabelecido na [RFC5452](https://datatracker.ietf.org/doc/html/rfc5452#section-9.2), resolvedores DNS precisam utilizar um número de query ID aleatório entre (0-65535), totalizando 2^16 possíveis valores para o query_id. Contudo, foi observado que vários ataques utilizavam o mesmo query_id, como apresentado no top 5 abaixo que o query_id "17767" foi utilizado em 87.924 ataques diferentes somando 9.063.853 requisições utilizando o mesmo query_id entre cerca de 30 domínios diferentes e isso levantou uma dúvida do porque tantos ataques utilizam o mesmo query_id?
+
+<!-- - Para iniciar essa análise de dados foi verificado que vários ataques utilizavam o mesmo query_id, como apresentado no top 5 abaixo que o query_id "17767" foi utilizado em 87.924 ataques diferentes somando 9.063.853 requisições utilizando o mesmo query_id entre cerca de 30 domínios diferentes e isso levantou algumas dúvidas, pois o query_id deveria ser aletório conforme estabelecido na [RFC5452](https://datatracker.ietf.org/doc/html/rfc5452#section-9.2) em que resolvedores DNS precisam utilizar um número de query ID aleatório entre (0-65535), totalizando 2^16 possíveis valores para o query_id. Dessa forma, uma dúvida que surge é porque tantos ataques utilizam o mesmo query_id? -->
+<!--   - Uma curiosidade é que o query_id mais utilizado "17767" em hexadecimal é 0x4567 que são 4 números consecutivos  -->
 
 ```{r}
 data %>%
@@ -520,15 +522,17 @@ data %>%
 - Essa diferença gigante entre a quantidade de vezes que o query_id repetiu e a probabilidade em que poderia repetir auxilia no embasamento da utilização de uma mesma ferramenta pelos atacantes.
 
 - Uma outra teoria é que se ataques com o mesmo query_id acontecem em paralelo a outro ataque com qname diferente, possívelmente existe um atacante que comanda inúmeros diferentes ataques ao mesmo tempo ou colabora para a teoria de que vários atacantes utilizam a mesma ferramenta para realizar os ataques e esses ataques são sincronizados para acontecerem em um mesmo período.
-- Para verificar se ataques com um mesmo qtype e query_id acontecem em paralelo a diferentes qnames é necessário verificar se esses ataques são concomitantes, ou seja, observar se um ataque acontece enquanto outro ataque com o mesmo query_id acontece. O cálculo da quantidade de ataques concomitantes foi verificado se o tempo inicio de um ataque esta entre o inicio e fim de outro ataque ou o tempo final esta entre o inicio e fim de outro ataque, é somado 1 ao contador (amount_overlap).
 
-```{r}
-dns_data_overlap_fetched %>% 
-  arrange(desc(amount_overlap)) %>%
-  select('query_id', 'qtype', 'qname', 'requests_per_attack', 'ip', 'amount_overlap') %>%
-  head(5)
-```
-- Com a tabela acima é possível observar que existe muita sobreposição entre os ataques que utilizam o mesmo QTYPE e o mesmo query_id com o ataque para o domínio "wzb.eu." que teve 658 ataques com o mesmo query_id "17767" e qtype "ANY" ocorrendo durante o período em que esse ataque ocorria.
+
+<!-- - Para verificar se ataques com um mesmo QTYPE e query_id acontecem em paralelo a diferentes qnames é necessário verificar se esses ataques são concomitantes, ou seja, observar se um ataque acontece enquanto outro ataque com o mesmo query_id acontece. O cálculo da quantidade de ataques concomitantes foi verificado se o tempo inicio de um ataque esta entre o inicio e fim de outro ataque ou o tempo final esta entre o inicio e fim de outro ataque, é somado 1 ao contador (amount_overlap). -->
+
+<!-- ```{r} -->
+<!-- dns_data_overlap_fetched %>%  -->
+<!--   arrange(desc(amount_overlap)) %>% -->
+<!--   select('query_id', 'qtype', 'qname', 'requests_per_attack', 'ip', 'amount_overlap') %>% -->
+<!--   head(5) -->
+<!-- ``` -->
+<!-- - Com a tabela acima é possível observar que existe muita sobreposição entre os ataques que utilizam o mesmo QTYPE e o mesmo query_id com o ataque para o domínio "wzb.eu." que teve 658 ataques com o mesmo query_id "17767" e QTYPE "ANY" ocorrendo durante o período em que esse ataque ocorria. -->
 
 <!-- Pois o query id deveria ser aleatório e através da probabilidade poderia repetir o mesmo query id  -->
 <!-- Possívelmente, inidicando que um ou vários atacantes estão utilizando uma mesma ferramenta para realizar ataques em paralelo para diferentes vítimas. -->
@@ -540,7 +544,7 @@ dns_data_overlap_fetched %>%
 
 <!-- , conforme [sugerido](https://blog.cloudflare.com/what-happened-next-the-deprecation-of-any/) em 2016, assim os atacantes podem continuar abusando dessa forma de amplificação.  -->
 
-- Além disso, o grande número de ataques utilizando o mesmo query_id e também a quantidade de sobreposição entre os ataques indicam que muitos deles utilizaram a mesma ferramenta para realizar os ataques. Ainda mais pois os atacantes nem sequer se deram ao trabalho de alterar o query_id ou utilizar um número randômico/incremental para o query_id ser diferente.
+- Além disso, o grande número de ataques utilizando o mesmo query_id e também a quantidade de sobreposição entre os ataques sugerem que muitos deles utilizaram a mesma ferramenta para realizar os ataques. Ainda mais pois os atacantes nem sequer se deram ao trabalho de alterar o query_id ou utilizar um número randômico/incremental para o query_id ser diferente.
 
 <!-- - Outro fato interessante que pode ser observado é que muitos ataques se sobrepõem (seu tempo de inicio e fim contém o início e fim de outro ataque para um mesmo qtype e query_id), realizamos a pesquisa de sobreposição apenas sobre ataques com um mesmo qtype, mesmo query_id e mesmo qname, porém acredito que vale realizar uma busca para verificar a quantidade de ataques sobrepostos a um mesmo qname com query_id diferentes em que ocorram sobreposições para observar os ataques em que são realizados em massa para um mesmo qname em um mesmo período de tempo -->
 

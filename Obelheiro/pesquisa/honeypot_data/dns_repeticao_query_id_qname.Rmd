@@ -1,0 +1,232 @@
+---
+title: "dns_query_id_qname"
+output:
+  pdf_document: default
+  html_document: default
+date: '2022-03-31'
+---
+
+## R Markdown
+
+
+- Executar as seguintes availiações por quarter
+  - verificar se o mesmo queryid existe por vários periodos
+  - verificar se o mesmo qname aparece por vários periodos
+  - olhar as tabelas antes de plotar
+  - Olhar o período passado para verificar o surgimento de novos casos de qname / query_id
+  - verificar se tirar ou não o " HAVING qnt_repeat_query_id > 1"
+  - quero gráficos de barra
+  - group por qname, qtype e queryid para verificar a ocorrência de grupo de ataques
+  
+verificar rfc1034,1035 para queryid repetidos
+
+
+```{r}
+library('RSQLite')
+library('ggplot2')
+library(DBI)
+options("scipen"=100, "digits"=4)
+library(dplyr)
+library(tibble)
+library(viridis)
+library(lubridate)
+
+
+```
+
+```{r}
+db <- dbConnect(RSQLite::SQLite(), dbname="./dnstor_statistics_dns.sqlite")
+
+data_unfetch <-dbSendQuery(db, "  
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+    FROM DNS_ANALYSIS
+		JOIN DNS_ANALYSIS_QUESTION
+		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+	 WHERE QTYPE != 0
+")
+data <- fetch(data_unfetch)
+
+dbDisconnect(db)
+```
+
+- Contar a frequência que query_id aparece em cada year_period
+
+```{r}
+data_split_year_period = data %>%
+  group_split(year_period)
+
+N=10
+
+period_query_id = data.frame()
+for (i in c(1:length(data_split_year_period))) {
+  query_id_frequency = data_split_year_period[[i]] %>%
+    count(query_id) 
+  
+  query_id_frequency['year_period'] = data_split_year_period[[i]]$year_period[1]
+  
+  period_query_id = rbind(period_query_id, head(query_id_frequency[order(-query_id_frequency$n),], N) )
+}
+```
+
+### Os `r N` query_id mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
+
+```{r}
+period_query_id %>%
+  group_split(year_period)
+```
+
+
+### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos
+- Caso o query_id 13213 fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
+
+```{r}
+period_query_id %>%
+  count(query_id) %>%
+  arrange(desc(n)) %>%
+  filter(n > 1)
+```
+
+### Group by qname, query_id
+
+```{r}
+period_query_id_qname = data.frame()
+for (i in c(1:length(data_split_year_period))) {
+  query_id_qname_frequency = data_split_year_period[[i]] %>%
+    count(qname, qtype, query_id, year_period, sort = TRUE) %>%
+    filter(n > 1)   
+  
+  period_query_id_qname = rbind(period_query_id_qname, head(query_id_qname_frequency, N) )
+}
+```
+
+
+### Os `r N` query_id, qname, qtype mais utilizados divididos por período e ordenados pela frequência em que apareceram no período
+
+```{r}
+period_query_id_qname %>%
+  group_split(year_period)
+```
+### Os query_id que apareceram com maior frequência entre os top `r N` em todos os períodos, agrupados por qname e qtype
+- Caso o query_id 13213 de qname = "isc.org." e qtype = "ANY" fosse top 1 em 20204 e top 3 em 20211 e não aparecer em mais nenhum outro período seu "n" seria 2
+
+```{r}
+top_queryid_qname = period_query_id_qname %>%
+  count(query_id, qtype, qname) %>%
+  arrange(desc(n)) %>%
+  filter(n > 1)
+
+top_queryid_qname
+```
+
+
+### Gerar tabela
+#### contador IP
+10        192.0.2.4
+100      192.0.2.5
+1000    10.3.4.5
+100000 5.6.7.8
+
+- Aqui saberíamos que 5.6.7.8 recebeu mais ataques (ou mais requisições, dependendo do que estamos contando), e poderíamos priorizá-lo.
+```{r}
+
+ip_group_data = data %>%
+  group_by(ip) %>%
+  summarise(requests_per_attack_sum = sum(requests_per_attack), attacks = n()) %>%
+  arrange(desc(requests_per_attack_sum)) %>%
+  head(30) %>%
+  select('ip')
+
+
+write.csv(ip_group_data, "ip_group_data")    
+```
+
+```{r}
+distinct_qname = period_query_id_qname %>%
+  distinct(qname)
+
+distinct_query_id = period_query_id_qname %>%
+  distinct(query_id)
+
+distinct_qname[['qname']]
+data %>%
+  filter(qname %in% distinct_qname[['qname']]) %>%
+  filter(query_id %in% distinct_query_id[['query_id']]) %>%
+  distinct(ip)
+
+period_query_id_qname %>%
+  inner_join(data, by=c("qname","qtype","query_id","year_period")) %>%
+    distinct(ip)
+
+merge(period_query_id_qname, data, by=c("qname","qtype","query_id","year_period"), all.x=TRUE) %>%
+  distinct(ip)
+```
+
+### Checar se houve sobreposição temporal entre ataques com o mesmo query_id, qtype e diferentes qnames entre os top em cada período
+
+```{r}
+
+#data['tempo_final']
+data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+data['tempo_final_date'] = date(data[['tempo_final_cast']])
+data['tempo_final_hour'] = hour(data[['tempo_final_cast']])
+
+
+data_overlap = select(data, 'query_id', 'qtype', 'qname', 'year_period', 'requests_per_attack', 'tempo_final_cast', 'tempo_final_date', 'tempo_final_hour')
+
+
+data_overlap
+top_repeated_query_id = top_queryid_qname %>%
+  count(query_id) %>%
+  filter(n > 1) %>%
+  select('query_id')
+
+
+top_repeated_qname = top_queryid_qname %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  select('qname')
+  
+
+data_overlap_split_qname = data_overlap %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  filter(qname %in% top_repeated_qname[['qname']]) %>%
+  arrange(tempo_final_cast) %>%
+  count(query_id, qname, tempo_final_date, tempo_final_hour) %>%
+  group_split(qname)
+
+top_overlap = data_overlap %>%
+  filter(query_id %in% top_repeated_query_id[['query_id']]) %>%
+  filter(qname %in% top_repeated_qname[['qname']]) %>%
+  arrange(tempo_final_cast) %>%
+  select('query_id', 'qtype', 'qname', 'tempo_final_date', 'tempo_final_hour')
+
+
+top_overlap
+head(top_overlap, N)
+#all_equal(data_overlap_split_qname[[1]], data_overlap_split_qname[[2]], )
+
+#duplicated(top_overlap, incomparables = TRUE)
+
+#top_overlap[duplicated(top_overlap, incomparables = TRUE),]
+
+#all.equal(select(data_overlap_split_qname[[1]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), select(data_overlap_split_qname[[2]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), convert=TRUE)
+
+
+#merge(select(data_overlap_split_qname[[1]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), select(data_overlap_split_qname[[2]], 'query_id', 'tempo_final_date', 'tempo_final_hour', 'qname'), by=c("query_id", "tempo_final_date", "tempo_final_hour"))
+
+
+#data_overlap_split_qname[[1]] %>%
+ # anti_join(data_overlap_split_qname[[2]], by="qname")
+
+#data_overlap_split_qname[[2]] %>%
+ # distinct(tempo_final_date)
+
+#distinct(data_overlap_split_qname[[1]][['tempo_final_date']])
+
+#semi_join(data_overlap_split_qname[[1]], data_overlap_split_qname[[2]], by=c("tempo_final_date", "tempo_final_hour", "query_id"))
+
+#top_queryid_qname %>%
+  #filter(query_id )
+ # top_queryid_qname[['query_id']]
+```
+
+

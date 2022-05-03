@@ -1,0 +1,103 @@
+---
+title: 'DN2. DNS: longevidade de nomes'
+author: "Rafilx"
+date: '2022-05-02'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+library('RSQLite')
+library('ggplot2')
+library(DBI)
+options("scipen"=100, "digits"=4)
+library(dplyr)
+library(tibble)
+library(viridis)
+library(lubridate)
+```
+
+## R Markdown
+A longevidade de um nome (QNAME+QTYPE) no dataset pode ser definida como o intervalo entre a primeira e a última aparição desse nome. Calcular a longevidade dos nomes no dataset, e analisar como essa variável está distribuída.
+
+Resultados esperados:
+
+- análise gráfica da distribuição (histograma, ECDF) e numérica (min, max, média, mediana) da longevidade dos nomes
+    * por enquanto não vejo sentido em dividir a análise por período, então pode considerar o dataset como um todo
+    * minha intuição é que a distribuição seja assimétrica com (longa) cauda à direita
+
+- Busca os dados no banco com o parse do DNS ja realizado, então temos:
+  - qname que é o domínio 
+  - QTYPE tipo da query
+  - query_id ID da transação definido pelo atacante
+  - year_period ano e trimestre em que ocorreu o ataque exemplo "20212" o ataque ocorreu no segundo trimestre do 2021
+  
+```{r fetch_data}
+db <- dbConnect(RSQLite::SQLite(), dbname="../dnstor_statistics_dns.sqlite")
+
+data_unfetch <-dbSendQuery(db, "  
+  SELECT *
+    FROM DNS_ANALYSIS
+		JOIN DNS_ANALYSIS_QUESTION
+		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
+	 WHERE QTYPE != 0
+")
+data <- fetch(data_unfetch)
+
+dbDisconnect(db)
+```
+
+```{r}
+data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+data['tempo_inicio_cast'] = as.POSIXct(data[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
+
+data_grouped = data %>%
+  group_by(qname, qtype) %>%
+  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast)) %>%
+  mutate(tempo_diff = tempo_final - tempo_inicio) %>%
+  #filter(tempo_diff > 0) %>%
+  arrange(desc(tempo_diff))
+  
+data_grouped %>%
+  head(10)
+```
+
+```{r}
+data_grouped %>%
+  ggplot(aes(x= tempo_diff)) +
+  geom_histogram(bins = 10, fill='blue', color ='black') +
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
+  xlab("tempo_final - tempo_inicio") + 
+  theme_classic()
+```
+
+```{r}
+data_grouped %>%
+  ggplot(aes(x= tempo_diff)) +
+  stat_ecdf(geom = "step", pad = FALSE) +
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
+  xlab("tempo_final - tempo_inicio") + 
+  theme_classic()
+```
+
+```{r}
+
+data_grouped.tempo_diff.min = min(data_grouped$tempo_diff)
+data_grouped.tempo_diff.max = max(data_grouped$tempo_diff)
+data_grouped.tempo_diff.mean = mean(data_grouped$tempo_diff)
+data_grouped.tempo_diff.median = median(data_grouped$tempo_diff)
+
+quantile(data_grouped$tempo_diff)
+summary(data_grouped)
+```
+
+- Dados sobre o intervalo entre a primeira e a última aparição desse (QNAME+QTYPE) 
+  - Mínimo `r data_grouped.tempo_diff.min` segundos
+  - Máximo `r data_grouped.tempo_diff.max` segundos
+  - Média `r round(data_grouped.tempo_diff.mean, 2)` segundos
+  - Mediana `r data_grouped.tempo_diff.median` segundos
