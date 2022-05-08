@@ -56,12 +56,14 @@ dbDisconnect(db)
 data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
 data['tempo_inicio_cast'] = as.POSIXct(data[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
 
+secs_to_month = (60 * 60 * 24 * 30)
+
 data_grouped = data %>%
   group_by(qname, qtype) %>%
   summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast)) %>%
-  mutate(tempo_diff = tempo_final - tempo_inicio) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
   #filter(tempo_diff > 0) %>%
-  arrange(desc(tempo_diff))
+  arrange(desc(tempo_diff_secs))
   
 data_grouped %>%
   head(10)
@@ -69,7 +71,7 @@ data_grouped %>%
 
 ```{r}
 data_grouped %>%
-  ggplot(aes(x= tempo_diff)) +
+  ggplot(aes(x= tempo_diff_secs)) +
   geom_histogram(bins = 10, fill='blue', color ='black') +
   ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
   xlab("tempo_final - tempo_inicio") + 
@@ -78,7 +80,7 @@ data_grouped %>%
 
 ```{r}
 data_grouped %>%
-  ggplot(aes(x= tempo_diff)) +
+  ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
   ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
   xlab("tempo_final - tempo_inicio") + 
@@ -87,17 +89,127 @@ data_grouped %>%
 
 ```{r}
 
-data_grouped.tempo_diff.min = min(data_grouped$tempo_diff)
-data_grouped.tempo_diff.max = max(data_grouped$tempo_diff)
-data_grouped.tempo_diff.mean = mean(data_grouped$tempo_diff)
-data_grouped.tempo_diff.median = median(data_grouped$tempo_diff)
+data_grouped.tempo_diff_secs.min = min(data_grouped$tempo_diff_secs)
+data_grouped.tempo_diff_secs.max = max(data_grouped$tempo_diff_secs)
+data_grouped.tempo_diff_secs.mean = mean(data_grouped$tempo_diff_secs)
+data_grouped.tempo_diff_secs.median = median(data_grouped$tempo_diff_secs)
 
-quantile(data_grouped$tempo_diff)
+quantile(data_grouped$tempo_diff_secs)
 summary(data_grouped)
 ```
 
 - Dados sobre o intervalo entre a primeira e a última aparição desse (QNAME+QTYPE) 
-  - Mínimo `r data_grouped.tempo_diff.min` segundos
-  - Máximo `r data_grouped.tempo_diff.max` segundos
-  - Média `r round(data_grouped.tempo_diff.mean, 2)` segundos
-  - Mediana `r data_grouped.tempo_diff.median` segundos
+  - Mínimo `r data_grouped.tempo_diff_secs.min` segundos
+  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_month` meses
+  - Média `r data_grouped.tempo_diff_secs.mean / 60` minutos
+  - Mediana `r data_grouped.tempo_diff_secs.median` segundos
+
+
+```{r}
+trim_value = .30
+
+data_grouped.tempo_diff_secs.min = min(data_grouped$tempo_diff_secs, trim=trim_value)
+data_grouped.tempo_diff_secs.max = max(data_grouped$tempo_diff_secs, trim=trim_value)
+data_grouped.tempo_diff_secs.mean = mean(data_grouped$tempo_diff_secs, trim=trim_value)
+data_grouped.tempo_diff_secs.median = median(data_grouped$tempo_diff_secs, trim=trim_value)
+
+quantile(data_grouped$tempo_diff_secs, trim=trim_value)
+summary(data_grouped, trim=trim_value)
+```
+
+- Dados sobre o intervalo entre a primeira e a última aparição do (QNAME+QTYPE) removendo `r trim_value * 100`% dos valores máximos e mínimos 
+  - Mínimo `r data_grouped.tempo_diff_secs.min` segundos
+  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_month` meses
+  - Média `r data_grouped.tempo_diff_secs.mean/ (60)` minutos
+  - Mediana `r data_grouped.tempo_diff_secs.median` segundos
+  
+- Identificar qual é o percentil em que há essa mudança de tendência (próximo aos 72-73%) e qual a duração correspondente
+```{r}
+quantile(data_grouped$tempo_diff_secs, 
+          c(.5332, .6235, .696282, .710307, .72, .7204, 
+            .721090026, .73, .7396902445, .75, .76, 
+            .77, .78, .99))
+```
+- Isso representa que Y% dos (QNAME+TYPE), tem os seus ataques com duração de até X segundos:
+  - 53.3%  até 100 segundos
+  - 62.3%  até 1000 segundos
+  - 69.6%  até 10000 segundos
+  - 71%    até 100000 segundos
+  - 72%    até 598289 segundos
+  - 72.04% até 803076 segundos
+  - 72.11% até 1000000 segundos
+  - 73.97% até 10000000 segundos
+- Significa que após os 69% o tempo dos ataques cresce muito até cerca de 73.97% onde estabiliza próximo dos 10000000 segundos
+
+- Uma representação ECDF removendo os registros abaixo da quantidade de segundos em que apresenta estabilidade (10000000 segundos) 
+  - Possívelmente apresenta uma distribuição assimétrica com cauda a direita
+
+```{r}
+data_grouped %>%
+  filter(tempo_diff_secs > 10000000) %>%
+  ggplot(aes(x= tempo_diff_secs)) +
+  stat_ecdf(geom = "step", pad = FALSE) +
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
+  xlab("tempo_final - tempo_inicio") + 
+  theme_classic()
+```
+
+```{r}
+
+percentage_76_secs = quantile(data_grouped$tempo_diff_secs, c(.76))[[1]]
+percentage_76_secs/secs_to_month
+
+percentage_99_secs = quantile(data_grouped$tempo_diff_secs, c(.995))[[1]]
+percentage_99_secs/secs_to_month
+
+data_grouped.tempo_diff_secs.max / secs_to_month
+```
+
+- Cerca de 24% dos (QNAME + QTYPE) possuem uma longevidade entre 9 e 16 meses 
+```{r}
+
+data_grouped %>%
+  filter(tempo_diff_secs > percentage_76_secs) %>%
+  ggplot(aes(x= tempo_diff_secs / secs_to_month)) +
+  geom_histogram(bins = 50, fill='blue', color ='black') +
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
+  xlab("Meses de Longevidade") + 
+  theme_classic()
+```
+```{r}
+
+data_bigger_than_76 = data_grouped %>%
+  filter(tempo_diff_secs > percentage_76_secs) %>%
+  ungroup() %>%
+  group_by(qtype) %>%
+  summarise(qtype_quantity = n()) %>%
+  arrange(desc(qtype_quantity))
+  
+  
+sum_qtype_quantity = sum(data_bigger_than_76$qtype_quantity)
+data_bigger_than_76_percentage = data_bigger_than_76 %>%
+  mutate(qtype_quantity_percentage = (qtype_quantity / sum_qtype_quantity) * 100) 
+
+data_bigger_than_76_percentage
+
+```
+
+```{r fig.align="center", fig.width = 10}
+data_bigger_than_76_percentage %>%
+ ggplot( aes(x=reorder(qtype, +qtype_quantity_percentage), y=qtype_quantity_percentage, fill=qtype)) +
+    geom_bar(stat="identity", position="dodge") +
+    scale_fill_viridis(discrete=TRUE, name="") +
+    geom_text(aes(label = paste(round(qtype_quantity_percentage, 2), "%")), vjust = -0.10, ) + 
+    theme_classic() + 
+    ylab("Porcentagem da quantidade") +
+    xlab("QTYPE") +
+    ggtitle("QTYPE com longevidade entre 9 e 16 meses")
+    
+```
+- Então dos QTYPE que possuem uma alta longevidade entre 9 e 16 meses (cerca de 24% de todos os registros 76% ~ 100%) 
+  - 20% (`r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "MX"),]$qtype_quantity`) deles possuem o QTYPE "MX" 
+  - 78% (`r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "A"),]$qtype_quantity`) dos ataques com maior longevidade utilizam o QTYPE "A", o que é surpreendente
+  - E por fim o QTYPE "ANY" aparece com apenas `r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "ANY"),]$qtype_quantity` registros de QTYPE com longevidade entre 9 e 16 meses
+
+
+
