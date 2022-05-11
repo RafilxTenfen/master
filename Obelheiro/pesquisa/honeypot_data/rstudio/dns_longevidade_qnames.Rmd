@@ -41,7 +41,7 @@ Resultados esperados:
 db <- dbConnect(RSQLite::SQLite(), dbname="../dnstor_statistics_dns.sqlite")
 
 data_unfetch <-dbSendQuery(db, "  
-  SELECT *
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
     FROM DNS_ANALYSIS
 		JOIN DNS_ANALYSIS_QUESTION
 		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
@@ -60,7 +60,7 @@ secs_to_month = (60 * 60 * 24 * 30)
 
 data_grouped = data %>%
   group_by(qname, qtype) %>%
-  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast)) %>%
+  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
   mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
   #filter(tempo_diff > 0) %>%
   arrange(desc(tempo_diff_secs))
@@ -212,4 +212,137 @@ data_bigger_than_76_percentage %>%
   - E por fim o QTYPE "ANY" aparece com apenas `r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "ANY"),]$qtype_quantity` registros de QTYPE com longevidade entre 9 e 16 meses
 
 
+```{r}
 
+percentage_76_secs_A_qnames = data_grouped %>%
+  filter(tempo_diff_secs > percentage_76_secs) %>%
+  filter(qtype == "A") %>%
+  select(qname) %>%
+  distinct(qname)
+  
+
+percentage_76_secs_qtype_A = data %>%
+  filter(qtype == "A") %>%
+  filter(qname %in% percentage_76_secs_A_qnames$qname)
+```
+
+
+- O QTYPE "A" é o QTYPE que possui a maior quantidade de QNAMEs com alta longevidade entre 9 e 16 meses
+  - Esse é o top 10 de QTYPE A agroupado por QNAME representado por qname_count e somado o request_per_attack 
+```{r}
+percentage_76_secs_qtype_A_group_qname = percentage_76_secs_qtype_A %>%
+  group_by(qname) %>%
+  summarise(qname_count = n(), sum_requests_per_attack=sum(requests_per_attack), tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) 
+
+percentage_76_secs_qtype_A_group_qname %>%
+  arrange(desc(tempo_diff_secs)) %>%
+  head(10)
+```
+
+- Uníca coisa a ressaltar aqui é que o top 1 QNAME "whoami.akamai.net." que apareceu 3639x e foi o registro com maior longevidade 480 dias, cerca de 16 meses
+
+- Ao ordenar pela soma de requests por ataque o top 10 muda
+```{r}
+percentage_76_secs_qtype_A_group_qname %>%
+  arrange(desc(sum_requests_per_attack)) %>%
+  head(10)
+```
+
+- Nenhum dos registros ordenados pela quantidade de requisições por ataque está no top 10 ordenado pela longevidade dos dados
+
+- Para verificar se o mesmo query_id é muito utilizado foi agrupado somente por query_id 
+```{r}
+
+percentage_76_secs_qtype_A %>%
+  group_by(query_id) %>%
+  summarise(query_id_count = n(), sum_requests_per_attack=sum(requests_per_attack), tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
+  arrange(desc(query_id_count)) %>%
+  head(10)
+
+
+```
+- Nada chamou a atenção
+
+
+
+
+
+
+#### Registros separados por trimestre
+
+```{r}
+#N = 10
+
+
+#data_split_year_period = data %>%
+#  group_split(year_period)
+
+
+#period_query_id_qname = data.frame()
+#for (i in c(1:length(data_split_year_period))) {
+#  query_id_qname_frequency = data_split_year_period[[i]] %>%
+#    group_by(qname, qtype) %>%
+#    summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack), year_period=year_period) %>%
+#    mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
+#    arrange(desc(tempo_diff_secs))
+#  
+#  period_query_id_qname = rbind(period_query_id_qname, head(query_id_qname_frequency, N))
+#}
+```
+
+- Apenas verificando as porcentagens de QTYPE por trimestre 
+```{r}
+
+data %>%
+  group_by(year_period, qtype) %>%
+  summarise(sum_grouped_year_period_qtype = n()) %>%
+  group_by(year_period) %>%
+  mutate(sum_qtype_year_period = sum(sum_grouped_year_period_qtype), qtype_percentage = ((sum_grouped_year_period_qtype/sum_qtype_year_period) * 100) ) %>%
+  arrange(desc(qtype_percentage)) %>% 
+  head(10)
+``` 
+
+- Agrupa os dados por (qname, qtype, year_period) para calcular por trimestre a longevidade dos registros com o mesmo QNAME+QTYPE 
+  - OBS.: Inicialmente eu iria verificar a longevidade, mas não faz sentido então separar por trimestre para verificar o quanto um qname se manteve ativo dentro do trimestre, correto? @Obelheiro @Thiago
+```{r}
+data_year_period = data %>%
+  group_by(qname, qtype, year_period) %>%
+  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
+  mutate(year_period=as.factor(year_period), tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
+  arrange(desc(tempo_diff_secs)) 
+  
+```
+
+- Agrupa somente pelo trimestre e o QTYPE para calcular quantos qnames diferentes existem em cada QTYPE
+
+```{r}
+data_year_period_qtype_quantity = data_year_period %>%
+  ungroup() %>%
+  group_by(year_period, qtype) %>%
+  summarise(qtype_quantity = n())
+```
+
+- Calcular a porcentagem da quantidade QTYPE 
+```{r}
+data_year_period_qtype_quantity_percentage = data_year_period_qtype_quantity %>%
+  group_by(year_period) %>%
+  mutate(sum_qtype_quantity_year_period = sum(qtype_quantity), qtype_year_period_quantity_percentage=((qtype_quantity/sum_qtype_quantity_year_period) * 100))
+
+```
+
+```{r fig.width = 12}
+data_year_period_qtype_quantity_percentage %>% 
+  filter(qtype_year_period_quantity_percentage > 1) %>%
+  ggplot( aes(x=year_period, y=qtype_year_period_quantity_percentage, fill=qtype)) +
+    geom_bar(stat="identity", width = 0.55) +
+    geom_text(aes(label = paste(round(qtype_year_period_quantity_percentage, 2), "%")), position = position_stack(vjust = 0.6)) +
+    scale_fill_viridis(discrete=TRUE, direction = -1) +
+    ylab("Porcentagem de QNAMES diferentes no trimestre") +
+    xlab("Trimestre") +
+    ggtitle("Quantidade de QNAMES diferentes em cada QTYPE no trimestre")
+
+```
+
+- Isso mostra que o QTYPE "A" tem uma grande quantidade de ataques com QNAMES distintos em cada trimestre
