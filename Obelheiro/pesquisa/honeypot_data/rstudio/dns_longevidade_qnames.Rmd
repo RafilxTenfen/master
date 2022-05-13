@@ -38,7 +38,7 @@ Resultados esperados:
   - year_period ano e trimestre em que ocorreu o ataque exemplo "20212" o ataque ocorreu no segundo trimestre do 2021
   
 ```{r fetch_data}
-db <- dbConnect(RSQLite::SQLite(), dbname="../dnstor_statistics_dns.sqlite")
+db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/dnstor_statistics_dns.sqlite")
 
 data_unfetch <-dbSendQuery(db, "  
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
@@ -62,7 +62,6 @@ data_grouped = data %>%
   group_by(qname, qtype) %>%
   summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
   mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
-  #filter(tempo_diff > 0) %>%
   arrange(desc(tempo_diff_secs))
   
 data_grouped %>%

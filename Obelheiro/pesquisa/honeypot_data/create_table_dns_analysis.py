@@ -5,7 +5,7 @@ import dnslib
 #t[each] = (ip_network(each).supernet(new_prefix=24) )
 
 
-con = sqlite3.connect('dnstor_statistics_dns.sqlite', timeout=10)
+con = sqlite3.connect('./db/database-2022-05-11/dnstor_statistics_dns.sqlite', timeout=10)
 cur = con.cursor()
 
 cur.execute("DROP TABLE IF EXISTS DNS_ANALYSIS;")
