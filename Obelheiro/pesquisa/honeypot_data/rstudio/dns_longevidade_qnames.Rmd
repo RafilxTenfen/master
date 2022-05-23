@@ -32,15 +32,15 @@ Resultados esperados:
     * minha intuição é que a distribuição seja assimétrica com (longa) cauda à direita
 
 - Busca os dados no banco com o parse do DNS ja realizado, então temos:
-  - qname que é o domínio 
+  - qname que é o domínio
   - QTYPE tipo da query
   - query_id ID da transação definido pelo atacante
   - year_period ano e trimestre em que ocorreu o ataque exemplo "20212" o ataque ocorreu no segundo trimestre do 2021
-  
+
 ```{r fetch_data}
 db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/dnstor_statistics_dns.sqlite")
 
-data_unfetch <-dbSendQuery(db, "  
+data_unfetch <-dbSendQuery(db, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
     FROM DNS_ANALYSIS
 		JOIN DNS_ANALYSIS_QUESTION
@@ -56,14 +56,18 @@ dbDisconnect(db)
 data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
 data['tempo_inicio_cast'] = as.POSIXct(data[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
 
-secs_to_month = (60 * 60 * 24 * 30)
+secs_to_hours = (60 * 60)
+secs_to_days = (secs_to_hours * 24)
 
 data_grouped = data %>%
   group_by(qname, qtype) %>%
-  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
-  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
+  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), 
+            sum_requests_per_attack=sum(requests_per_attack), number_of_attacks=n()) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), 
+         tempo_diff = tempo_final - tempo_inicio,
+         avg_requests_per_attack=trunc(sum_requests_per_attack/number_of_attacks)) %>%
   arrange(desc(tempo_diff_secs))
-  
+
 data_grouped %>%
   head(10)
 ```
@@ -72,8 +76,8 @@ data_grouped %>%
 data_grouped %>%
   ggplot(aes(x= tempo_diff_secs)) +
   geom_histogram(bins = 10, fill='blue', color ='black') +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
-  xlab("tempo_final - tempo_inicio") + 
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
+  xlab("tempo_final - tempo_inicio") +
   theme_classic()
 ```
 
@@ -81,8 +85,8 @@ data_grouped %>%
 data_grouped %>%
   ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
-  xlab("tempo_final - tempo_inicio") + 
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
+  xlab("tempo_final - tempo_inicio") +
   theme_classic()
 ```
 
@@ -97,15 +101,15 @@ quantile(data_grouped$tempo_diff_secs)
 summary(data_grouped)
 ```
 
-- Dados sobre o intervalo entre a primeira e a última aparição desse (QNAME+QTYPE) 
+- Dados sobre o intervalo entre a primeira e a última aparição desse (QNAME+QTYPE)
   - Mínimo `r data_grouped.tempo_diff_secs.min` segundos
-  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_month` meses
+  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_days` meses
   - Média `r data_grouped.tempo_diff_secs.mean / 60` minutos
   - Mediana `r data_grouped.tempo_diff_secs.median` segundos
 
 
 ```{r}
-trim_value = .30
+trim_value = .1
 
 data_grouped.tempo_diff_secs.min = min(data_grouped$tempo_diff_secs, trim=trim_value)
 data_grouped.tempo_diff_secs.max = max(data_grouped$tempo_diff_secs, trim=trim_value)
@@ -116,17 +120,17 @@ quantile(data_grouped$tempo_diff_secs, trim=trim_value)
 summary(data_grouped, trim=trim_value)
 ```
 
-- Dados sobre o intervalo entre a primeira e a última aparição do (QNAME+QTYPE) removendo `r trim_value * 100`% dos valores máximos e mínimos 
+- Dados sobre o intervalo entre a primeira e a última aparição do (QNAME+QTYPE) removendo `r trim_value * 100`% dos valores máximos e mínimos
   - Mínimo `r data_grouped.tempo_diff_secs.min` segundos
-  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_month` meses
+  - Máximo `r data_grouped.tempo_diff_secs.max / secs_to_days` meses
   - Média `r data_grouped.tempo_diff_secs.mean/ (60)` minutos
   - Mediana `r data_grouped.tempo_diff_secs.median` segundos
-  
+
 - Identificar qual é o percentil em que há essa mudança de tendência (próximo aos 72-73%) e qual a duração correspondente
 ```{r}
-quantile(data_grouped$tempo_diff_secs, 
-          c(.5332, .6235, .696282, .710307, .72, .7204, 
-            .721090026, .73, .7396902445, .75, .76, 
+quantile(data_grouped$tempo_diff_secs,
+          c(.5332, .6235, .696282, .710307, .72, .7204,
+            .721090026, .73, .7396902445, .75, .76,
             .77, .78, .99))
 ```
 - Isso representa que Y% dos (QNAME+TYPE), tem os seus ataques com duração de até X segundos:
@@ -138,41 +142,40 @@ quantile(data_grouped$tempo_diff_secs,
   - 72.04% até 803076 segundos
   - 72.11% até 1000000 segundos
   - 73.97% até 10000000 segundos
-- Significa que após os 69% o tempo dos ataques cresce muito até cerca de 73.97% onde estabiliza próximo dos 10000000 segundos
+- Significa que após os (69%) o tempo dos ataques cresceu de `r 100000/secs_to_hours` até `r 10000000/secs_to_days` (73.97%) onde estabiliza próximo dos 10000000 segundos
 
-- Uma representação ECDF removendo os registros abaixo da quantidade de segundos em que apresenta estabilidade (10000000 segundos) 
-  - Possívelmente apresenta uma distribuição assimétrica com cauda a direita
+- Uma representação ECDF removendo os registros abaixo da quantidade de segundos em que apresenta estabilidade (10000000 segundos)
 
 ```{r}
 data_grouped %>%
   filter(tempo_diff_secs > 10000000) %>%
   ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
-  xlab("tempo_final - tempo_inicio") + 
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
+  xlab("tempo_final - tempo_inicio") +
   theme_classic()
 ```
 
 ```{r}
 
 percentage_76_secs = quantile(data_grouped$tempo_diff_secs, c(.76))[[1]]
-percentage_76_secs/secs_to_month
+percentage_76_secs/secs_to_days
 
 percentage_99_secs = quantile(data_grouped$tempo_diff_secs, c(.995))[[1]]
-percentage_99_secs/secs_to_month
+percentage_99_secs/secs_to_days
 
-data_grouped.tempo_diff_secs.max / secs_to_month
+data_grouped.tempo_diff_secs.max / secs_to_days
 ```
 
-- Cerca de 24% dos (QNAME + QTYPE) possuem uma longevidade entre 9 e 16 meses 
+- Cerca de 24% dos (QNAME + QTYPE) possuem uma longevidade entre 9 e 16 meses
 ```{r}
 
 data_grouped %>%
   filter(tempo_diff_secs > percentage_76_secs) %>%
-  ggplot(aes(x= tempo_diff_secs / secs_to_month)) +
+  ggplot(aes(x= tempo_diff_secs / secs_to_days)) +
   geom_histogram(bins = 50, fill='blue', color ='black') +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") + 
-  xlab("Meses de Longevidade") + 
+  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
+  xlab("Dias de Longevidade") +
   theme_classic()
 ```
 ```{r}
@@ -183,11 +186,11 @@ data_bigger_than_76 = data_grouped %>%
   group_by(qtype) %>%
   summarise(qtype_quantity = n()) %>%
   arrange(desc(qtype_quantity))
-  
-  
+
+
 sum_qtype_quantity = sum(data_bigger_than_76$qtype_quantity)
 data_bigger_than_76_percentage = data_bigger_than_76 %>%
-  mutate(qtype_quantity_percentage = (qtype_quantity / sum_qtype_quantity) * 100) 
+  mutate(qtype_quantity_percentage = (qtype_quantity / sum_qtype_quantity) * 100)
 
 data_bigger_than_76_percentage
 
@@ -198,15 +201,15 @@ data_bigger_than_76_percentage %>%
  ggplot( aes(x=reorder(qtype, +qtype_quantity_percentage), y=qtype_quantity_percentage, fill=qtype)) +
     geom_bar(stat="identity", position="dodge") +
     scale_fill_viridis(discrete=TRUE, name="") +
-    geom_text(aes(label = paste(round(qtype_quantity_percentage, 2), "%")), vjust = -0.10, ) + 
-    theme_classic() + 
+    geom_text(aes(label = paste(round(qtype_quantity_percentage, 2), "%")), vjust = -0.10, ) +
+    theme_classic() +
     ylab("Porcentagem da quantidade") +
     xlab("QTYPE") +
     ggtitle("QTYPE com longevidade entre 9 e 16 meses")
-    
+
 ```
-- Então dos QTYPE que possuem uma alta longevidade entre 9 e 16 meses (cerca de 24% de todos os registros 76% ~ 100%) 
-  - 20% (`r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "MX"),]$qtype_quantity`) deles possuem o QTYPE "MX" 
+- Então dos QTYPE que possuem uma alta longevidade entre 9 e 16 meses (cerca de 24% de todos os registros 76% ~ 100%)
+  - 20% (`r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "MX"),]$qtype_quantity`) deles possuem o QTYPE "MX"
   - 78% (`r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "A"),]$qtype_quantity`) dos ataques com maior longevidade utilizam o QTYPE "A", o que é surpreendente
   - E por fim o QTYPE "ANY" aparece com apenas `r data_bigger_than_76_percentage[(data_bigger_than_76_percentage['qtype'] == "ANY"),]$qtype_quantity` registros de QTYPE com longevidade entre 9 e 16 meses
 
@@ -218,7 +221,7 @@ percentage_76_secs_A_qnames = data_grouped %>%
   filter(qtype == "A") %>%
   select(qname) %>%
   distinct(qname)
-  
+
 
 percentage_76_secs_qtype_A = data %>%
   filter(qtype == "A") %>%
@@ -227,16 +230,21 @@ percentage_76_secs_qtype_A = data %>%
 
 
 - O QTYPE "A" é o QTYPE que possui a maior quantidade de QNAMEs com alta longevidade entre 9 e 16 meses
-  - Esse é o top 10 de QTYPE A agroupado por QNAME representado por qname_count e somado o request_per_attack 
+  - Esse é o top 10 de QTYPE A agroupado por QNAME representado por qname_count e somado o request_per_attack
 ```{r}
 percentage_76_secs_qtype_A_group_qname = percentage_76_secs_qtype_A %>%
   group_by(qname) %>%
-  summarise(qname_count = n(), sum_requests_per_attack=sum(requests_per_attack), tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
-  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) 
+  summarise(qname_count = n(), sum_requests_per_attack=sum(requests_per_attack),
+            tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast),
+            sum_requests_per_attack=sum(requests_per_attack)) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"),
+         tempo_diff = tempo_final - tempo_inicio)
 
 percentage_76_secs_qtype_A_group_qname %>%
   arrange(desc(tempo_diff_secs)) %>%
-  head(10)
+  select('qname', 'qname_count', 'tempo_diff') %>%
+  head(25) %>%
+  print(n=35)
 ```
 
 - Uníca coisa a ressaltar aqui é que o top 1 QNAME "whoami.akamai.net." que apareceu 3639x e foi o registro com maior longevidade 480 dias, cerca de 16 meses
@@ -245,12 +253,13 @@ percentage_76_secs_qtype_A_group_qname %>%
 ```{r}
 percentage_76_secs_qtype_A_group_qname %>%
   arrange(desc(sum_requests_per_attack)) %>%
+  select('qname', 'qname_count', 'sum_requests_per_attack') %>%
   head(10)
 ```
 
 - Nenhum dos registros ordenados pela quantidade de requisições por ataque está no top 10 ordenado pela longevidade dos dados
 
-- Para verificar se o mesmo query_id é muito utilizado foi agrupado somente por query_id 
+- Para verificar se o mesmo query_id é muito utilizado foi agrupado somente por query_id
 ```{r}
 
 percentage_76_secs_qtype_A %>%
@@ -258,6 +267,7 @@ percentage_76_secs_qtype_A %>%
   summarise(query_id_count = n(), sum_requests_per_attack=sum(requests_per_attack), tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
   mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
   arrange(desc(query_id_count)) %>%
+  select('query_id', 'query_id_count', 'sum_requests_per_attack', 'tempo_diff')  %>%
   head(10)
 
 
@@ -265,83 +275,206 @@ percentage_76_secs_qtype_A %>%
 - Nada chamou a atenção
 
 
-
-
-
-
-#### Registros separados por trimestre
-
-```{r}
-#N = 10
-
-
-#data_split_year_period = data %>%
-#  group_split(year_period)
-
-
-#period_query_id_qname = data.frame()
-#for (i in c(1:length(data_split_year_period))) {
-#  query_id_qname_frequency = data_split_year_period[[i]] %>%
-#    group_by(qname, qtype) %>%
-#    summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack), year_period=year_period) %>%
-#    mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
-#    arrange(desc(tempo_diff_secs))
-#  
-#  period_query_id_qname = rbind(period_query_id_qname, head(query_id_qname_frequency, N))
-#}
-```
-
-- Apenas verificando as porcentagens de QTYPE por trimestre 
-```{r}
-
-data %>%
-  group_by(year_period, qtype) %>%
-  summarise(sum_grouped_year_period_qtype = n()) %>%
-  group_by(year_period) %>%
-  mutate(sum_qtype_year_period = sum(sum_grouped_year_period_qtype), qtype_percentage = ((sum_grouped_year_period_qtype/sum_qtype_year_period) * 100) ) %>%
-  arrange(desc(qtype_percentage)) %>% 
-  head(10)
-``` 
-
-- Agrupa os dados por (qname, qtype, year_period) para calcular por trimestre a longevidade dos registros com o mesmo QNAME+QTYPE 
-  - OBS.: Inicialmente eu iria verificar a longevidade, mas não faz sentido então separar por trimestre para verificar o quanto um qname se manteve ativo dentro do trimestre, correto? @Obelheiro @Thiago
-```{r}
-data_year_period = data %>%
-  group_by(qname, qtype, year_period) %>%
-  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), sum_requests_per_attack=sum(requests_per_attack)) %>%
-  mutate(year_period=as.factor(year_period), tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), tempo_diff = tempo_final - tempo_inicio) %>%
-  arrange(desc(tempo_diff_secs)) 
-  
-```
-
-- Agrupa somente pelo trimestre e o QTYPE para calcular quantos qnames diferentes existem em cada QTYPE
+-----------------------------------------------
+- uma análise mais interessante levando os períodos em comparação é a contagem de nomes novos e retirados (i.e., que deixam de ser usados) por período
+  - um nome é contado como novo no período da primeira ocorrência do dataset
+  - um nome é contado como retirado no período da última ocorrência no dataset
+- p.ex., um nome que aparece pela primeira vez em 23/04/21 e pela última em 28/10/21 conta como novo em 2021.Q2 e como retirado em 2021.Q4
+- produzir uma tabela e um gráfico de barras (com 2 barras por período, de novos e retirados) com esses dados
+- se a quantidade de nomes novos em 2020.Q4 (1o período) for absurdamente maior que a dos demais períodos, considerar a possibilidade de omiti-la do gráfico
 
 ```{r}
-data_year_period_qtype_quantity = data_year_period %>%
+data_quarters = data_grouped %>%
+  mutate(year_period_inicio=paste(year(tempo_inicio), quarters(tempo_inicio), sep = "."),
+         year_period_fim=paste(year(tempo_final), quarters(tempo_final), sep = "."))
+
+
+data_quarters_new = data_quarters %>%
   ungroup() %>%
-  group_by(year_period, qtype) %>%
-  summarise(qtype_quantity = n())
+  count(year_period_inicio, name = "novos")
+
+data_quarters_removed = data_quarters %>%
+  ungroup() %>%
+  count(year_period_fim, name = "retirados")
+
+data_quarters_new_removed = data_quarters_new %>%
+  inner_join(data_quarters_removed, by = c("year_period_inicio" = "year_period_fim")) %>%
+  mutate(year_period =  as.factor(year_period_inicio) ) %>%
+  select('year_period', 'novos', 'retirados') %>%
+  arrange(year_period)
+
+data_quarters_new_removed
+
 ```
 
-- Calcular a porcentagem da quantidade QTYPE 
+
 ```{r}
-data_year_period_qtype_quantity_percentage = data_year_period_qtype_quantity %>%
-  group_by(year_period) %>%
-  mutate(sum_qtype_quantity_year_period = sum(qtype_quantity), qtype_year_period_quantity_percentage=((qtype_quantity/sum_qtype_quantity_year_period) * 100))
+
+data_quarters_new_removed %>%
+  ggplot( aes(x=year_period, y=novos)) +
+  geom_bar(stat="identity", position="dodge", fill = "#00FF00") +
+  ggtitle("Novos QNAMES por trimestre") +
+  xlab("Período") +
+  ylab("Novos - Primeira ocorrência") +
+  theme_classic()
+
 
 ```
 
-```{r fig.width = 12}
-data_year_period_qtype_quantity_percentage %>% 
-  filter(qtype_year_period_quantity_percentage > 1) %>%
-  ggplot( aes(x=year_period, y=qtype_year_period_quantity_percentage, fill=qtype)) +
-    geom_bar(stat="identity", width = 0.55) +
-    geom_text(aes(label = paste(round(qtype_year_period_quantity_percentage, 2), "%")), position = position_stack(vjust = 0.6)) +
-    scale_fill_viridis(discrete=TRUE, direction = -1) +
-    ylab("Porcentagem de QNAMES diferentes no trimestre") +
-    xlab("Trimestre") +
-    ggtitle("Quantidade de QNAMES diferentes em cada QTYPE no trimestre")
+
+```{r}
+
+data_quarters_new_removed %>%
+  ggplot( aes(x=year_period, y=retirados)) +
+  geom_bar(stat="identity", position="dodge", fill = "#FF6666") +
+  ggtitle("QNAMES retirados por trimestre") +
+  xlab("Período") +
+  ylab("Retirado - Ultima ocorrência") +
+  theme_classic()
+
 
 ```
 
-- Isso mostra que o QTYPE "A" tem uma grande quantidade de ataques com QNAMES distintos em cada trimestre
+### QNAMES Novos/Retirados por trimestre
+- Um QNAME é considerado 
+  - Novo no trimestre em que aparece a primeira vez no database
+  - Retirado no trimestre em que aparece pela ultima vez
+```{r}
+data_quarters_new_removed.st = stack(data_quarters_new_removed)
+data_quarters_new_removed.st$year_period = rep(data_quarters_new_removed$year_period, 2)
+
+data_quarters_new_removed.st %>%
+  ggplot( aes(x=year_period, y=values, fill=ind)) +
+  geom_bar(stat="identity", position="dodge") +
+  ggtitle("QNAMES novos e retirados por trimestre") +
+  xlab("Período") +
+  ylab("Quantidade") +
+  theme_classic()
+```
+
+- Contudo, caso um ataque inicie e termine no mesmo trimestre, ele conta como um para novo e um para retirado
+- Removendo todos os registros que iniciam e terminam no mesmo trimestre
+```{r}
+data_different_quarters = data_quarters %>%
+  filter(year_period_inicio != year_period_fim)
+
+data_quarters_new2 = data_different_quarters %>%
+  ungroup() %>%
+  count(year_period_inicio, name = "novos")
+
+data_quarters_removed2 = data_different_quarters %>%
+  ungroup() %>%
+  count(year_period_fim, name = "retirados")
+
+data_diff_quarters_new_removed = data_quarters_new2 %>%
+  inner_join(data_quarters_removed2, by = c("year_period_inicio" = "year_period_fim")) %>%
+  mutate(year_period =  as.factor(year_period_inicio) ) %>%
+  select('year_period', 'novos', 'retirados') %>%
+  arrange(year_period)
+
+
+data_diff_quarters_new_removed.st = stack(data_diff_quarters_new_removed)
+data_diff_quarters_new_removed.st$year_period = rep(data_diff_quarters_new_removed$year_period, 2)
+
+
+data_diff_quarters_new_removed.st %>%
+  ggplot( aes(x=year_period, y=values, fill=ind)) +
+  geom_bar(stat="identity", position="dodge") +
+  ggtitle("Somente QNAMES que iniciam e terminam em trimestres diferentes") +
+  xlab("Período") +
+  ylab("Quantidade") +
+  theme_classic()
+```
+- Dessa forma, foram considerados somente ataques em que iniciaram e finalizaram em trimestres diferentes
+
+
+
+- Por curiosidade fui verificar para colocar lado a lado aqueles registros que iniciam e terminam no mesmo trimestre 
+```{r fig.align="center", fig.width = 12}
+data_same_quarters = data_quarters %>%
+  filter(year_period_inicio == year_period_fim)
+
+data_same_quarters = data_quarters %>%
+  filter(year_period_inicio == year_period_fim) %>%
+  ungroup() %>%
+  count(year_period_inicio, name = "mesmo_trimestre") %>%
+    mutate(year_period =  as.factor(year_period_inicio) ) 
+
+data_quarters_new_removed_same = data_diff_quarters_new_removed %>%
+  inner_join(data_same_quarters, by = c("year_period" = "year_period")) %>%
+  mutate(year_period =  as.factor(year_period_inicio) ) %>%
+  select('year_period', 'novos', 'retirados', 'mesmo_trimestre') %>%
+  arrange(year_period)
+
+
+data_quarters_new_removed_same.st = stack(data_quarters_new_removed_same)
+data_quarters_new_removed_same.st$year_period = rep(data_quarters_new_removed_same$year_period, 3)
+
+
+data_quarters_new_removed_same.st %>%
+  ggplot( aes(x=year_period, y=values, fill=ind)) +
+  geom_bar(stat="identity", position="dodge") +
+  ggtitle("QNAMES novos/retirados/(nasceram e morreram no mesmo trimestre)  por trimestres") +
+  xlab("Período") +
+  ylab("Quantidade") +
+  theme_classic()
+```
+- A barra azul então representa que no último trimestre de 2021, tiveram 4066 QNAMES que naceram e morreram no mesmo período
+
+
+- Média de requisições por ataque
+  - A soma de todos os requests dos ataques agrupados por (QNAME+QTYPE) / divido pela quantidade de ataques
+  - Uma observação aqui é que muitos ataques que possuem uma média alta de requisições por ataque são aqueles em que tiveram apenas um ataque
+```{r}
+data_quarters %>%
+  ungroup() %>%
+  arrange(desc(avg_requests_per_attack)) %>%
+  select(avg_requests_per_attack, number_of_attacks, sum_requests_per_attack) %>%
+  print(n=15)
+
+quantile(data_quarters$avg_requests_per_attack, trim=trim_value)
+```
+
+- Média de ataques por dia
+  - A média de ataques por dia, foi mensurado contando a quantidade de ataques (number_of_attacks) e dividindo pelo número de dias entre a data inicio e fim dos ataques de um (QNAME+QTYPE) 
+```{r}
+
+
+data_quarters_avg_attacks = data_quarters %>%
+  ungroup() %>%
+  mutate(tempo_diff_days=as.numeric(trunc(difftime(tempo_final, tempo_inicio, units = "days")))) %>%
+  filter(tempo_diff_days > 1) %>%
+  mutate(avg_attacks_per_day=trunc(number_of_attacks/tempo_diff_days))
+
+data_quarters_avg_attacks %>%
+  arrange(desc(avg_attacks_per_day)) %>%
+  select(avg_attacks_per_day, avg_requests_per_attack, number_of_attacks, tempo_diff_days) %>%
+  print(n=15)
+
+data_quarters_avg_attacks.count = data_quarters_avg_attacks %>%
+  count(avg_attacks_per_day, name = "number_of_qnames") %>%
+  arrange(desc(number_of_qnames))
+
+data_quarters_avg_attacks.count %>% 
+  print(n=10)
+
+quantile(
+  data_quarters_avg_attacks$avg_attacks_per_day[data_quarters_avg_attacks$avg_attacks_per_day>0], 
+  trim=trim_value
+)
+```
+- Em 3.868 QNAMES a média de ataques por dia é 0, `r round((max(data_quarters_avg_attacks.count$avg_attacks_per_day)/sum(data_quarters_avg_attacks.count$avg_attacks_per_day)) * 100 , 2)` % dos registros
+- mas em 25% dos QNAMES possuem uma média de mais de 17 ataques por dia
+
+```{r}
+data_quarters_avg_attacks %>%
+  ggplot(aes(x= avg_attacks_per_day)) +
+  stat_ecdf(geom = "step", pad = FALSE) +
+  ggtitle("Quantidade de ataques diários de um mesmo (QNAME + QTYPE)") +
+  xlab("Quantidade de ataques") +
+  theme_classic()
+```
+
+
+
+
