@@ -1,0 +1,108 @@
+---
+title: "ntp_monlist"
+author: "Rafilx"
+date: '2022-06-01'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+library('RSQLite')
+library('ggplot2')
+library(DBI)
+options("scipen"=100, "digits"=4)
+library(dplyr)
+library(tibble)
+library(viridis)
+library(lubridate)
+```
+
+## R Markdown
+NT1. NTP: incidência de monlist
+
+Resultados esperados:
+Historicamente os ataques DRDoS com NTP fazem uso do comando monlist. Analisar a porcentagem de monlist por período, para ver se ela se mantém consistentemente acima de 99% ou houve alteração
+
+Resultados esperados:
+
+- tabela/gráfico de barras com a %monlist por período 
+```{r fetch_data}
+db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/dnstor_statistics_ntp.sqlite")
+
+data_unfetch <-dbSendQuery(db, "
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+    FROM NTP_ANALYSIS
+")
+data <- fetch(data_unfetch)
+
+dbDisconnect(db)
+```
+
+- Calculado a porcentagem de "ntp_type" por período
+  - Existem apenas dois tipos em "ntp_type" = {"Monlist", "Outros"}
+  - Além disso o "ntp_type" é definido da seguinte forma 
+  ```python
+  def get_ntp_type(ntp_payload):
+    ntp_data_pattern = b'\x17\x00\x03\x2a\x00\x00\x00\x00'
+    if ntp_data_pattern == ntp_payload:
+      return "Monlist"
+    return "Other"
+  ```
+  
+- Agrupamento realizado:
+```{r}
+
+data['tempo_final_cast'] = as.POSIXct(data[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+data['tempo_inicio_cast'] = as.POSIXct(data[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
+
+data_grouped_period_ntp_type = data %>%
+  mutate(year_period = as.factor(year_period)) %>%
+  group_by(year_period, ntp_type) %>%
+  summarise(sum_requests_per_attack = sum(requests_per_attack), number_of_attacks = n()) 
+
+data_grouped_period_ntp_type_percentage = data_grouped_period_ntp_type %>%
+  group_by(year_period) %>%
+  summarise(ntp_type = ntp_type, number_of_attacks = number_of_attacks,
+            sum_period_number_of_attacks = sum(number_of_attacks), 
+            sum_requests_per_attack = sum_requests_per_attack) %>%
+  mutate(number_of_attacks_percentage = (number_of_attacks / sum_period_number_of_attacks) * 100) 
+
+
+data_grouped_period_ntp_type_percentage %>%
+  select(year_period, ntp_type, number_of_attacks_percentage, number_of_attacks) %>%
+  print(n=14)
+
+```
+- Isso significa que no ultimo trimestre de 2020 ("year_period" = 20204) 67% dos ataques realizados foram monlist, e 32% outros tipos
+
+- Gráfico de barras empilhadas apresentando a porcentagem da quantidade de ataques em cada "ntp_type" por período
+```{r fig.width = 12}
+data_grouped_period_ntp_type_percentage %>% 
+  ggplot( aes(x=year_period, y=number_of_attacks_percentage, fill=ntp_type)) +
+    geom_bar(stat="identity", width = 0.5) +
+    geom_text(aes(label = paste(round(number_of_attacks_percentage, 2), "%")), 
+              position = position_stack(vjust = 0.6)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    ylab("Porcentagem da quantidade de ataques") +
+    xlab("Período (Trimestre)") + 
+    ggtitle("NTP - Porcentagem de ataques por trimestre e por \"ntp_type\" com barras empilhadas")
+```
+
+- Gráfico de barras empilhadas apresentando a porcentagem da quantidade de ataques em cada "ntp_type" por período
+```{r fig.width = 12}
+data_grouped_period_ntp_type_percentage %>% 
+  ggplot( aes(x=ntp_type, y=number_of_attacks_percentage, fill=ntp_type)) +
+    #geom_bar(stat="identity", width = 0.5, prosition = "dodge") +
+    geom_bar(stat="identity", position="dodge") + 
+    geom_text(aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    ylab("Porcentagem da quantidade de ataques") +
+    xlab("Período (Trimestre)") + 
+    ggtitle("NTP - Porcentagem de ataques por trimestre por \"ntp_type\"")
+```

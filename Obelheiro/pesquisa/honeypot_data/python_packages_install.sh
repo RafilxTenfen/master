@@ -4,3 +4,4 @@
 # pip install dnslib
 pip install "git+https://github.com/paulc/dnslib.git#egg=dnslib"
 pip install ipcalc
+pip install ntplib
