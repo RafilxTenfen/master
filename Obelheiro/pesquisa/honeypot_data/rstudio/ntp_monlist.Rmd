@@ -20,6 +20,8 @@ library(dplyr)
 library(tibble)
 library(viridis)
 library(lubridate)
+library(blob)
+# library("dplyr.teradata")
 ```
 
 ## R Markdown
@@ -69,8 +71,10 @@ data_grouped_period_ntp_type_percentage = data_grouped_period_ntp_type %>%
   group_by(year_period) %>%
   summarise(ntp_type = ntp_type, number_of_attacks = number_of_attacks,
             sum_period_number_of_attacks = sum(number_of_attacks), 
+            sum_period_requests_per_attack = sum(sum_requests_per_attack),
             sum_requests_per_attack = sum_requests_per_attack) %>%
-  mutate(number_of_attacks_percentage = (number_of_attacks / sum_period_number_of_attacks) * 100) 
+  mutate(number_of_attacks_percentage = (number_of_attacks / sum_period_number_of_attacks) * 100, 
+         number_of_requests_percentage = (sum_requests_per_attack / sum_period_requests_per_attack) * 100)
 
 
 data_grouped_period_ntp_type_percentage %>%
@@ -105,4 +109,35 @@ data_grouped_period_ntp_type_percentage %>%
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
     ggtitle("NTP - Porcentagem de ataques por trimestre por \"ntp_type\"")
+```
+
+- Gráfico de barras empilhadas apresentando a porcentagem da quantidade de requisições em cada "ntp_type" por período
+```{r fig.width = 12}
+data_grouped_period_ntp_type_percentage %>% 
+  ggplot( aes(x=ntp_type, y=number_of_requests_percentage, fill=ntp_type)) +
+    #geom_bar(stat="identity", width = 0.5, prosition = "dodge") +
+    geom_bar(stat="identity", position="dodge") + 
+    geom_text(aes(label = paste(round(number_of_requests_percentage, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    ylab("Porcentagem da quantidade de requisições") +
+    xlab("Período (Trimestre)") + 
+    ggtitle("NTP - Porcentagem de requisições por trimestre por \"ntp_type\"")
+```
+
+
+```{r}
+data
+rawToChars(as.raw(data$payload[6]))
+as.blob(c("Good morning", "Good evening"))
+
+x = str(data$payload[4])
+
+rawToChar(as.vector(data$payload[4]))
+
+rawToBits(as.vector(data$payload[3]))
+
+data %>%
+  group_by(payload) %>%
+  summarise()
 ```
