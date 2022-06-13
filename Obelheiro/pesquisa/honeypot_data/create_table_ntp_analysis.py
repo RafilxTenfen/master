@@ -1,20 +1,49 @@
 # from email import header
 import sqlite3
-import ntplib
+# import ntplib
 
 #t[each] = (ip_network(each).supernet(new_prefix=24) )
 # ntplib.
 
 con = sqlite3.connect('./db/database-2022-05-11/dnstor_statistics_ntp.sqlite', timeout=10)
 cur = con.cursor()
+monlist_byte0 = b'\x17'
+monlist_byte3 = b'\x2a'
 
+
+payload_types = {'Monlist': 0}
 
 def get_ntp_type(ntp_payload):
-  ntp_data_pattern = b'\x17\x00\x03\x2a\x00\x00\x00\x00'
-  if ntp_data_pattern == ntp_payload:
+
+  if len(ntp_payload) <= 3:
+    add_to_payload_types(ntp_payload)
+    return "Other"
+
+  # checks for the following
+  # b'\x17' and b'\x2a'
+  # not b'x17' and b'x2a'
+  # not b'\\x17' and b'\\x2a'
+  if (monlist_byte0[0] == ntp_payload[0] and monlist_byte3[0] == ntp_payload[3]):
+    payload_types['Monlist'] += 1
     return "Monlist"
+
+  add_to_payload_types(ntp_payload)
   return "Other"
 
+def add_to_payload_types(ntp_payload: bytes):
+  if payload_types.get(ntp_payload) == None:
+    payload_types[ntp_payload] = 0
+  payload_types[ntp_payload] += 1
+
+
+cur.execute("DROP TABLE IF EXISTS NTP_PAYLOAD_TYPES;")
+cur.execute("""
+CREATE TABLE NTP_PAYLOAD_TYPES (
+	id INTEGER NOT NULL,
+  payload TEXT NOT NULL,
+  quantity INTEGER NOT NULL
+);
+""")
 
 cur.execute("DROP TABLE IF EXISTS NTP_ANALYSIS;")
 cur.execute("""
@@ -40,7 +69,8 @@ for row in cur.execute("""
 SELECT ip, count, tempoInicio, tempoFinal, NTP_MEMORY_DICT.payloadID, payload, strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period
   FROM NTP_MEMORY_DICT
   JOIN NTP_PAYLOAD_DICT
-    ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID;
+    ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID
+ WHERE count > 5;
 """):
   ip = row[0]
   count = int(row[1])
@@ -51,12 +81,16 @@ SELECT ip, count, tempoInicio, tempoFinal, NTP_MEMORY_DICT.payloadID, payload, s
   year = int(row[6])
   period = int(row[7])
 
+  print("strQuotedPacket", strQuotedPacket)
   # removes B' at the beginning, remove ' from the end and cast it to bytes
+  # bytePayloadUnscaped = bytes(strQuotedPacket, encoding="utf-8")
   bytePayloadUnscaped = bytes(strQuotedPacket[2:-1], encoding="utf-8")
   # decode and encode again to change "\\" to "\"
   bytePayload = bytePayloadUnscaped.decode("unicode_escape").encode("raw_unicode_escape")
+  # bytePayload = bytePayloadUnscaped.decode("unicode_escape").encode("raw_unicode_escape")
   # print("\n bytePayload", bytePayload, "len(bytePayload) ", len(bytePayload))
   ntp_type = get_ntp_type(bytePayload)
+  # ntp_type = get_ntp_type(strQuotedPacket)
   print(ntp_type)
   ntpAnalysis.append((ntpId, ip, count, tempoInicio, tempoFinal, payloadID, bytePayload, year, period, ntp_type))
   print(ntpAnalysis[len(ntpAnalysis) - 1])
@@ -65,5 +99,15 @@ SELECT ip, count, tempoInicio, tempoFinal, NTP_MEMORY_DICT.payloadID, payload, s
 cur.executemany('INSERT INTO NTP_ANALYSIS VALUES (?,?,?,?,?,?,?,?,?,?)', ntpAnalysis)
 con.commit()
 
+id = 0
+for payload in payload_types:
+  id += 1
+  print(payload_types[payload], payload)
+  cur.execute('INSERT INTO NTP_PAYLOAD_TYPES VALUES (?,?,?)', [id, payload, payload_types[payload]])
+con.commit()
+
 con.close()
 
+# print(payload_types)
+print(payload_types.values())
+# print(payload_types.keys())

@@ -42,6 +42,12 @@ data_unfetch <-dbSendQuery(db, "
 ")
 data <- fetch(data_unfetch)
 
+data_npt_payload_types_unfetch <-dbSendQuery(db, "
+  SELECT id, quantity, SUBSTR(payload,0,25) AS payload_limit
+    FROM NTP_PAYLOAD_TYPES
+")
+data_ntp_payload_types <- fetch(data_npt_payload_types_unfetch)
+
 dbDisconnect(db)
 ```
 
@@ -49,11 +55,16 @@ dbDisconnect(db)
   - Existem apenas dois tipos em "ntp_type" = {"Monlist", "Outros"}
   - Além disso o "ntp_type" é definido da seguinte forma 
   ```python
-  def get_ntp_type(ntp_payload):
-    ntp_data_pattern = b'\x17\x00\x03\x2a\x00\x00\x00\x00'
-    if ntp_data_pattern == ntp_payload:
-      return "Monlist"
+
+def get_ntp_type(ntp_payload):
+
+  if len(ntp_payload) <= 3:
     return "Other"
+
+  if (monlist_byte0[0] == ntp_payload[0] and monlist_byte3[0] == ntp_payload[3]):
+    return "Monlist"
+    
+  return "Other"
   ```
   
 - Agrupamento realizado:
@@ -82,7 +93,7 @@ data_grouped_period_ntp_type_percentage %>%
   print(n=14)
 
 ```
-- Isso significa que no ultimo trimestre de 2020 ("year_period" = 20204) 67% dos ataques realizados foram monlist, e 32% outros tipos
+- Isso significa que no ultimo trimestre de 2020 ("year_period" = 20204) 99% dos ataques realizados foram monlist, e 0.3% outros tipos
 
 - Gráfico de barras empilhadas apresentando a porcentagem da quantidade de ataques em cada "ntp_type" por período
 ```{r fig.width = 12}
@@ -127,17 +138,22 @@ data_grouped_period_ntp_type_percentage %>%
 
 
 ```{r}
-data
-rawToChars(as.raw(data$payload[6]))
-as.blob(c("Good morning", "Good evening"))
+ntp_payload_types = data_ntp_payload_types %>%
+  mutate(payload_str = toString(payload_limit)) %>%
+  arrange(desc(quantity)) %>%
+  select('quantity', 'payload_limit', 'id') 
 
-x = str(data$payload[4])
+ntp_payload_types_quantity_percentage = ntp_payload_types %>%
+  mutate(sum_quantity = sum(quantity)) %>%
+  mutate(quantity_percentage = (quantity / sum_quantity) * 100)
 
-rawToChar(as.vector(data$payload[4]))
-
-rawToBits(as.vector(data$payload[3]))
-
-data %>%
-  group_by(payload) %>%
-  summarise()
+ntp_payload_types_quantity_percentage %>%
+  #filter(quantity_percentage > 0.10) %>%
+  select('quantity', 'quantity_percentage', 'payload_limit') %>%
+  head(15)
+  
+# ntp_payload_types_quantity_percentage %>%
+#  select('quantity_percentage', 'payload_limit') %>%
+#  ggplot( aes(x=payload_limit, y=quantity_percentage)) + 
+#  geom_bar(stat="identity", position="dodge")
 ```
