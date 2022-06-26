@@ -23,6 +23,7 @@ CREATE TABLE MEMCACHED_ANALYSIS (
   tempo_final TEXT NOT NULL,
   payload TEXT NOT NULL,
   payload_decoded TEXT NOT NULL,
+  get_payload_value TEXT NOT NULL,
   memcached_request_type TEXT NOT NULL
 );
 """)
@@ -55,7 +56,7 @@ payload_types = {
   'append': 0,
   'prepend': 0,
   'flush_all': 0,
-  'other': 0,
+  'outros': 0,
 }
 
 def contain_bytes(memcached_payload, byte_keyword):
@@ -73,8 +74,6 @@ def contain_bytes(memcached_payload, byte_keyword):
         currentIndex += 1
         break
 
-        # b'\x00\x01\x00\x00\x00\x01\x00\x00stats\r\n'
-        # b'stat'
       end_memcached_payload = currentIndex+(byte_keyword_len)
       if end_memcached_payload >= memcached_payload_len:
         return False
@@ -84,12 +83,33 @@ def contain_bytes(memcached_payload, byte_keyword):
 
   return False
 
+def get_bytes_after(memcached_payload, byte_keyword):
+  memcached_payload_len = len(memcached_payload)
+  byte_keyword_len = len(byte_keyword)
+
+  if memcached_payload_len < byte_keyword_len:
+    return "-"
+
+  currentIndex = 0
+  while currentIndex < memcached_payload_len:
+
+    for keyword_idx in range(0, byte_keyword_len-1):
+      if memcached_payload[currentIndex] != byte_keyword[keyword_idx]:
+        currentIndex += 1
+        break
+
+      end_memcached_payload = currentIndex+(byte_keyword_len)
+      if end_memcached_payload >= memcached_payload_len:
+        return "-"
+
+      if memcached_payload[currentIndex: end_memcached_payload] == byte_keyword:
+        return memcached_payload[end_memcached_payload: (memcached_payload_len-1)]
+
+  return "-"
+
 def get_memcached_request_type(memcached_payload):
 
   print("get_memcached_request_type", memcached_payload)
-  if len(memcached_payload) <= 2:
-    payload_types['other'] += 1
-    return "Other"
 
   if contain_bytes(memcached_payload, byte_stats):
     payload_types['stats'] += 1
@@ -119,8 +139,9 @@ def get_memcached_request_type(memcached_payload):
     payload_types['prepend'] += 1
     return "Prepend"
 
-  payload_types['other'] += 1
-  return "Other"
+  payload_types['outros'] += 1
+  # add_to_payload_types(memcached_payload)
+  return "Outros"
 
 def add_to_payload_types(memcached_payload: bytes):
   if payload_types.get(memcached_payload) == None:
@@ -146,15 +167,18 @@ SELECT ip, count, tempoInicio, tempoFinal, payload
   decoded_payload = bytePayload.decode(encoding)
 
   memcached_request_type = get_memcached_request_type(bytePayload)
+  get_payload_value = "-"
+  if memcached_request_type == "Get":
+    get_payload_value = get_bytes_after(bytePayload, byte_get)
   # memcached_request_type = get_memcached_request_type(strQuotedPacket)
   print(memcached_request_type)
 
-  protocol_mix.append((protocol_id, ip, requests_per_attack, tempoInicio, tempoFinal, bytePayload, decoded_payload, memcached_request_type))
+  protocol_mix.append((protocol_id, ip, requests_per_attack, tempoInicio, tempoFinal, bytePayload, decoded_payload, get_payload_value, memcached_request_type))
   protocol_id += 1
 
 memcached_connection.close()
 
-mix_cursor.executemany('INSERT INTO MEMCACHED_ANALYSIS VALUES (?,?,?,?,?,?,?,?)', protocol_mix)
+mix_cursor.executemany('INSERT INTO MEMCACHED_ANALYSIS VALUES (?,?,?,?,?,?,?,?,?)', protocol_mix)
 mix_connection.commit()
 print('memcached finish: ', len(protocol_mix))
 print('payload_types: ', len(payload_types), payload_types)
