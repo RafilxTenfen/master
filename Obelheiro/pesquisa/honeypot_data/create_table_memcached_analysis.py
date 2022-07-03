@@ -21,6 +21,7 @@ CREATE TABLE MEMCACHED_ANALYSIS (
 	requests_per_attack INTEGER NOT NULL,
   tempo_inicio TEXT NOT NULL,
   tempo_final TEXT NOT NULL,
+  raw_payload TEXT NOT NULL,
   payload TEXT NOT NULL,
   payload_decoded TEXT NOT NULL,
   get_payload_value TEXT NOT NULL,
@@ -111,12 +112,12 @@ def get_memcached_request_type(memcached_payload):
 
   print("get_memcached_request_type", memcached_payload)
 
-  if contain_bytes(memcached_payload, byte_stats):
-    payload_types['stats'] += 1
-    return "Stats"
   if contain_bytes(memcached_payload, byte_set):
     payload_types['set'] += 1
     return "Set"
+  if contain_bytes(memcached_payload, byte_stats):
+    payload_types['stats'] += 1
+    return "Stats"
   if contain_bytes(memcached_payload, byte_get):
     payload_types['get'] += 1
     return "Get"
@@ -174,12 +175,12 @@ SELECT ip, count, tempoInicio, tempoFinal, payload
   # memcached_request_type = get_memcached_request_type(strQuotedPacket)
   print(memcached_request_type)
 
-  protocol_mix.append((protocol_id, ip, requests_per_attack, tempoInicio, tempoFinal, bytePayload, decoded_payload, get_payload_value, memcached_request_type))
+  protocol_mix.append((protocol_id, ip, requests_per_attack, tempoInicio, tempoFinal, payload, bytePayload, decoded_payload, get_payload_value, memcached_request_type))
   protocol_id += 1
 
 memcached_connection.close()
 
-mix_cursor.executemany('INSERT INTO MEMCACHED_ANALYSIS VALUES (?,?,?,?,?,?,?,?,?)', protocol_mix)
+mix_cursor.executemany('INSERT INTO MEMCACHED_ANALYSIS VALUES (?,?,?,?,?,?,?,?,?,?)', protocol_mix)
 mix_connection.commit()
 print('memcached finish: ', len(protocol_mix))
 print('payload_types: ', len(payload_types), payload_types)

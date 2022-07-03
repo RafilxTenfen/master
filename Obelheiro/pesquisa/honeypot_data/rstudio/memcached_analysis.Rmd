@@ -22,6 +22,11 @@ library(tibble)
 library(viridis)
 library(lubridate)
 library(blob)
+
+library(stringi)
+library(stringr)
+library(eply)
+#install.packages('eply')
 #library("dplyr.teradata")
 # library("dplyr.teradata")
 ```
@@ -42,6 +47,7 @@ db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protoco
 
 data_unfetch <-dbSendQuery(db, "
   SELECT ip, requests_per_attack, tempo_inicio, tempo_final, QUOTE(payload) as quote_payload, QUOTE(get_payload_value) as quote_payload_get,
+         payload_decoded, payload, raw_payload,
          CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, SUBSTR(payload,0,25) AS payload_limit, memcached_request_type
     FROM (
       SELECT *,  strftime(\"%Y\", tempo_inicio) as year, ((strftime(\"%m\", tempo_final) - 1) / 3) + 1 AS period
@@ -208,7 +214,7 @@ data_grouped_period_command_others_percentage %>%
 
 data_grouped_period_payload = data %>%
   mutate(year_period = as.factor(year_period),
-         payload = as.factor(quote_payload)) %>%
+         payload = as.factor(raw_payload)) %>%
   group_by(year_period, payload) %>%
   summarise(sum_requests_per_attack = sum(requests_per_attack),
             number_of_payloads_by_period = n())
@@ -237,7 +243,7 @@ data_grouped_period_payload_others_percentage = data_grouped_period_payload_perc
 ```
 
 > Porcentagem menores que `r minimum_percentage_as_others` foram agrupadas como "OUTROS"
-> payload foi limitado a mostrar os 25 primeiros characteres
+> payload foi limitado a mostrar os 45 primeiros characteres
 
 - Esses dados podem ser analisados como
   - year_period = ano e trimestre
@@ -248,7 +254,7 @@ data_grouped_period_payload_others_percentage = data_grouped_period_payload_perc
 - Gráfico de barras 2020 ~ 2022
 ```{r fig.width = 16}
 data_grouped_period_payload_others_percentage %>%
-  mutate(payload_limit=substr(payload, 0, 25)) %>%
+  mutate(payload_limit=substr(payload, 0, 45)) %>%
   ggplot( aes(x=payload_limit, y=number_of_payloads_percentage, fill=payload_limit)) +
     geom_bar(stat="identity", width = 0.5, position="dodge") +
     geom_text(aes(label = paste(round(number_of_payloads_percentage, decimals_digits), "%"),  vjust = -0.25)) +
@@ -262,7 +268,12 @@ data_grouped_period_payload_others_percentage %>%
 
 ```{r}
 data_grouped_period_payload_others_percentage %>%
-  mutate(payload_limit=substr(payload, 0, 80)) %>%
+  mutate(
+    payload_limit=case_when(
+      payload == "OUTROS" ~ as.character(payload),
+      TRUE ~ substr(payload, 35, 80)
+    )
+    ) %>%
   select('year_period', 'percentage'='number_of_payloads_percentage', 'payload_limit') %>%
   print(n=35)
 ```
@@ -272,7 +283,7 @@ data_grouped_period_payload_others_percentage %>%
 ```{r}
 data_get_payload = data %>%
   filter(memcached_request_type %in% c("Get")) %>%
-  select(year_period, requests_per_attack, quote_payload_get)
+  select(year_period, requests_per_attack, quote_payload_get, raw_payload)
 
 data_grouped_period_payload_get = data_get_payload %>%
   mutate(year_period = as.factor(year_period),
@@ -303,7 +314,8 @@ data_grouped_period_payload_get_others_percentage = data_grouped_period_payload_
   ) %>%
   group_by(year_period, payload_get) %>%
   summarise(
-    number_of_payloads_get_percentage = sum(number_of_payloads_get_percentage))
+    number_of_payloads_get_percentage = sum(number_of_payloads_get_percentage)
+    )
 ```
 - Esse gráfico não ficou bacana, mas da uma noção
 - Nesses dados, foi pego somente os registros que eram do tipo "get" e os payloads após o byte 'get', que tecnicamente representa o que foi a key buscada pelo comando get
@@ -323,12 +335,24 @@ data_grouped_period_payload_get_others_percentage %>%
 ```
 
 ```{r}
-data_grouped_period_payload_get_others_percentage %>%
-  mutate(payload_limit=substr(payload_get, 0, 60)) %>%
-  select(year_period, percentage=number_of_payloads_get_percentage, payload_limit) %>%
+data_grouped_period_payload_get_others_percentage_with_raw_payload = left_join(x=data_grouped_period_payload_get_others_percentage, y=data, 
+          by=c("payload_get" = "quote_payload_get"),
+          keep=FALSE,
+          copy = FALSE
+          ) %>%
+  count(year_period.x, payload_get, number_of_payloads_get_percentage, raw_payload) %>%
+  select(year_period = year_period.x, payload_get,  percentage=number_of_payloads_get_percentage, raw_payload)
+
+
+data_grouped_period_payload_get_others_percentage_with_raw_payload %>%
+  mutate(
+    payload_limit=case_when(
+      payload_get == "OUTROS" ~ as.character(payload_get),
+      TRUE ~ substr(raw_payload, 35, 80)
+    )
+    ) %>%
+  select(year_period, percentage, payload_limit) %>%
   print(n=24)
 ```
 
-
-
-
+ 
