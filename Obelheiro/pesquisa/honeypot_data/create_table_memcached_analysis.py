@@ -154,6 +154,7 @@ SELECT ip, count, tempoInicio, tempoFinal, payload
   FROM MEMCACHED_MEMORY_DICT
   JOIN MEMCACHED_PAYLOAD_DICT
     ON MEMCACHED_MEMORY_DICT.payloadID = MEMCACHED_PAYLOAD_DICT.payloadID
+ WHERE count > 5
 """):
   ip = memcached_row[0]
   requests_per_attack = int(memcached_row[1])
