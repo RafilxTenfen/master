@@ -22,7 +22,22 @@ library(tibble)
 library(viridis)
 library(lubridate)
 library(blob)
+library(scales)
 # library("dplyr.teradata")
+```
+```{r echo=FALSE}
+addUnits <- function(n) {
+  labels <- ifelse(n < 1000, n, # less than thousands
+    ifelse(n < 1e6, paste0(round(n/1e3), 'k'), # in thousands
+      ifelse(n < 1e9, paste0(round(n/1e6), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12), 'T'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+                             "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 ```
 
 ## R Markdown
@@ -151,3 +166,91 @@ data_grouped_period_percentage_selected %>%
   xlab("Período (Trimestre)") +  
   ggtitle("Volume de vítimas distintas por trimestre") 
 ```
+
+## Apresentar os resultados com números ao invés de porcentagens
+
+- Total de requisições por trimestre
+```{r fig.width = 12} 
+data_grouped_period %>%  
+  ggplot( aes(x=year_period, y=sum_requests_per_attack)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
+  scale_fill_viridis(discrete=TRUE) +
+  ylab("Porcentagem da quantidade de requisições") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de tráfego de requisições") 
+```
+- Total de ataques por trimestre
+```{r fig.width = 12} 
+data_grouped_period %>%  
+  ggplot( aes(x=year_period, y=number_of_attacks)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25)) + 
+  scale_fill_viridis(discrete=TRUE) +
+  ylab("Quantidade de ataques") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de tráfego de ataques") 
+```
+
+- Total de vítimas distintas por trimestre 
+  - é contado as vítimas distintas por trimestre, então a vítima de ip "52.233.175.59" que aparece no trimestre 20204 e 20211 será contado como um nos dois ou mais trimestres em que esse ip é atacado
+```{r fig.width = 12} 
+data_grouped_period %>%  
+  ggplot( aes(x=year_period, y=count_victim)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(count_victim),  vjust = -0.25)) + 
+  scale_fill_viridis(discrete=TRUE) +
+  #theme(axis.text.x=element_text(angle=60, hjust=1)) +
+  # scale_fill_manual(values=safe_colorblind_palette) +
+  # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + 
+  ylab("Quantidade de vítimas distintas no trimestre") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de vítimas distintas por trimestre") 
+```
+
+
+### Vítimas novas
+- Será verificado o aparecimento e desaparecimento de ip de vítimas durante os períodos
+
+```{r}
+# data %>%
+#   filter(year_period == 20191) %>%
+#   count(vitima_ip)
+# 
+# data %>%
+#   ungroup() %>%
+#   filter(year_period == 20191) %>%
+#   group_by(vitima_ip) %>%
+#   summarise(year_period = year_period)
+
+
+data_new_victim_period = data %>%
+  ungroup() %>%
+  group_by(vitima_ip) %>%
+  summarise(year_period = min(year_period)) %>%
+  # filter(year_period == 20181) %>%
+  ungroup() %>%
+  group_by(year_period) %>%
+  summarise(new_victims = n_distinct(vitima_ip)) %>%
+  mutate(year_period=as.factor(year_period))
+```
+
+
+- Total de novas vítimas que surgiram em cada trimestre 
+  - é contado as vítimas distintas, então a vítima de ip "52.233.175.59" que aparece no trimestre 20204 e 20211 será contado como um somente no primeiro momento em que apareceu (20204)
+```{r fig.width = 12} 
+data_new_victim_period %>%  
+  ggplot( aes(x=year_period, y=new_victims)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) + 
+  scale_fill_viridis(discrete=TRUE) +
+  # theme(axis.text.x=element_text(angle=60, hjust=1)) +
+  # scale_fill_manual(values=safe_colorblind_palette) +
+  # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + 
+  ylab("Quantidade de novas vítimas") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de novas vítimas") 
+```
+
+
+
