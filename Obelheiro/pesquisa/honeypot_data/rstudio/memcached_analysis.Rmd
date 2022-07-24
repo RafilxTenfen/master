@@ -91,7 +91,7 @@ memcached_payload_types_quantity_percentage %>%
 
 ```
 
-```{r fig.width = 16}
+```{r fig.width = 14}
   
  memcached_payload_types_quantity_percentage %>%
   arrange(desc(quantity)) %>%
@@ -101,7 +101,7 @@ memcached_payload_types_quantity_percentage %>%
     geom_bar(stat="identity", width = 0.7, position="dodge") +
     geom_text(aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1)) +
+    # theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust=1)) +
     ylab("Porcentagem") +
     xlab("Comando") +
     ggtitle("Porcentagem da quantidade de comandos memcached")

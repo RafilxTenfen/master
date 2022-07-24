@@ -307,6 +307,7 @@ data_grouped_period_protocol_others_percentage %>%
 - Gráfico de linhas 
 ```{r fig.width = 12}
 data_grouped_period_protocol_others_percentage %>% 
+  # filter(year_period > 20182) %>%
   ggplot( aes(x=year_period, y=number_of_requests_percentage, group=attack_protocol)) +
     geom_line(size=1.2, aes(color=attack_protocol)) +
     geom_point(color="red", size=3,  aes(color=attack_protocol)) + 
@@ -315,8 +316,11 @@ data_grouped_period_protocol_others_percentage %>%
       hjust = 0, nudge_x = 0.05,
     ) +
     scale_fill_viridis(discrete=TRUE) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
+    # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + 
     ylab("Porcentagem da quantidade de requisições") +
     xlab("Período (Trimestre)") + 
-    ggtitle("Mix de protocolos 2018 ~ 2022")
+    ggtitle("Mix de protocolos")
+
+# Não pode morrer, plotar completo inicio ao fim, CHARGEN, MEMCACHED e talvez NTP
+# justificativa do porque eles morreram do nada.... 
 ```

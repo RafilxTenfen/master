@@ -119,10 +119,10 @@ data_grouped_period_ntp_type_percentage %>%
     facet_grid(~year_period) +
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
-    ggtitle("NTP - Porcentagem de ataques por trimestre por \"ntp_type\"")
+    ggtitle("NTP - Porcentagem de ataques por trimestre")
 ```
 
-- Gráfico de barras empilhadas apresentando a porcentagem da quantidade de requisições em cada "ntp_type" por período
+- Gráfico de barras apresentando a porcentagem da quantidade de requisições em cada "ntp_type" por período
 ```{r fig.width = 12}
 data_grouped_period_ntp_type_percentage %>% 
   ggplot( aes(x=ntp_type, y=number_of_requests_percentage, fill=ntp_type)) +

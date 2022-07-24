@@ -29,9 +29,9 @@ library(scales)
 addUnits <- function(n) {
   labels <- ifelse(n < 1000, n, # less than thousands
     ifelse(n < 1e6, paste0(round(n/1e3), 'k'), # in thousands
-      ifelse(n < 1e9, paste0(round(n/1e6), 'M'), # in millions
-        ifelse(n < 1e12, paste0(round(n/1e9), 'B'), # in billions
-          ifelse(n < 1e15, paste0(round(n/1e12), 'T'), # in trillions
+      ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
   'too big!')))))
   return(labels)
 }
@@ -47,6 +47,11 @@ Analisar a porcentagem de equisições por protocolo, dividindo por períodos. E
 Resultados esperados:
 
 - gráficos de linhas e de barras mostrando a evolução 
+
+
+### Dados analisados
+- Todos os protocolos foram agrupados em um único database para realizar a análise de dados
+
 ```{r fetch_data}
 db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protocol.sqlite")
 
@@ -176,10 +181,13 @@ data_grouped_period %>%
   geom_bar(stat="identity", width = 0.8, position="dodge") +  
   geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
   scale_fill_viridis(discrete=TRUE) +
-  ylab("Porcentagem da quantidade de requisições") + 
+  scale_y_continuous(labels = addUnits) +
+  ylab("Quantidade de requisições") + 
   xlab("Período (Trimestre)") +  
   ggtitle("Volume de tráfego de requisições") 
 ```
+- O terceiro trimestre de 2020 foi o que teve o maior volume de requisições, alcançando a marca de 7.99 Bilhões de requisições realizadas
+
 - Total de ataques por trimestre
 ```{r fig.width = 12} 
 data_grouped_period %>%  
@@ -187,10 +195,15 @@ data_grouped_period %>%
   geom_bar(stat="identity", width = 0.8, position="dodge") +  
   geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25)) + 
   scale_fill_viridis(discrete=TRUE) +
+  scale_y_continuous(labels = addUnits) +
   ylab("Quantidade de ataques") + 
   xlab("Período (Trimestre)") +  
   ggtitle("Volume de tráfego de ataques") 
 ```
+- O trimestre com maior número de requisições foi o 2020.3 com 7.99 Bilhões de requisições em apenas 372 mil ataques, representando que uma maior quantidade de requisições não significam maior número de ataques, mas sim que tiveram ataques com muitas requisições
+O trimestre com maior número de ataques foi o de 2022.1 com 1.9 Milhões de ataques registrados para apenas 2.64 Bilhões de requisições.
+
+
 
 - Total de vítimas distintas por trimestre 
   - é contado as vítimas distintas por trimestre, então a vítima de ip "52.233.175.59" que aparece no trimestre 20204 e 20211 será contado como um nos dois ou mais trimestres em que esse ip é atacado
@@ -200,6 +213,7 @@ data_grouped_period %>%
   geom_bar(stat="identity", width = 0.8, position="dodge") +  
   geom_text(aes(label = addUnits(count_victim),  vjust = -0.25)) + 
   scale_fill_viridis(discrete=TRUE) +
+  scale_y_continuous(labels = addUnits) +
   #theme(axis.text.x=element_text(angle=60, hjust=1)) +
   # scale_fill_manual(values=safe_colorblind_palette) +
   # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + 
@@ -244,6 +258,7 @@ data_new_victim_period %>%
   geom_bar(stat="identity", width = 0.8, position="dodge") +  
   geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) + 
   scale_fill_viridis(discrete=TRUE) +
+  scale_y_continuous(labels = addUnits) +
   # theme(axis.text.x=element_text(angle=60, hjust=1)) +
   # scale_fill_manual(values=safe_colorblind_palette) +
   # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) + 
@@ -252,5 +267,7 @@ data_new_victim_period %>%
   ggtitle("Volume de novas vítimas") 
 ```
 
-
+- Existe um número significativo de novas vítimas em todos os trimestres, com aumentos expressivos no terceiro trimestre de 2020 em que o protocolo CoAP foi 
+adicionado o que pode apresentar que no terceiro trimestre de 2020 o honeypot foi encontrado por scans e entre o terceiro e quarto trimestre ele iniciou sendo 
+incorporado a listas de refletores disponíveis a ser usado por ferramentas de ataque ou booters
 

@@ -485,8 +485,9 @@ dns_data_fetched.sum_attacks_quarterly.sum_period %>%
     geom_bar(stat="identity", width = 0.55) +
     geom_text(aes(label = paste(round(quantity_percentage, 2), "%")), position = position_stack(vjust = 0.75)) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
-    ylab("Percentage of attacks") +
-    ggtitle("All QTYPES - stacked bars")
+    ylab("Porcentagem de ataques") +
+    xlab("Período (Trimestre)") + 
+    ggtitle("Todos QTYPES")
 ```
 
 - Esse gráfico apresenta que ANY é a maioria em todos os trimestre em que os dados foram coletados com uma predominância grande (98%+) nos três primeiros trimestres (20204, 20211, 20212), no trimestre 20213 os QTYPES tiveram uma paridade entre os diferentes QTYPES: A (24%), ANY (27%), MX (22%) e RRSIG (25%), lembrando que nesse trimestre teve um volume de tráfego bem abaixo do normal, o que prejudica a nálise. Além disso, teve uma queda nos dois últimos trimestres com 83% em 20214 e 80% em 20221 devido ao aumento do uso dos QTYPES A e MX que juntos somam 16% em 20214 e 19% em 20221.
@@ -512,12 +513,15 @@ data %>%
 ```{r}
 possible_query_id = 65536
 
-data %>%
+data_repeated_query_id = data %>%
   group_by(query_id, qname) %>%
   summarise(requests_per_attack = sum(requests_per_attack), query_id_repeated = n()) %>%
-  mutate(probabilist_repetion = as.integer(requests_per_attack/possible_query_id)) %>%
-  arrange(desc(query_id_repeated)) %>%
-  head(5)
+  mutate(probabilist_repetion = ceiling(as.integer(requests_per_attack/possible_query_id))) %>%
+  arrange(desc(query_id_repeated)) %>% 
+  head(5) 
+
+data_repeated_query_id %>%
+  rename(requisições=requests_per_attack, repetiu=query_id_repeated, 'probabilidade de repetição'=probabilist_repetion)
 ```
 - Essa diferença gigante entre a quantidade de vezes que o query_id repetiu e a probabilidade em que poderia repetir auxilia no embasamento da utilização de uma mesma ferramenta pelos atacantes.
 

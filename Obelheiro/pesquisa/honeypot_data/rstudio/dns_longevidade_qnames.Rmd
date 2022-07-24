@@ -22,6 +22,38 @@ library(viridis)
 library(lubridate)
 ```
 
+```{r echo=FALSE}
+addUnits <- function(n) {
+  labels <- ifelse(n < 1000, n, # less than thousands
+    ifelse(n < 1e6, paste0(round(n/1e3), 'k'), # in thousands
+      ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+
+minutes = 60
+hours = minutes * 60
+days = hours * 24
+months = days * 30
+years = months * 12
+
+addUnitsHours <- function(n) {
+  labels <- ifelse(n < minutes, n, # less than 60
+    ifelse(n < hours, paste0(round(n/minutes), 'Min'), # in hours
+      ifelse(n < months, paste0(round(n/hours, 1), 'Horas'), # in millions
+        ifelse(n < years, paste0(round(n/months, 2), 'Meses'), # in billions
+          ifelse(n < 1e15, paste0(round(n/years, 3), 'Anos'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+                             "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
+```
+
 ## R Markdown
 A longevidade de um nome (QNAME+QTYPE) no dataset pode ser definida como o intervalo entre a primeira e a última aparição desse nome. Calcular a longevidade dos nomes no dataset, e analisar como essa variável está distribuída.
 
@@ -72,21 +104,28 @@ data_grouped %>%
   head(10)
 ```
 
-```{r}
+- Dessa forma é buscado apresentar quanto tempo um QNAME em conjunto com o QTYPE, permanece ativo, ex o qname "peacecorps.gov." do qtype "ANY" teve o primeiro ataque registrado em 31/10/2020 e o ultimo ataque com o mesmo qname e qtype em 11/05/2022 totalizando uma longevidade de aproximadamente um ano e meio (48092066 secs)
+
+```{r fig.width = 10} 
 data_grouped %>%
   ggplot(aes(x= tempo_diff_secs)) +
-  geom_histogram(bins = 10, fill='blue', color ='black') +
+  geom_histogram(bins = 20, fill='blue', color ='black') +
   ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
-  xlab("tempo_final - tempo_inicio") +
+  xlab("Longevidade") +
+  ylab("Quantidade") + 
+  scale_y_continuous(labels = addUnits) +
+  scale_x_continuous(labels = addUnitsHours) +
   theme_classic()
+# verificar para colocar a cada 3 ou 4 meses
 ```
 
-```{r}
+```{r fig.width = 12} 
 data_grouped %>%
   ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
-  xlab("tempo_final - tempo_inicio") +
+  ggtitle("ecdf - Longevidade de um mesmo (QNAME + QTYPE)") +
+  xlab("Longevidade (tempo_final - tempo_inicio)") +
+  scale_x_continuous(labels = addUnitsHours) + 
   theme_classic()
 ```
 
@@ -241,10 +280,9 @@ percentage_76_secs_qtype_A_group_qname = percentage_76_secs_qtype_A %>%
          tempo_diff = tempo_final - tempo_inicio)
 
 percentage_76_secs_qtype_A_group_qname %>%
-  arrange(desc(tempo_diff_secs)) %>%
+  arrange(desc(qname_count)) %>%
   select('qname', 'qname_count', 'tempo_diff') %>%
-  head(25) %>%
-  print(n=35)
+  head(100)
 ```
 
 - Uníca coisa a ressaltar aqui é que o top 1 QNAME "whoami.akamai.net." que apareceu 3639x e foi o registro com maior longevidade 480 dias, cerca de 16 meses
@@ -413,8 +451,11 @@ data_quarters_new_removed_same.st$year_period = rep(data_quarters_new_removed_sa
 
 data_quarters_new_removed_same.st %>%
   ggplot( aes(x=year_period, y=values, fill=ind)) +
-  geom_bar(stat="identity", position="dodge") +
-  ggtitle("QNAMES novos/retirados/(nasceram e morreram no mesmo trimestre)  por trimestres") +
+  geom_bar(stat="identity", position=position_dodge()) +
+  ggtitle("QNAMES novos/retirados/(nasceram e morreram no mesmo trimestre) por trimestres") +
+  geom_text(aes(label = addUnits(values)), vjust=-0.25, position = position_dodge(0.9)) +
+  # geom_text(aes(values, label = sprintf("%2.1f", values)), position = position_dodge(width = .9)) + 
+  scale_y_continuous(labels = addUnits) +
   xlab("Período") +
   ylab("Quantidade") +
   theme_classic()
