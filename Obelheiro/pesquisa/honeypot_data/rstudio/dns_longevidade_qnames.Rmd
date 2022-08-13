@@ -49,6 +49,27 @@ addUnitsHours <- function(n) {
   'too big!')))))
   return(labels)
 }
+  #   breaks=c("0","10000000","20000000", "30000000", "40000000"),
+  #   limits = c("0", "4 meses", "8 meses", "12 meses", "16 meses")) +
+longevidadeUnits <- function(n) {
+  # return(switch (as.character(n),
+  #   "0" = "0",
+  #   "10000000" = "4 meses",
+  #   "20000000" = "8 meses",
+  #   "30000000" = "12 meses",
+  #   "40000000" = "16 meses",
+  # ))
+  labels <- ifelse(0 == n, "0", # less than 60
+    ifelse(10000000 == n, "4 meses",
+      ifelse(20000000 == n, "8 meses", 
+        ifelse(30000000 == n, "12 meses", 
+          ifelse(40000000 == n, "16 meses", 
+             ifelse(50000000 == n, "20 meses", 
+  'too big!'))))))
+
+  return(labels)
+}
+
 
 safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
@@ -106,15 +127,23 @@ data_grouped %>%
 
 - Dessa forma é buscado apresentar quanto tempo um QNAME em conjunto com o QTYPE, permanece ativo, ex o qname "peacecorps.gov." do qtype "ANY" teve o primeiro ataque registrado em 31/10/2020 e o ultimo ataque com o mesmo qname e qtype em 11/05/2022 totalizando uma longevidade de aproximadamente um ano e meio (48092066 secs)
 
-```{r fig.width = 10} 
+```{r fig.width = 12} 
 data_grouped %>%
+  mutate(tempo_diff_secs = tempo_diff_secs / months) %>%
   ggplot(aes(x= tempo_diff_secs)) +
   geom_histogram(bins = 20, fill='blue', color ='black') +
   ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
   xlab("Longevidade") +
-  ylab("Quantidade") + 
+  ylab("Quantidade de Registros") + 
   scale_y_continuous(labels = addUnits) +
-  scale_x_continuous(labels = addUnitsHours) +
+  # scale_x_continuous(labels = addUnitsHours) +
+  # scale_x_continuous(labels = longevidadeUnits) +
+  # scale_x_discrete(limits = c(0, 16*months), breaks = 0:(4*months)) +
+  # xlim("0","10000000","20000000", "30000000", "40000000") +
+  # scale_x_discrete(
+  #   breaks=c("0","10000000","20000000", "30000000", "40000000"),
+  #   limits = c("0", "4 meses", "8 meses", "12 meses", "16 meses")) +
+    # limits = c("0" = "0", "10000000" = "4 meses", "20000000" = "8 meses", "30000000" = "12 meses", "40000000" = "16 meses")) +
   theme_classic()
 # verificar para colocar a cada 3 ou 4 meses
 ```
@@ -124,8 +153,8 @@ data_grouped %>%
   ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
   ggtitle("ecdf - Longevidade de um mesmo (QNAME + QTYPE)") +
-  xlab("Longevidade (tempo_final - tempo_inicio)") +
-  scale_x_continuous(labels = addUnitsHours) + 
+  xlab("Longevidade") +
+  scale_x_continuous(labels = longevidadeUnits) + 
   theme_classic()
 ```
 
@@ -452,9 +481,10 @@ data_quarters_new_removed_same.st$year_period = rep(data_quarters_new_removed_sa
 data_quarters_new_removed_same.st %>%
   ggplot( aes(x=year_period, y=values, fill=ind)) +
   geom_bar(stat="identity", position=position_dodge()) +
-  ggtitle("QNAMES novos/retirados/(nasceram e morreram no mesmo trimestre) por trimestres") +
+  ggtitle("QNAMES novos/retirados/(nasceram e desapareceram no mesmo trimestre) por trimestres") +
   geom_text(aes(label = addUnits(values)), vjust=-0.25, position = position_dodge(0.9)) +
   # geom_text(aes(values, label = sprintf("%2.1f", values)), position = position_dodge(width = .9)) + 
+  # labs(color = "QNAME") + 
   scale_y_continuous(labels = addUnits) +
   xlab("Período") +
   ylab("Quantidade") +

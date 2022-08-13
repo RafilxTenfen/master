@@ -34,7 +34,7 @@ Resultados esperados:
 
 - tabela/gráfico de barras com a %monlist por período 
 ```{r fetch_data}
-db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/dnstor_statistics_ntp.sqlite")
+db <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protocol.sqlite")
 
 data_unfetch <-dbSendQuery(db, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
@@ -136,6 +136,25 @@ data_grouped_period_ntp_type_percentage %>%
     ggtitle("NTP - Porcentagem de requisições por trimestre por \"ntp_type\"")
 ```
 
+
+- No trimestre de 2021.2 existe uma grande quantidade de ataques ntp que não são monlist, o que surge uma dúvida do que pode ser esses registros?
+```{r}
+data %>%
+  filter(year_period == 20212 & ntp_type == 'outros') %>%
+  group_by(raw_payload) %>%
+  summarise(quantity = n(), inicio = min(tempo_inicio), fim = max(tempo_final)) %>%
+  mutate(raw_payload = substr(raw_payload, 0, 100)) %>%
+  select(quantity, inicio, fim, raw_payload)
+
+```
+- Um payload aparece 178x nesses dados de 2021.2 (b'0\\x84\\x00\\x00\\x00-\\x02\\x01')
+- Tentei decodificar esses payloads [codebeautify](https://codebeautify.org/utf8-decode?), porém sem sucesso
+
+- O payload que aparece 2x b'\\xe3\\x00\\x04\\xfa\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xc5O#Kq\\xb1R\\xf3'	é também utilizado em CLDAP
+- O payload que aparece 1x b'\\x00\\x06\\x01\\x00\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x07version\\x04bind\\x00\\x00\\x10\\x00\\x03' é também utilizado em DNS 
+- Ja o payload que não é monlist e aparece 178x não existe em nenhum outro protocolo
+
+![SQL executado](../sql/payload_ntp_not_monlist.png)
 
 ```{r}
 ntp_payload_types = data_ntp_payload_types %>%

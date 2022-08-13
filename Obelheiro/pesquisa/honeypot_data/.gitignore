@@ -1,7 +1,8 @@
 .Rhistory
-.RData
+.RData*
 dnstor_statistics*
 db/database-2022-05-11/*
 mix-protocolos/G1-evolucao-mix-protocolos.ods
 *.rar
 *.zip
+pcap
