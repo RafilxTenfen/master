@@ -1,7 +1,7 @@
 ---
 title: 'DN2. DNS: longevidade de nomes'
 author: "Rafilx"
-date: '2022-05-02'
+date: '2022-08-13'
 output:
   pdf_document: default
   html_document: default
@@ -311,7 +311,7 @@ percentage_76_secs_qtype_A_group_qname = percentage_76_secs_qtype_A %>%
 percentage_76_secs_qtype_A_group_qname %>%
   arrange(desc(qname_count)) %>%
   select('qname', 'qname_count', 'tempo_diff') %>%
-  head(100)
+  head(5)
 ```
 
 - Uníca coisa a ressaltar aqui é que o top 1 QNAME "whoami.akamai.net." que apareceu 3639x e foi o registro com maior longevidade 480 dias, cerca de 16 meses
@@ -485,7 +485,7 @@ data_quarters_new_removed_same.st %>%
   geom_text(aes(label = addUnits(values)), vjust=-0.25, position = position_dodge(0.9)) +
   # geom_text(aes(values, label = sprintf("%2.1f", values)), position = position_dodge(width = .9)) + 
   # labs(color = "QNAME") + 
-  scale_y_continuous(labels = addUnits) +
+  # scale_y_continuous(labels = addUnits) +
   xlab("Período") +
   ylab("Quantidade") +
   theme_classic()
@@ -546,6 +546,52 @@ data_quarters_avg_attacks %>%
   theme_classic()
 ```
 
+
+- Obelheiro 
+- A propósito, acho que pode ser interessante verificar:
+  - quantos nomes são usados em apenas um ataque;
+  - quantos nomes aparecem e desaparecem no mesmo dia, ou dentro de 24h ("mesmo dia" pode ser influenciado pelo timezone)
+
+```{r}
+data %>%
+  count(qname) %>%
+  filter(n == 1) %>%
+  count(n) %>%
+  select(nn)
+```
+- 11.636 qnames foram utilizados em apenas 1 ataque
+
+```{r}
+dns_data_longevidade = data %>%
+  group_by(qname) %>%
+  summarise(tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast), 
+            number_of_attacks=n(), year_period = first(year_period)) %>%
+  mutate(tempo_diff_secs = as.numeric(tempo_final - tempo_inicio, units="secs"), 
+         tempo_diff = tempo_final - tempo_inicio)
+
+dns_data_longevidade %>%
+  count(qname) %>%
+  count(n)
+```
+
+- 15.305 qnames aparecem e desaparecem no mesmo dia, ou dentro de 24h ("mesmo dia")
+
+```{r fig.width = 12}
+dns_data_longevidade %>%
+  ungroup() %>%
+  group_by(year_period) %>%
+  summarise(qnames_one_day = n()) %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%    
+  ggplot( aes(x=year_period, y=qnames_one_day)) +
+  geom_bar(stat="identity", position="dodge", fill = "#FF6666") +
+  geom_text(aes(label = addUnits(qnames_one_day),  vjust = -0.25)) + 
+  scale_y_continuous(labels = addUnits) +
+  ggtitle("QNAMES aparecem e desaparecem no mesmo dia por trimestre") +
+  xlab("Trimestre") +
+  ylab("Quantidade de qnames que aparecem e desaparecem no mesmo dia") +
+  theme_classic()
+
+```
 
 
 

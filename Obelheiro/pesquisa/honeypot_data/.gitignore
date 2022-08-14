@@ -6,3 +6,4 @@ mix-protocolos/G1-evolucao-mix-protocolos.ods
 *.rar
 *.zip
 pcap
+rust/pcap_reader/target/*
