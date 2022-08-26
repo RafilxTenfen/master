@@ -67,7 +67,7 @@ impl PcapDNS {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype, qtype_text, udp_payload_size) values (?1, ?2, ?3, ?4, ?5, ?6)",
-        &[&self.id.to_string(), &self.tx_id.to_string(), &self.qname, &self.qtype.to_string(), &self.qtype_text, &self.udp_payload_size.to_string()],
+      &[&self.id.to_string(), &self.tx_id.to_string(), &self.qname, &self.qtype.to_string(), &self.qtype_text, &self.udp_payload_size.to_string()],
     );
 
     match result {

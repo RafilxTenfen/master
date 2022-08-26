@@ -1,6 +1,5 @@
 use rtshark::Layer;
 use rusqlite::Connection;
-use std::{time::SystemTime, str::FromStr};
 use chrono::{DateTime, FixedOffset};
 
 // https://www.wireshark.org/docs/dfref/f/frame.html
