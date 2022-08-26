@@ -7,3 +7,7 @@ edition = "2021"
 
 [dependencies]
 rtshark = "2.3.1"
+rusqlite = { version = "0.28.0", features = ["bundled"]}
+cidr = { version = "0.2.0" }
+cidr-utils = { version = "0.5.7" }
+chrono = { version = "0.4.22" }
