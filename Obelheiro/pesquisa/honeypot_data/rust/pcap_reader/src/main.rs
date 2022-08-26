@@ -93,19 +93,23 @@ pub fn pcap_process(
   }
 }
 
-pub fn add_packet_to_attacks(map_attacks: &mut HashMap<Ipv4Cidr, HashMap<i32, PcapAttack>>, packet: pcap_packet::PcapPacket, attack_id: i32) {
+pub fn add_packet_to_attacks(cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i32, PcapAttack>>, packet: pcap_packet::PcapPacket, attack_id: i32) {
   let cidr = packet.ip.vitima_cidr;
 
-  if !map_attacks.contains_key(&cidr) {
-    // nao tem aquele cidr ainda
-    let udp_attack = new_map_attack(packet, attack_id);
-    map_attacks.insert(cidr, udp_attack);
-    return ;
+  match cidr_udp_attack.get_mut(&cidr) {
+    Some(udp_attack) => {
+      // cidr existe
+      let udp_dest_port = packet.udp.destination_port;
+      udp_attack.insert(udp_dest_port, new_attack(packet, attack_id));
+    },
+    None => {
+      // não tem o cidr,
+      let udp_attack = new_map_attack(packet, attack_id);
+      cidr_udp_attack.insert(cidr, udp_attack);
+    },
   }
 
-  // let udp_dest_port = packet.udp.destination_port;
 
-  // let mut udp_attack = map_attacks.get(&cidr).unwrap();
   // if !udp_attack.contains_key(&udp_dest_port) {
   //   // tem o cidr
   //   // mas nao tem a porta de destino udp
