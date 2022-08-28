@@ -1,5 +1,5 @@
 use rtshark::{RTShark, RTSharkBuilder};
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, params};
 use std::{env};
 use std::path::PathBuf;
 use std::collections::HashMap;
@@ -37,6 +37,7 @@ fn main() -> Result<()> {
   let mut id_attack = 0;
 
   let builder = RTSharkBuilder::builder().input_path(&pcap_str);
+  // builder.metadata_blacklist(blacklist)
   // Start a new TShark process
   let rtshark = builder
     .spawn()
@@ -72,7 +73,7 @@ impl PcapAttack {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
-        &[&self.id.to_string(), &self.ip_vitima_cidr.to_string(), &self.packets.len().to_string(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+        params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     );
 
     match result {
@@ -90,7 +91,7 @@ impl PcapAttack {
     for packet in &self.packets {
         let result = conn.execute(
             "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
-            &[&self.id.to_string(), &packet.id.to_string()],
+            params![&self.id, &packet.id],
         );
 
         match result {
@@ -139,10 +140,12 @@ pub fn pcap_process(
     // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
     // cidr utils
 
-      // println!("Layer name: {}", layer.name());
-      // for metadata in layer {
-      //   println!("\t metadata Name: {} = {}", metadata.name(), metadata.display());
-      // }
+    // for layer in packet {
+    //   println!("Layer name: {}", layer.name());
+    //   for metadata in layer {
+    //     println!("\t metadata Name: {} = {}", metadata.name(), metadata.display());
+    //   }
+    // }
 
     let packet = pcap_packet::pcap_process_packet(packet, conn, map_id);
     add_packet_to_attacks(conn, map_attacks, packet, id_attack);
@@ -266,7 +269,7 @@ pub fn drop_table_attack(conn: &Connection) {
 pub fn create_table_attack(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       ip_vitima_cidr TEXT NOT NULL,
       packets_per_attack INTEGER NOT NULL,
       timestamp_inicio TEXT NOT NULL,
@@ -284,13 +287,13 @@ pub fn create_table_attack(conn: &Connection) {
     }
   }
 
+  // FOREIGN KEY(attack_id) REFERENCES PCAP_ATTACK(id),
+  // FOREIGN KEY(packet_id) REFERENCES PCAP_PACKET(id)
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_ATTACK_PACKET (
       attack_id INTEGER NOT NULL,
-      packet_id INTEGER NOT NULL,
-      FOREIGN KEY(attack_id) REFERENCES PCAP_ATTACK(id),
-      FOREIGN KEY(packet_id) REFERENCES PCAP_PACKET(id)
-     )",
+      packet_id INTEGER NOT NULL
+    )",
     [],
   );
 

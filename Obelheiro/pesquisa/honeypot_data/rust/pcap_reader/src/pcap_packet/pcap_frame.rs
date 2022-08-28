@@ -1,5 +1,5 @@
 use rtshark::Layer;
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 use chrono::{DateTime, FixedOffset};
 
 // https://www.wireshark.org/docs/dfref/f/frame.html
@@ -31,7 +31,7 @@ pub fn drop_table(conn: &Connection) {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_FRAME (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       timestamp_str TEXT NOT NULL,
       time_epoch REAL NOT NULL
      )",
@@ -61,7 +61,7 @@ impl PcapFrame {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_FRAME (id, timestamp_str, time_epoch) values (?1, ?2, ?3)",
-        &[&self.id.to_string(), &self.timestamp_str.to_string(), &self.time_epoch],
+        params![&self.id, &self.timestamp_str.to_string(), &self.time_epoch],
     );
 
     match result {

@@ -1,5 +1,5 @@
 use rtshark::Packet;
-use rusqlite::{Connection};
+use rusqlite::{Connection, params};
 use std::collections::HashMap;
 mod pcap_dns;
 mod pcap_frame;
@@ -63,25 +63,24 @@ pub fn drop_table(conn: &Connection) {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_PACKET (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       frame_id INTEGER NOT NULL,
       ip_id INTEGER NOT NULL,
       udp_id INTEGER NOT NULL,
       dns_id INTEGER,
       chargen_id INTEGER,
       ntp_id INTEGER,
-      ssdp_id INTEGER,
-
-      FOREIGN KEY(frame_id) REFERENCES PCAP_FRAME(id),
-      FOREIGN KEY(ip_id) REFERENCES PCAP_IP(id),
-      FOREIGN KEY(udp_id) REFERENCES PCAP_UDP(id),
-      FOREIGN KEY(dns_id) REFERENCES PCAP_DNS(id),
-      FOREIGN KEY(chargen_id) REFERENCES PCAP_CHARGEN(id),
-      FOREIGN KEY(ntp_id) REFERENCES PCAP_NTP(id),
-      FOREIGN KEY(ssdp_id) REFERENCES PCAP_SSDP(id)
-     )",
+      ssdp_id INTEGER
+    )",
     [],
   );
+  // FOREIGN KEY(frame_id) REFERENCES PCAP_FRAME(id),
+  // FOREIGN KEY(ip_id) REFERENCES PCAP_IP(id),
+  // FOREIGN KEY(udp_id) REFERENCES PCAP_UDP(id),
+  // FOREIGN KEY(dns_id) REFERENCES PCAP_DNS(id),
+  // FOREIGN KEY(chargen_id) REFERENCES PCAP_CHARGEN(id),
+  // FOREIGN KEY(ntp_id) REFERENCES PCAP_NTP(id),
+  // FOREIGN KEY(ssdp_id) REFERENCES PCAP_SSDP(id)
 
   match result {
     Ok(_) => {
@@ -165,30 +164,22 @@ impl PcapPacket {
     if self.dns.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, dns_id) values (?1, ?2, ?3, ?4, ?5)",
-        [&self.id.to_string(), &self.frame.id.to_string(), &self.ip.id.to_string(), &self.udp.id.to_string(),
-          &self.dns.id.to_string(),
-        ],
+        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.dns.id],
       );
     } else if self.chargen.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, chargen_id) values (?1, ?2, ?3, ?4, ?5)",
-        [&self.id.to_string(), &self.frame.id.to_string(), &self.ip.id.to_string(), &self.udp.id.to_string(),
-          &self.chargen.id.to_string(),
-        ],
+        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.chargen.id],
       );
     } else if self.ssdp.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ssdp_id) values (?1, ?2, ?3, ?4, ?5)",
-        [&self.id.to_string(), &self.frame.id.to_string(), &self.ip.id.to_string(), &self.udp.id.to_string(),
-          &self.ssdp.id.to_string(),
-        ],
+        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.ssdp.id],
       );
     } else if self.ntp.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ntp_id) values (?1, ?2, ?3, ?4, ?5)",
-        [&self.id.to_string(), &self.frame.id.to_string(), &self.ip.id.to_string(), &self.udp.id.to_string(),
-          &self.ntp.id.to_string(),
-        ],
+        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.ntp.id],
       );
     }
 

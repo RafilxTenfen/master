@@ -1,6 +1,6 @@
 
 use rtshark::Layer;
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 use cidr_utils::cidr::Ipv4Cidr;
 // use std::str::FromStr;
 // use cidr_utils::cidr::IpCidr;
@@ -32,7 +32,7 @@ pub fn drop_table(conn: &Connection) {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_IP (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       vitima_addr TEXT NOT NULL,
       vitima_cidr TEXT NOT NULL
      )",
@@ -61,7 +61,7 @@ impl PcapIP {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_IP (vitima_addr, vitima_cidr) values (?1, ?2)",
-        &[&self.vitima_addr.to_string(), &self.vitima_cidr.to_string()],
+        params![&self.vitima_addr, &self.vitima_cidr.to_string()],
     );
 
     match result {
@@ -86,8 +86,7 @@ pub fn pcap_process_layer_ip(layer: Layer, conn: &Connection, id: i32) -> PcapIP
     match name {
       "ip.addr" => {
         pcap_ip.vitima_addr = value.to_string();
-        let cidr = Ipv4Cidr::from_str(value);
-        match cidr {
+        match Ipv4Cidr::from_str(value) {
           Ok(ipcidr) => {pcap_ip.vitima_cidr = ipcidr},
           Err(err) => {
             println!("Problem Ipv4Cidr ip: {:?}, - err {:?}", value, err)

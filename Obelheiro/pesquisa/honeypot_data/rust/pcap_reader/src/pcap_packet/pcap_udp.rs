@@ -1,5 +1,5 @@
 use rtshark::Layer;
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
 
@@ -27,7 +27,7 @@ pub fn drop_table(conn: &Connection) {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_UDP (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       destination_port INTEGER NOT NULL
      )",
     [],
@@ -58,7 +58,7 @@ impl PcapUDP {
 
     let result = conn.execute(
         "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
-        &[&self.id.to_string(), &self.destination_port.to_string()],
+        params![&self.id, &self.destination_port],
     );
 
     match result {

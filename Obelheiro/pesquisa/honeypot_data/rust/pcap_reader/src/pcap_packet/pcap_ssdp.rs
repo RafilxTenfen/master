@@ -1,5 +1,5 @@
 use rtshark::Layer;
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/c/chargen.html
 
@@ -27,7 +27,7 @@ pub fn drop_table(conn: &Connection) {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_SSDP (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       full_uri TEXT NOT NULL
      )",
     [],
@@ -54,7 +54,7 @@ impl PcapSSDP {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_SSDP (id, full_uri) values (?1, ?2)",
-        &[&self.id.to_string(), &self.full_uri.to_string()],
+        params![&self.id, &self.full_uri],
     );
 
     match result {

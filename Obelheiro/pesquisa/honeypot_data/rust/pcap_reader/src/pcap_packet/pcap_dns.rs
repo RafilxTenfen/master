@@ -1,5 +1,5 @@
 use rtshark::Layer;
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
 
@@ -16,7 +16,7 @@ pub struct PcapDNS {
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_DNS (
-      id INTEGER PRIMARY KEY,
+      id INTEGER NOT NULL,
       tx_id INTEGER NOT NULL,
       qname TEXT NOT NULL,
       qtype INTEGER NOT NULL,
@@ -67,7 +67,7 @@ impl PcapDNS {
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
         "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype, qtype_text, udp_payload_size) values (?1, ?2, ?3, ?4, ?5, ?6)",
-      &[&self.id.to_string(), &self.tx_id.to_string(), &self.qname, &self.qtype.to_string(), &self.qtype_text, &self.udp_payload_size.to_string()],
+      params![&self.id, &self.tx_id, &self.qname, &self.qtype, &self.qtype_text, &self.udp_payload_size],
     );
 
     match result {
