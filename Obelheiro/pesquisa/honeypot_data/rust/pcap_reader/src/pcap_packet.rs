@@ -291,7 +291,6 @@ pub fn pcap_process_packet(packet: &Packet, map_id: &mut HashMap<&str, i32>) -> 
   *packet_id += 1;
 
   let mut pcap_packet = PcapPacket::default(*packet_id);
-
   println!("Packet {}", packet_id);
 
   packet

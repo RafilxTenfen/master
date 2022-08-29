@@ -72,7 +72,8 @@ impl PcapAttack {
   pub fn same_attack(&self, packet: &pcap_packet::PcapPacket) -> bool {
     match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
       Some(fim_plus_1min) => {
-        packet.frame.timestamp <= fim_plus_1min && packet.frame.timestamp >= self.timestamp_fim
+        return packet.frame.timestamp >= self.timestamp_fim
+          && packet.frame.timestamp <= fim_plus_1min
       }
       None => false,
     }
