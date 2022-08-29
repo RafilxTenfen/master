@@ -1,15 +1,14 @@
-use rtshark::{RTShark, RTSharkBuilder};
-use rusqlite::{Connection, Result, params};
-use std::{env};
-use std::path::PathBuf;
-use std::collections::HashMap;
+use chrono::{DateTime, Duration, FixedOffset};
 use cidr_utils::cidr::Ipv4Cidr;
-use chrono::{DateTime, FixedOffset, Duration};
+use rtshark::{RTShark, RTSharkBuilder};
+use rusqlite::{params, Connection, Result};
+use std::collections::HashMap;
+use std::env;
+use std::path::PathBuf;
 // use std::time::Duration;
 
 mod pcap_packet;
 // use std::path::Path;
-
 
 fn main() -> Result<()> {
   let currently_dir = get_current_working_dir();
@@ -44,7 +43,13 @@ fn main() -> Result<()> {
     .spawn()
     .unwrap_or_else(|e| panic!("Error starting tshark: {e}"));
 
-  pcap_process(rtshark, &conn, &mut map_id, &mut map_attacks, &mut id_attack);
+  pcap_process(
+    rtshark,
+    &conn,
+    &mut map_id,
+    &mut map_attacks,
+    &mut id_attack,
+  );
 
   Ok(())
 }
@@ -66,7 +71,9 @@ impl PcapAttack {
   // same_attack chcks if the packet happened within 5 minutes from the last attack
   pub fn same_attack(&self, packet: &pcap_packet::PcapPacket) -> bool {
     match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
-      Some(fim_plus_1min) => packet.frame.timestamp <= fim_plus_1min && packet.frame.timestamp >= self.timestamp_fim,
+      Some(fim_plus_1min) => {
+        packet.frame.timestamp <= fim_plus_1min && packet.frame.timestamp >= self.timestamp_fim
+      }
       None => false,
     }
   }
@@ -90,25 +97,21 @@ impl PcapAttack {
 
   fn insert_pcap_packets(&self, conn: &Connection) {
     for packet in &self.packets {
-        let result = conn.execute(
-            "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
-            params![&self.id, &packet.id],
-        );
+      let result = conn.execute(
+        "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
+        params![&self.id, &packet.id],
+      );
 
-        match result {
-          Ok(_) => {
-            println!("attack inserted")
-          }
-          Err(err) => {
-            println!("Problem inserting attack : {:?}", err)
-          }
+      match result {
+        Ok(_) => {
+          println!("attack inserted")
         }
+        Err(err) => {
+          println!("Problem inserting attack : {:?}", err)
+        }
+      }
     }
   }
-
-
-
-
 }
 
 fn get_current_working_dir() -> PathBuf {
@@ -120,7 +123,6 @@ fn get_current_working_dir() -> PathBuf {
   return current_dir;
 }
 
-
 pub fn pcap_process(
   mut rtshark: RTShark,
   conn: &Connection,
@@ -129,7 +131,6 @@ pub fn pcap_process(
   id_attack: &mut i32,
 ) {
   // read packets until the end of the PCAP file
-
 
   while let Some(packet) = rtshark.read().unwrap_or_else(|e| {
     eprintln!("Error parsing TShark output: {e}");
@@ -152,7 +153,7 @@ pub fn pcap_process(
     add_packet_to_attacks(conn, map_attacks, packet, id_attack);
 
     // TODO verificar a cada 10000 packets o que da pra limpar do hashmap...
- }
+  }
 }
 
 pub fn add_packet_to_attacks(
@@ -170,14 +171,13 @@ pub fn add_packet_to_attacks(
       // udp => attack
       let udp_dest_port = packet.udp.destination_port;
 
-
       match udp_attack.get_mut(&udp_dest_port) {
         Some(attack) => {
           // attack exists
           // check time
           if attack.same_attack(&packet) {
             attack.add_packet(packet);
-            return ;
+            return;
           }
 
           // not same attack, should check if len(packets) > 5 to dbinsert or just replace by a new attack
@@ -185,29 +185,34 @@ pub fn add_packet_to_attacks(
             attack.insert(conn);
           }
           udp_attack.insert(udp_dest_port, new_empty_attack(packet, id_attack));
-          return
-        },
+          return;
+        }
         None => {
           // no attack
           udp_attack.insert(udp_dest_port, new_empty_attack(packet, id_attack));
-          return ;
-        },
+          return;
+        }
       }
-
-    },
+    }
 
     None => {
       // não tem o cidr,
       let udp_attack = new_map_attack(packet, id_attack);
       cidr_udp_attack.insert(cidr, udp_attack);
-      return ;
-    },
+      return;
+    }
   }
 }
 
-pub fn new_map_attack(packet: pcap_packet::PcapPacket, id_attack: &mut i32) -> HashMap<i32, PcapAttack> {
+pub fn new_map_attack(
+  packet: pcap_packet::PcapPacket,
+  id_attack: &mut i32,
+) -> HashMap<i32, PcapAttack> {
   let mut map_attack = HashMap::<i32, PcapAttack>::new();
-  map_attack.insert(packet.udp.destination_port, new_empty_attack(packet, id_attack));
+  map_attack.insert(
+    packet.udp.destination_port,
+    new_empty_attack(packet, id_attack),
+  );
 
   return map_attack;
 }
@@ -216,13 +221,13 @@ pub fn new_empty_attack(packet: pcap_packet::PcapPacket, id: &mut i32) -> PcapAt
   let timestamp = packet.frame.timestamp;
   *id += 1;
 
-  return PcapAttack{
+  return PcapAttack {
     id: *id,
     ip_vitima_cidr: packet.ip.vitima_cidr,
     packets: vec![packet],
     timestamp_inicio: timestamp,
     timestamp_fim: timestamp,
-  }
+  };
 }
 
 pub fn drop_tables(conn: &Connection) {
@@ -237,10 +242,7 @@ pub fn create_tables(conn: &Connection) {
 }
 
 pub fn drop_table_attack(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_ATTACK",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK", []);
 
   match result {
     Ok(_) => {
@@ -251,10 +253,7 @@ pub fn drop_table_attack(conn: &Connection) {
     }
   }
 
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_ATTACK_PACKET",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK_PACKET", []);
 
   match result {
     Ok(_) => {
@@ -265,7 +264,6 @@ pub fn drop_table_attack(conn: &Connection) {
     }
   }
 }
-
 
 pub fn create_table_attack(conn: &Connection) {
   let result = conn.execute(

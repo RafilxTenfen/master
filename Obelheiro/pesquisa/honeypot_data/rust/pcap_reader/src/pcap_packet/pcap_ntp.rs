@@ -1,5 +1,5 @@
 use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/n/ntp.html
 
@@ -9,10 +9,7 @@ pub struct PcapNTP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_NTP",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_NTP", []);
 
   match result {
     Ok(_) => {
@@ -53,8 +50,8 @@ impl PcapNTP {
 
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
-        "INSERT INTO PCAP_NTP (id, refid) values (?1, ?2)",
-        params![&self.id, &self.refid],
+      "INSERT INTO PCAP_NTP (id, refid) values (?1, ?2)",
+      params![&self.id, &self.refid],
     );
 
     match result {
@@ -71,7 +68,7 @@ impl PcapNTP {
       "ntp.refid" => {
         self.refid = value.to_string();
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -85,7 +82,9 @@ pub fn pcap_process_layer_ntp(layer: &Layer, id: &i32) -> PcapNTP {
   // }
 
   println!("Processing ntp");
-  layer.iter().for_each(|metadata| pcap_ntp.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_ntp.metadata_process(metadata));
 
   return pcap_ntp;
 }

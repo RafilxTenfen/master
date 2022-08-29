@@ -1,5 +1,5 @@
 use rtshark::{Layer, Metadata};
-use rusqlite::{ Connection, params };
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/c/chargen.html
 
@@ -9,10 +9,7 @@ pub struct PcapChargen {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_CHARGEN",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_CHARGEN", []);
 
   match result {
     Ok(_) => {
@@ -53,8 +50,8 @@ impl PcapChargen {
 
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
-        "INSERT INTO PCAP_CHARGEN (id, data) values (?1, ?2)",
-        params![&self.id, &self.data],
+      "INSERT INTO PCAP_CHARGEN (id, data) values (?1, ?2)",
+      params![&self.id, &self.data],
     );
 
     match result {
@@ -71,7 +68,7 @@ impl PcapChargen {
       "chargen.data" => {
         self.data = value.to_string();
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -85,7 +82,9 @@ pub fn pcap_process_layer_chargen(layer: &Layer, id: i32) -> PcapChargen {
   // }
 
   println!("Processing chargen");
-  layer.iter().for_each(|metadata| pcap_chargen.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_chargen.metadata_process(metadata));
 
   return pcap_chargen;
 }

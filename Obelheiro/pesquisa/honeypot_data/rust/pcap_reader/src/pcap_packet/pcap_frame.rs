@@ -1,6 +1,6 @@
-use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
 use chrono::{DateTime, FixedOffset};
+use rtshark::{Layer, Metadata};
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/f/frame.html
 
@@ -12,10 +12,7 @@ pub struct PcapFrame {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_FRAME",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_FRAME", []);
 
   match result {
     Ok(_) => {
@@ -26,7 +23,6 @@ pub fn drop_table(conn: &Connection) {
     }
   }
 }
-
 
 pub fn create_table(conn: &Connection) {
   let result = conn.execute(
@@ -60,8 +56,8 @@ impl PcapFrame {
 
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
-        "INSERT INTO PCAP_FRAME (id, timestamp_str, time_epoch) values (?1, ?2, ?3)",
-        params![&self.id, &self.timestamp_str.to_string(), &self.time_epoch],
+      "INSERT INTO PCAP_FRAME (id, timestamp_str, time_epoch) values (?1, ?2, ?3)",
+      params![&self.id, &self.timestamp_str.to_string(), &self.time_epoch],
     );
 
     match result {
@@ -83,19 +79,20 @@ impl PcapFrame {
         // "1983 Apr 13 12:09:14.274 +0000", "%Y %b %d %H:%M:%S%.3f %z");599409000
         // let q = DateTime::from_str(value);
         let timestamp_formatted = format!("{}:00", value);
-        let parsed_datetime = DateTime::parse_from_str(timestamp_formatted.as_str(), "%b %d, %Y %H:%M:%S%.9f %z");
+        let parsed_datetime =
+          DateTime::parse_from_str(timestamp_formatted.as_str(), "%b %d, %Y %H:%M:%S%.9f %z");
         match parsed_datetime {
           Ok(datetime) => {
             self.timestamp = datetime;
-          },
-          Err(err) => println!("Error parse data: {:?} = {}", err, value)
+          }
+          Err(err) => println!("Error parse data: {:?} = {}", err, value),
         }
         self.timestamp_str = value.to_string();
       }
       // "frame.time_epoch" => {
       //   pcap_frame.time_epoch = value.to_string();
       // },
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, _display),
     }
   }
@@ -109,7 +106,9 @@ pub fn pcap_process_layer_frame(layer: &Layer, id: &i32) -> PcapFrame {
   // }
 
   println!("Processing frame");
-  layer.iter().for_each(|metadata| pcap_frame.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_frame.metadata_process(metadata));
 
   return pcap_frame;
 }

@@ -1,5 +1,5 @@
 use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
 
@@ -37,10 +37,7 @@ pub fn create_table(conn: &Connection) {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_DNS",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_DNS", []);
 
   match result {
     Ok(_) => {
@@ -94,7 +91,7 @@ impl PcapDNS {
       "dns.rr.udp_payload_size" => {
         self.udp_payload_size = value.parse::<i32>().unwrap();
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -108,7 +105,9 @@ pub fn pcap_process_layer_dns(layer: &Layer, id: i32) -> PcapDNS {
   // }
 
   println!("Processing dns");
-  layer.iter().for_each(|metadata| pcap_dns.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_dns.metadata_process(metadata));
 
   return pcap_dns;
 }

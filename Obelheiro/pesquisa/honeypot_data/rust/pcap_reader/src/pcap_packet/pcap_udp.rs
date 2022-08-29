@@ -1,5 +1,5 @@
 use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
 
@@ -9,10 +9,7 @@ pub struct PcapUDP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_UDP",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_UDP", []);
 
   match result {
     Ok(_) => {
@@ -53,12 +50,12 @@ impl PcapUDP {
 
   pub fn insert(&self, conn: &Connection) {
     if self.destination_port == 0 {
-      return
+      return;
     }
 
     let result = conn.execute(
-        "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
-        params![&self.id, &self.destination_port],
+      "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
+      params![&self.id, &self.destination_port],
     );
 
     match result {
@@ -75,7 +72,7 @@ impl PcapUDP {
       "udp.dstport" => {
         self.destination_port = value.parse::<i32>().unwrap();
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -89,7 +86,9 @@ pub fn pcap_process_layer_udp(layer: &Layer, id: &i32) -> PcapUDP {
   // }
 
   println!("Processing udp");
-  layer.iter().for_each(|metadata| pcap_udp.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_udp.metadata_process(metadata));
 
   return pcap_udp;
 }

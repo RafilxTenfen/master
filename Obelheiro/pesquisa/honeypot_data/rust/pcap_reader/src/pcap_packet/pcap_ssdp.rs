@@ -1,5 +1,5 @@
 use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 // https://www.wireshark.org/docs/dfref/c/chargen.html
 
@@ -9,10 +9,7 @@ pub struct PcapSSDP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_SSDP",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_SSDP", []);
 
   match result {
     Ok(_) => {
@@ -53,8 +50,8 @@ impl PcapSSDP {
 
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
-        "INSERT INTO PCAP_SSDP (id, full_uri) values (?1, ?2)",
-        params![&self.id, &self.full_uri],
+      "INSERT INTO PCAP_SSDP (id, full_uri) values (?1, ?2)",
+      params![&self.id, &self.full_uri],
     );
 
     match result {
@@ -71,7 +68,7 @@ impl PcapSSDP {
       "http.request.full_uri" => {
         self.full_uri = value.to_string();
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -85,7 +82,9 @@ pub fn pcap_process_layer_ssdp(layer: &Layer, id: &i32) -> PcapSSDP {
   // }
 
   println!("Processing ssdp");
-  layer.iter().for_each(|metadata| pcap_ssdp.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_ssdp.metadata_process(metadata));
 
   return pcap_ssdp;
 }

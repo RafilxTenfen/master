@@ -1,7 +1,6 @@
-
-use rtshark::{Layer, Metadata};
-use rusqlite::{Connection, params};
 use cidr_utils::cidr::Ipv4Cidr;
+use rtshark::{Layer, Metadata};
+use rusqlite::{params, Connection};
 // use std::str::FromStr;
 // use cidr_utils::cidr::IpCidr;
 
@@ -14,10 +13,7 @@ pub struct PcapIP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_IP",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_IP", []);
 
   match result {
     Ok(_) => {
@@ -60,8 +56,8 @@ impl PcapIP {
 
   pub fn insert(&self, conn: &Connection) {
     let result = conn.execute(
-        "INSERT INTO PCAP_IP (vitima_addr, vitima_cidr) values (?1, ?2)",
-        params![&self.vitima_addr, &self.vitima_cidr.to_string()],
+      "INSERT INTO PCAP_IP (vitima_addr, vitima_cidr) values (?1, ?2)",
+      params![&self.vitima_addr, &self.vitima_cidr.to_string()],
     );
 
     match result {
@@ -78,7 +74,7 @@ impl PcapIP {
       "ip.addr" => {
         self.vitima_addr = value.to_string();
         match Ipv4Cidr::from_str(value) {
-          Ok(ipcidr) => {self.vitima_cidr = ipcidr},
+          Ok(ipcidr) => self.vitima_cidr = ipcidr,
           Err(err) => {
             println!("Problem Ipv4Cidr ip: {:?}, - err {:?}", value, err)
           }
@@ -90,7 +86,7 @@ impl PcapIP {
         // let ipv4_addr = "012.004.002.000".parse::<Ipv4Addr>().unwrap();
         //  AnyIpCidr::new_host(value)
       }
-      _ => {},
+      _ => {}
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
@@ -104,7 +100,9 @@ pub fn pcap_process_layer_ip(layer: &Layer, id: &i32) -> PcapIP {
   // }
 
   println!("Processing ip");
-  layer.iter().for_each(|metadata| pcap_ip.metadata_process(metadata));
+  layer
+    .iter()
+    .for_each(|metadata| pcap_ip.metadata_process(metadata));
 
   return pcap_ip;
 }

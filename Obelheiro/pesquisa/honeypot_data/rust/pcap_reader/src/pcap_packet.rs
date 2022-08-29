@@ -1,14 +1,13 @@
-use rtshark::{Packet, Layer};
-use rusqlite::{Connection, params};
+use rtshark::{Layer, Packet};
+use rusqlite::{params, Connection};
 use std::collections::HashMap;
+mod pcap_chargen;
 mod pcap_dns;
 mod pcap_frame;
 mod pcap_ip;
-mod pcap_udp;
 mod pcap_ntp;
-mod pcap_chargen;
 mod pcap_ssdp;
-
+mod pcap_udp;
 
 pub struct PcapPacket {
   pub id: i32,
@@ -43,12 +42,8 @@ pub fn db_drop_pcap_tables(conn: &Connection) {
   pcap_ssdp::drop_table(conn);
 }
 
-
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute(
-    "DROP TABLE IF EXISTS PCAP_PACKET",
-    [],
-  );
+  let result = conn.execute("DROP TABLE IF EXISTS PCAP_PACKET", []);
 
   match result {
     Ok(_) => {
@@ -94,7 +89,9 @@ pub fn create_table(conn: &Connection) {
 
 impl std::fmt::Display for PcapPacket {
   fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    write!(f, "(
+    write!(
+      f,
+      "(
       id.to_string(): {},
       frame.id.to_string(): {},
       ip.id.to_string(): {},
@@ -128,52 +125,54 @@ impl PcapPacket {
 
   pub fn process_layer(&mut self, layer: &Layer, map_id: &mut HashMap<&str, i32>) {
     let layer_name = layer.name();
-      // let layer_name2 = layer.name();
-      // let name_clone = layer_name.clone();
-      // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
+    // let layer_name2 = layer.name();
+    // let name_clone = layer_name.clone();
+    // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
 
-      // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
-
-
+    // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
 
     match layer_name {
       "frame" => {
         let id = map_id.entry("frame").or_insert(0);
         self.frame = pcap_frame::pcap_process_layer_frame(layer, id);
         *id += 1;
-      },
+      }
       "ip" => {
         let id = map_id.entry("ip").or_insert(0);
         self.ip = pcap_ip::pcap_process_layer_ip(layer, id);
         *id += 1;
-      },
+      }
       "udp" => {
         let id = map_id.entry("udp").or_insert(0);
         self.udp = pcap_udp::pcap_process_layer_udp(layer, id);
         *id += 1;
-      },
+      }
       "dns" => {
         let id = map_id.entry("dns").or_insert(0);
         self.dns = pcap_dns::pcap_process_layer_dns(layer, *id);
         *id += 1;
-      },
+      }
       "ntp" => {
         let id = map_id.entry("ntp").or_insert(0);
         self.ntp = pcap_ntp::pcap_process_layer_ntp(layer, id);
         *id += 1;
-      },
+      }
       "chargen" => {
         let id = map_id.entry("chargen").or_insert(0);
         self.chargen = pcap_chargen::pcap_process_layer_chargen(layer, *id);
         *id += 1;
-      },
+      }
       "ssdp" => {
         let id = map_id.entry("ssdp").or_insert(0);
         self.ssdp = pcap_ssdp::pcap_process_layer_ssdp(layer, id);
         *id += 1;
-      },
-      "eth" => {println!("layer is eth - we don't want nothing here")},
-      "tcp" => {println!("layer is tcp - we don't want nothing here")},
+      }
+      "eth" => {
+        println!("layer is eth - we don't want nothing here")
+      }
+      "tcp" => {
+        println!("layer is tcp - we don't want nothing here")
+      }
       _ => {
         println!("layer is {}", layer_name);
         // let it = layer.iter();
@@ -187,7 +186,7 @@ impl PcapPacket {
         // }
       }
     }
-      // *layer_id += 1
+    // *layer_id += 1
   }
   // pub fn get_dns_id(&self) -> String {
   //   if self.dns.id == 0 {
@@ -227,7 +226,13 @@ impl PcapPacket {
     if self.dns.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, dns_id) values (?1, ?2, ?3, ?4, ?5)",
-        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.dns.id],
+        params![
+          &self.id,
+          &self.frame.id,
+          &self.ip.id,
+          &self.udp.id,
+          &self.dns.id
+        ],
       );
     } else if self.chargen.id != 0 {
       result = conn.execute(
@@ -242,7 +247,13 @@ impl PcapPacket {
     } else if self.ntp.id != 0 {
       result = conn.execute(
         "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ntp_id) values (?1, ?2, ?3, ?4, ?5)",
-        params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.ntp.id],
+        params![
+          &self.id,
+          &self.frame.id,
+          &self.ip.id,
+          &self.udp.id,
+          &self.ntp.id
+        ],
       );
     }
 
@@ -263,10 +274,11 @@ pub fn pcap_process_packet(packet: &Packet, map_id: &mut HashMap<&str, i32>) -> 
 
   let mut pcap_packet = PcapPacket::default(*packet_id);
 
-
   println!("Packet {}", packet_id);
   // map_id.into_iter();
-  packet.iter().for_each(|layer| pcap_packet.process_layer(layer, map_id));
+  packet
+    .iter()
+    .for_each(|layer| pcap_packet.process_layer(layer, map_id));
 
   // packet.into_iter().all(f)
   // for layer in *packet {
@@ -276,8 +288,6 @@ pub fn pcap_process_packet(packet: &Packet, map_id: &mut HashMap<&str, i32>) -> 
   //   // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
 
   //   // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
-
-
 
   //   match layer_name {
   //     "frame" => {
