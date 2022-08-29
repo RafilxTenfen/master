@@ -182,14 +182,14 @@ impl PcapPacket {
         self.ssdp = Some(pcap_ssdp::pcap_process_layer_ssdp(layer, id));
         *id += 1;
       }
-      "eth" => {
-        println!("layer is eth - we don't want nothing here")
-      }
-      "tcp" => {
-        println!("layer is tcp - we don't want nothing here")
-      }
+      // "eth" => {
+      //   println!("layer is eth - we don't want nothing here")
+      // }
+      // "tcp" => {
+      //   println!("layer is tcp - we don't want nothing here")
+      // }
       _ => {
-        println!("layer is {}", layer_name);
+        println!("layer is {} - we don't want nothing here", layer_name);
         // let it = layer.iter();
         // for metadata in layer {
         //   println!(

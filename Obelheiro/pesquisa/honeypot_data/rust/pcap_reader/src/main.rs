@@ -78,7 +78,7 @@ impl PcapAttack {
     }
   }
 
-  pub fn insert(&self, conn: &Connection) {
+  pub fn db_insert(&self, conn: &Connection) {
     match conn.execute(
       "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
       params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
@@ -179,7 +179,7 @@ pub fn add_packet_to_attacks(
 
           // not same attack, should check if len(packets) > 5 to dbinsert or just replace by a new attack
           if attack.packets.len() > 5 {
-            attack.insert(conn); // inserts db
+            attack.db_insert(conn); // inserts db
           }
           // udp_attack.insert also updates
           udp_attack.insert(udp_dest_port, new_empty_attack(packet, id_attack));
