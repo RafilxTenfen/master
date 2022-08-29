@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/c/chargen.html
@@ -64,26 +64,28 @@ impl PcapSSDP {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_ssdp(layer: Layer, conn: &Connection, id: i32) -> PcapSSDP {
-  let mut pcap_ssdp = PcapSSDP::default(id);
-
-  if layer.name() != "ssdp" {
-    return pcap_ssdp;
-  }
-
-  println!("Processing ssdp");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "http.request.full_uri" => {
-        pcap_ssdp.full_uri = value.to_string();
+        self.full_uri = value.to_string();
       }
       _ => {},
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_ssdp.insert(conn);
+}
+
+pub fn pcap_process_layer_ssdp(layer: &Layer, id: &i32) -> PcapSSDP {
+  let mut pcap_ssdp = PcapSSDP::default(*id);
+
+  // if layer.name() != "ssdp" {
+  //   return pcap_ssdp;
+  // }
+
+  println!("Processing ssdp");
+  layer.iter().for_each(|metadata| pcap_ssdp.metadata_process(metadata));
+
   return pcap_ssdp;
 }

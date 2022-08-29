@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{ Connection, params };
 
 // https://www.wireshark.org/docs/dfref/c/chargen.html
@@ -64,26 +64,28 @@ impl PcapChargen {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_chargen(layer: Layer, conn: &Connection, id: i32) -> PcapChargen {
-  let mut pcap_chargen = PcapChargen::default(id);
-
-  if layer.name() != "chargen" {
-    return pcap_chargen;
-  }
-
-  println!("Processing chargen");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "chargen.data" => {
-        pcap_chargen.data = value.to_string();
+        self.data = value.to_string();
       }
       _ => {},
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_chargen.insert(conn);
+}
+
+pub fn pcap_process_layer_chargen(layer: &Layer, id: i32) -> PcapChargen {
+  let mut pcap_chargen = PcapChargen::default(id);
+
+  // if layer.name() != "chargen" {
+  //   return pcap_chargen;
+  // }
+
+  println!("Processing chargen");
+  layer.iter().for_each(|metadata| pcap_chargen.metadata_process(metadata));
+
   return pcap_chargen;
 }

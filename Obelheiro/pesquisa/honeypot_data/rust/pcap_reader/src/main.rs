@@ -38,6 +38,7 @@ fn main() -> Result<()> {
 
   let builder = RTSharkBuilder::builder().input_path(&pcap_str);
   // builder.metadata_blacklist(blacklist)
+  // builder.metadata_blacklist(blacklist)
   // Start a new TShark process
   let rtshark = builder
     .spawn()
@@ -147,7 +148,7 @@ pub fn pcap_process(
     //   }
     // }
 
-    let packet = pcap_packet::pcap_process_packet(packet, conn, map_id);
+    let packet = pcap_packet::pcap_process_packet(&packet, map_id);
     add_packet_to_attacks(conn, map_attacks, packet, id_attack);
 
     // TODO verificar a cada 10000 packets o que da pra limpar do hashmap...

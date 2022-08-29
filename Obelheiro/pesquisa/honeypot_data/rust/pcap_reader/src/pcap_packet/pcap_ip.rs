@@ -1,5 +1,5 @@
 
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 use cidr_utils::cidr::Ipv4Cidr;
 // use std::str::FromStr;
@@ -71,23 +71,14 @@ impl PcapIP {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_ip(layer: Layer, conn: &Connection, id: i32) -> PcapIP {
-  let mut pcap_ip = PcapIP::default(id);
-
-  if layer.name() != "ip" {
-    return pcap_ip;
-  }
-
-  println!("Processing ip");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "ip.addr" => {
-        pcap_ip.vitima_addr = value.to_string();
+        self.vitima_addr = value.to_string();
         match Ipv4Cidr::from_str(value) {
-          Ok(ipcidr) => {pcap_ip.vitima_cidr = ipcidr},
+          Ok(ipcidr) => {self.vitima_cidr = ipcidr},
           Err(err) => {
             println!("Problem Ipv4Cidr ip: {:?}, - err {:?}", value, err)
           }
@@ -103,6 +94,17 @@ pub fn pcap_process_layer_ip(layer: Layer, conn: &Connection, id: i32) -> PcapIP
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_ip.insert(conn);
+}
+
+pub fn pcap_process_layer_ip(layer: &Layer, id: &i32) -> PcapIP {
+  let mut pcap_ip = PcapIP::default(*id);
+
+  // if layer.name() != "ip" {
+  //   return pcap_ip;
+  // }
+
+  println!("Processing ip");
+  layer.iter().for_each(|metadata| pcap_ip.metadata_process(metadata));
+
   return pcap_ip;
 }

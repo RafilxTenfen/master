@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
@@ -77,36 +77,38 @@ impl PcapDNS {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_dns(layer: Layer, conn: &Connection, id: i32) -> PcapDNS {
-  let mut pcap_dns = PcapDNS::default(id);
-
-  if layer.name() != "dns" {
-    return pcap_dns;
-  }
-
-  println!("Processing dns");
-  for metadata in layer {
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
     let (name, value, display) = (metadata.name(), metadata.value(), metadata.display());
     match name {
       "dns.id" => {
         let without_prefix = value.trim_start_matches("0x");
         let tx_id = i32::from_str_radix(without_prefix, 16).unwrap();
-        pcap_dns.tx_id = tx_id;
+        self.tx_id = tx_id;
       }
-      "dns.qry.name" => pcap_dns.qname = value.to_string(),
+      "dns.qry.name" => self.qname = value.to_string(),
       "dns.qry.type" => {
-        pcap_dns.qtype = value.parse::<i32>().unwrap();
-        pcap_dns.qtype_text = display.to_string();
+        self.qtype = value.parse::<i32>().unwrap();
+        self.qtype_text = display.to_string();
       }
       "dns.rr.udp_payload_size" => {
-        pcap_dns.udp_payload_size = value.parse::<i32>().unwrap();
+        self.udp_payload_size = value.parse::<i32>().unwrap();
       }
       _ => {},
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_dns.insert(conn);
+}
+
+pub fn pcap_process_layer_dns(layer: &Layer, id: i32) -> PcapDNS {
+  let mut pcap_dns = PcapDNS::default(id);
+
+  // if layer.name() != "dns" {
+  //   return pcap_dns;
+  // }
+
+  println!("Processing dns");
+  layer.iter().for_each(|metadata| pcap_dns.metadata_process(metadata));
+
   return pcap_dns;
 }

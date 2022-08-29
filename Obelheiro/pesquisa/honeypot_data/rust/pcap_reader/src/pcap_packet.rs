@@ -1,4 +1,4 @@
-use rtshark::Packet;
+use rtshark::{Packet, Layer};
 use rusqlite::{Connection, params};
 use std::collections::HashMap;
 mod pcap_dns;
@@ -126,6 +126,69 @@ impl PcapPacket {
     }
   }
 
+  pub fn process_layer(&mut self, layer: &Layer, map_id: &mut HashMap<&str, i32>) {
+    let layer_name = layer.name();
+      // let layer_name2 = layer.name();
+      // let name_clone = layer_name.clone();
+      // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
+
+      // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
+
+
+
+    match layer_name {
+      "frame" => {
+        let id = map_id.entry("frame").or_insert(0);
+        self.frame = pcap_frame::pcap_process_layer_frame(layer, id);
+        *id += 1;
+      },
+      "ip" => {
+        let id = map_id.entry("ip").or_insert(0);
+        self.ip = pcap_ip::pcap_process_layer_ip(layer, id);
+        *id += 1;
+      },
+      "udp" => {
+        let id = map_id.entry("udp").or_insert(0);
+        self.udp = pcap_udp::pcap_process_layer_udp(layer, id);
+        *id += 1;
+      },
+      "dns" => {
+        let id = map_id.entry("dns").or_insert(0);
+        self.dns = pcap_dns::pcap_process_layer_dns(layer, *id);
+        *id += 1;
+      },
+      "ntp" => {
+        let id = map_id.entry("ntp").or_insert(0);
+        self.ntp = pcap_ntp::pcap_process_layer_ntp(layer, id);
+        *id += 1;
+      },
+      "chargen" => {
+        let id = map_id.entry("chargen").or_insert(0);
+        self.chargen = pcap_chargen::pcap_process_layer_chargen(layer, *id);
+        *id += 1;
+      },
+      "ssdp" => {
+        let id = map_id.entry("ssdp").or_insert(0);
+        self.ssdp = pcap_ssdp::pcap_process_layer_ssdp(layer, id);
+        *id += 1;
+      },
+      "eth" => {println!("layer is eth - we don't want nothing here")},
+      "tcp" => {println!("layer is tcp - we don't want nothing here")},
+      _ => {
+        println!("layer is {}", layer_name);
+        // let it = layer.iter();
+        // for metadata in layer {
+        //   println!(
+        //     "\t metadata Name: {} = {} - {}",
+        //     metadata.name(),
+        //     metadata.value(),
+        //     metadata.display(),
+        //   );
+        // }
+      }
+    }
+      // *layer_id += 1
+  }
   // pub fn get_dns_id(&self) -> String {
   //   if self.dns.id == 0 {
   //     return String::from("null");
@@ -192,7 +255,7 @@ impl PcapPacket {
   }
 }
 
-pub fn pcap_process_packet(packet: Packet, conn: &Connection, map_id: &mut HashMap<&str, i32>) -> PcapPacket {
+pub fn pcap_process_packet(packet: &Packet, map_id: &mut HashMap<&str, i32>) -> PcapPacket {
   let packet_entry = map_id.entry("packet");
   let packet_id = packet_entry.or_insert(0);
 
@@ -201,73 +264,75 @@ pub fn pcap_process_packet(packet: Packet, conn: &Connection, map_id: &mut HashM
   let mut pcap_packet = PcapPacket::default(*packet_id);
 
 
-  // map_id.into_iter();
-
   println!("Packet {}", packet_id);
-  for layer in packet {
-    let layer_name = layer.name();
-    // let layer_name2 = layer.name();
-    // let name_clone = layer_name.clone();
-    // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
+  // map_id.into_iter();
+  packet.iter().for_each(|layer| pcap_packet.process_layer(layer, map_id));
 
-    // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
+  // packet.into_iter().all(f)
+  // for layer in *packet {
+  //   let layer_name = layer.name();
+  //   // let layer_name2 = layer.name();
+  //   // let name_clone = layer_name.clone();
+  //   // NAO CONSEGUI PEGAR O LAYER_NAME WTF RUST
+
+  //   // let mut id = map_id.entry(layer_name.clone()).or_insert(0);
 
 
 
-    match layer_name {
-      "frame" => {
-        let id = map_id.entry("frame").or_insert(0);
-        pcap_packet.frame = pcap_frame::pcap_process_layer_frame(layer, conn, *id);
-        *id += 1;
-      },
-      "ip" => {
-        let id = map_id.entry("ip").or_insert(0);
-        pcap_packet.ip = pcap_ip::pcap_process_layer_ip(layer, conn, *id);
-        *id += 1;
-      },
-      "udp" => {
-        let id = map_id.entry("udp").or_insert(0);
-        pcap_packet.udp = pcap_udp::pcap_process_layer_udp(layer, conn, *id);
-        *id += 1;
-      },
-      "dns" => {
-        let id = map_id.entry("dns").or_insert(0);
-        pcap_packet.dns = pcap_dns::pcap_process_layer_dns(layer, conn, *id);
-        *id += 1;
-      },
-      "ntp" => {
-        let id = map_id.entry("ntp").or_insert(0);
-        pcap_packet.ntp = pcap_ntp::pcap_process_layer_ntp(layer, conn, *id);
-        *id += 1;
-      },
-      "chargen" => {
-        let id = map_id.entry("chargen").or_insert(0);
-        pcap_packet.chargen = pcap_chargen::pcap_process_layer_chargen(layer, conn, *id);
-        *id += 1;
-      },
-      "ssdp" => {
-        let id = map_id.entry("ssdp").or_insert(0);
-        pcap_packet.ssdp = pcap_ssdp::pcap_process_layer_ssdp(layer, conn, *id);
-        *id += 1;
-      },
-      "eth" => {println!("layer is eth - we don't want nothing here")},
-      "tcp" => {println!("layer is tcp - we don't want nothing here")},
-      _ => {
-        println!("layer is {}", layer_name);
-        // let it = layer.iter();
-        // for metadata in layer {
-        //   println!(
-        //     "\t metadata Name: {} = {} - {}",
-        //     metadata.name(),
-        //     metadata.value(),
-        //     metadata.display(),
-        //   );
-        // }
-      }
-    }
-    // *layer_id += 1
-  }
+  //   match layer_name {
+  //     "frame" => {
+  //       let id = map_id.entry("frame").or_insert(0);
+  //       pcap_packet.frame = pcap_frame::pcap_process_layer_frame(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "ip" => {
+  //       let id = map_id.entry("ip").or_insert(0);
+  //       pcap_packet.ip = pcap_ip::pcap_process_layer_ip(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "udp" => {
+  //       let id = map_id.entry("udp").or_insert(0);
+  //       pcap_packet.udp = pcap_udp::pcap_process_layer_udp(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "dns" => {
+  //       let id = map_id.entry("dns").or_insert(0);
+  //       pcap_packet.dns = pcap_dns::pcap_process_layer_dns(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "ntp" => {
+  //       let id = map_id.entry("ntp").or_insert(0);
+  //       pcap_packet.ntp = pcap_ntp::pcap_process_layer_ntp(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "chargen" => {
+  //       let id = map_id.entry("chargen").or_insert(0);
+  //       pcap_packet.chargen = pcap_chargen::pcap_process_layer_chargen(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "ssdp" => {
+  //       let id = map_id.entry("ssdp").or_insert(0);
+  //       pcap_packet.ssdp = pcap_ssdp::pcap_process_layer_ssdp(layer, conn, *id);
+  //       *id += 1;
+  //     },
+  //     "eth" => {println!("layer is eth - we don't want nothing here")},
+  //     "tcp" => {println!("layer is tcp - we don't want nothing here")},
+  //     _ => {
+  //       println!("layer is {}", layer_name);
+  //       // let it = layer.iter();
+  //       // for metadata in layer {
+  //       //   println!(
+  //       //     "\t metadata Name: {} = {} - {}",
+  //       //     metadata.name(),
+  //       //     metadata.value(),
+  //       //     metadata.display(),
+  //       //   );
+  //       // }
+  //     }
+  //   }
+  //   // *layer_id += 1
+  // }
 
-  pcap_packet._insert(conn);
+  // pcap_packet._insert(conn);
   return pcap_packet;
 }

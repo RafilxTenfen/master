@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/n/ntp.html
@@ -64,26 +64,28 @@ impl PcapNTP {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_ntp(layer: Layer, conn: &Connection, id: i32) -> PcapNTP {
-  let mut pcap_ntp = PcapNTP::default(id);
-
-  if layer.name() != "ntp" {
-    return pcap_ntp;
-  }
-
-  println!("Processing ntp");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "ntp.refid" => {
-        pcap_ntp.refid = value.to_string();
+        self.refid = value.to_string();
       }
       _ => {},
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_ntp.insert(conn);
+}
+
+pub fn pcap_process_layer_ntp(layer: &Layer, id: &i32) -> PcapNTP {
+  let mut pcap_ntp = PcapNTP::default(*id);
+
+  // if layer.name() != "ntp" {
+  //   return pcap_ntp;
+  // }
+
+  println!("Processing ntp");
+  layer.iter().for_each(|metadata| pcap_ntp.metadata_process(metadata));
+
   return pcap_ntp;
 }

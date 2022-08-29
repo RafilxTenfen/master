@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 use chrono::{DateTime, FixedOffset};
 
@@ -73,18 +73,9 @@ impl PcapFrame {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_frame(layer: Layer, conn: &Connection, id: i32) -> PcapFrame {
-  let mut pcap_frame = PcapFrame::default(id);
-
-  if layer.name() != "frame" {
-    return pcap_frame;
-  }
-
-  println!("Processing frame");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "frame.time" => {
         // SystemTime::from(value);
@@ -95,11 +86,11 @@ pub fn pcap_process_layer_frame(layer: Layer, conn: &Connection, id: i32) -> Pca
         let parsed_datetime = DateTime::parse_from_str(timestamp_formatted.as_str(), "%b %d, %Y %H:%M:%S%.9f %z");
         match parsed_datetime {
           Ok(datetime) => {
-            pcap_frame.timestamp = datetime;
+            self.timestamp = datetime;
           },
           Err(err) => println!("Error parse data: {:?} = {}", err, value)
         }
-        pcap_frame.timestamp_str = value.to_string();
+        self.timestamp_str = value.to_string();
       }
       // "frame.time_epoch" => {
       //   pcap_frame.time_epoch = value.to_string();
@@ -108,6 +99,17 @@ pub fn pcap_process_layer_frame(layer: Layer, conn: &Connection, id: i32) -> Pca
       // _ => println!("ignored field: {} = {} - {}", name, value, _display),
     }
   }
-  pcap_frame.insert(conn);
+}
+
+pub fn pcap_process_layer_frame(layer: &Layer, id: &i32) -> PcapFrame {
+  let mut pcap_frame = PcapFrame::default(*id);
+
+  // if layer.name() != "frame" {
+  //   return pcap_frame;
+  // }
+
+  println!("Processing frame");
+  layer.iter().for_each(|metadata| pcap_frame.metadata_process(metadata));
+
   return pcap_frame;
 }

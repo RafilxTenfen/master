@@ -1,4 +1,4 @@
-use rtshark::Layer;
+use rtshark::{Layer, Metadata};
 use rusqlite::{Connection, params};
 
 // https://www.wireshark.org/docs/dfref/d/dns.html
@@ -68,26 +68,28 @@ impl PcapUDP {
       }
     }
   }
-}
 
-pub fn pcap_process_layer_udp(layer: Layer, conn: &Connection, id: i32) -> PcapUDP {
-  let mut pcap_udp = PcapUDP::default(id);
-
-  if layer.name() != "udp" {
-    return pcap_udp;
-  }
-
-  println!("Processing udp");
-  for metadata in layer {
-    let (name, value, _display) = (metadata.name(), metadata.value(), metadata.display());
+  pub fn metadata_process(&mut self, metadata: &Metadata) {
+    let (name, value) = (metadata.name(), metadata.value());
     match name {
       "udp.dstport" => {
-        pcap_udp.destination_port = value.parse::<i32>().unwrap();
+        self.destination_port = value.parse::<i32>().unwrap();
       }
       _ => {},
       // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
-  pcap_udp.insert(conn);
+}
+
+pub fn pcap_process_layer_udp(layer: &Layer, id: &i32) -> PcapUDP {
+  let mut pcap_udp = PcapUDP::default(*id);
+
+  // if layer.name() != "udp" {
+  //   return pcap_udp;
+  // }
+
+  println!("Processing udp");
+  layer.iter().for_each(|metadata| pcap_udp.metadata_process(metadata));
+
   return pcap_udp;
 }
