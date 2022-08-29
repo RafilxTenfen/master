@@ -14,7 +14,7 @@ pub struct PcapDNS {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_DNS (
       id INTEGER NOT NULL,
       tx_id INTEGER NOT NULL,
@@ -24,9 +24,7 @@ pub fn create_table(conn: &Connection) {
       udp_payload_size INTEGER NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -37,9 +35,7 @@ pub fn create_table(conn: &Connection) {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_DNS", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_DNS", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -62,12 +58,10 @@ impl PcapDNS {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
-        "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype, qtype_text, udp_payload_size) values (?1, ?2, ?3, ?4, ?5, ?6)",
-      params![&self.id, &self.tx_id, &self.qname, &self.qtype, &self.qtype_text, &self.udp_payload_size],
-    );
-
-    match result {
+    match conn.execute(
+      "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype, qtype_text, udp_payload_size) values (?1, ?2, ?3, ?4, ?5, ?6)",
+    params![&self.id, &self.tx_id, &self.qname, &self.qtype, &self.qtype_text, &self.udp_payload_size],
+  ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting dns: {:?}", err)
@@ -98,10 +92,6 @@ impl PcapDNS {
 
 pub fn pcap_process_layer_dns(layer: &Layer, id: i32) -> PcapDNS {
   let mut pcap_dns = PcapDNS::default(id);
-
-  // if layer.name() != "dns" {
-  //   return pcap_dns;
-  // }
 
   println!("Processing dns");
   layer

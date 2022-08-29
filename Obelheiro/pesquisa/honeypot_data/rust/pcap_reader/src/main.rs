@@ -79,12 +79,10 @@ impl PcapAttack {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
-        "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
-        params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
-    );
-
-    match result {
+    match conn.execute(
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
+      params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+  ) {
       Ok(_) => {
         println!("attack inserted");
         self.insert_pcap_packets(conn);
@@ -97,12 +95,10 @@ impl PcapAttack {
 
   fn insert_pcap_packets(&self, conn: &Connection) {
     for packet in &self.packets {
-      let result = conn.execute(
+      match conn.execute(
         "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
         params![&self.id, &packet.id],
-      );
-
-      match result {
+      ) {
         Ok(_) => {
           println!("attack inserted")
         }
@@ -242,9 +238,7 @@ pub fn create_tables(conn: &Connection) {
 }
 
 pub fn drop_table_attack(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -253,9 +247,7 @@ pub fn drop_table_attack(conn: &Connection) {
     }
   }
 
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK_PACKET", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_ATTACK_PACKET", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -266,7 +258,7 @@ pub fn drop_table_attack(conn: &Connection) {
 }
 
 pub fn create_table_attack(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
       id INTEGER NOT NULL,
       ip_vitima_cidr TEXT NOT NULL,
@@ -275,9 +267,7 @@ pub fn create_table_attack(conn: &Connection) {
       timestamp_fim TEXT NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -288,15 +278,14 @@ pub fn create_table_attack(conn: &Connection) {
 
   // FOREIGN KEY(attack_id) REFERENCES PCAP_ATTACK(id),
   // FOREIGN KEY(packet_id) REFERENCES PCAP_PACKET(id)
-  let result = conn.execute(
+
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_ATTACK_PACKET (
       attack_id INTEGER NOT NULL,
       packet_id INTEGER NOT NULL
     )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }

@@ -13,9 +13,7 @@ pub struct PcapIP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_IP", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_IP", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -26,16 +24,14 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_IP (
       id INTEGER NOT NULL,
       vitima_addr TEXT NOT NULL,
       vitima_cidr TEXT NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -55,12 +51,10 @@ impl PcapIP {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
+    match conn.execute(
       "INSERT INTO PCAP_IP (vitima_addr, vitima_cidr) values (?1, ?2)",
       params![&self.vitima_addr, &self.vitima_cidr.to_string()],
-    );
-
-    match result {
+    ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting ip: {:?}", err)
@@ -93,10 +87,6 @@ impl PcapIP {
 
 pub fn pcap_process_layer_ip(layer: &Layer, id: &i32) -> PcapIP {
   let mut pcap_ip = PcapIP::default(*id);
-
-  // if layer.name() != "ip" {
-  //   return pcap_ip;
-  // }
 
   println!("Processing ip");
   layer

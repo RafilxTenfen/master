@@ -15,10 +15,10 @@ pub struct PcapPacket {
   pub ip: pcap_ip::PcapIP,
   pub udp: pcap_udp::PcapUDP,
   pub attack_type: PcapAttackType,
-  pub dns: pcap_dns::PcapDNS,
-  pub chargen: pcap_chargen::PcapChargen,
-  pub ntp: pcap_ntp::PcapNTP,
-  pub ssdp: pcap_ssdp::PcapSSDP,
+  pub dns: Option<pcap_dns::PcapDNS>,
+  pub chargen: Option<pcap_chargen::PcapChargen>,
+  pub ntp: Option<pcap_ntp::PcapNTP>,
+  pub ssdp: Option<pcap_ssdp::PcapSSDP>,
 }
 
 pub enum PcapAttackType {
@@ -64,9 +64,7 @@ pub fn db_drop_pcap_tables(conn: &Connection) {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_PACKET", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_PACKET", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -77,7 +75,15 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  // FOREIGN KEY(frame_id) REFERENCES PCAP_FRAME(id),
+  // FOREIGN KEY(ip_id) REFERENCES PCAP_IP(id),
+  // FOREIGN KEY(udp_id) REFERENCES PCAP_UDP(id),
+  // FOREIGN KEY(dns_id) REFERENCES PCAP_DNS(id),
+  // FOREIGN KEY(chargen_id) REFERENCES PCAP_CHARGEN(id),
+  // FOREIGN KEY(ntp_id) REFERENCES PCAP_NTP(id),
+  // FOREIGN KEY(ssdp_id) REFERENCES PCAP_SSDP(id)
+
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_PACKET (
       id INTEGER NOT NULL,
       frame_id INTEGER NOT NULL,
@@ -90,16 +96,7 @@ pub fn create_table(conn: &Connection) {
       ssdp_id INTEGER
     )",
     [],
-  );
-  // FOREIGN KEY(frame_id) REFERENCES PCAP_FRAME(id),
-  // FOREIGN KEY(ip_id) REFERENCES PCAP_IP(id),
-  // FOREIGN KEY(udp_id) REFERENCES PCAP_UDP(id),
-  // FOREIGN KEY(dns_id) REFERENCES PCAP_DNS(id),
-  // FOREIGN KEY(chargen_id) REFERENCES PCAP_CHARGEN(id),
-  // FOREIGN KEY(ntp_id) REFERENCES PCAP_NTP(id),
-  // FOREIGN KEY(ssdp_id) REFERENCES PCAP_SSDP(id)
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -135,10 +132,10 @@ impl PcapPacket {
       ip: pcap_ip::PcapIP::default(0),
       udp: pcap_udp::PcapUDP::default(0),
       attack_type: PcapAttackType::None,
-      dns: pcap_dns::PcapDNS::default(0),
-      chargen: pcap_chargen::PcapChargen::default(0),
-      ntp: pcap_ntp::PcapNTP::default(0),
-      ssdp: pcap_ssdp::PcapSSDP::default(0),
+      dns: None,
+      chargen: None,
+      ntp: None,
+      ssdp: None,
     }
   }
 
@@ -164,25 +161,25 @@ impl PcapPacket {
       "dns" => {
         let id = map_id.entry("dns").or_insert(0);
         self.attack_type = PcapAttackType::DNS;
-        self.dns = pcap_dns::pcap_process_layer_dns(layer, *id);
+        self.dns = Some(pcap_dns::pcap_process_layer_dns(layer, *id));
         *id += 1;
       }
       "ntp" => {
         let id = map_id.entry("ntp").or_insert(0);
         self.attack_type = PcapAttackType::NTP;
-        self.ntp = pcap_ntp::pcap_process_layer_ntp(layer, id);
+        self.ntp = Some(pcap_ntp::pcap_process_layer_ntp(layer, id));
         *id += 1;
       }
       "chargen" => {
         let id = map_id.entry("chargen").or_insert(0);
         self.attack_type = PcapAttackType::CHARGEN;
-        self.chargen = pcap_chargen::pcap_process_layer_chargen(layer, *id);
+        self.chargen = Some(pcap_chargen::pcap_process_layer_chargen(layer, *id));
         *id += 1;
       }
       "ssdp" => {
         let id = map_id.entry("ssdp").or_insert(0);
         self.attack_type = PcapAttackType::SSDP;
-        self.ssdp = pcap_ssdp::pcap_process_layer_ssdp(layer, id);
+        self.ssdp = Some(pcap_ssdp::pcap_process_layer_ssdp(layer, id));
         *id += 1;
       }
       "eth" => {
@@ -212,46 +209,66 @@ impl PcapPacket {
 
     match self.attack_type {
       PcapAttackType::None => {}
-      PcapAttackType::DNS => {
-        self.dns.insert(conn);
-        result = conn.execute(
-            "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, dns_id) values (?1, ?2, ?3, ?4, ?5)",
-            params![
-              &self.id,
-              &self.frame.id,
-              &self.ip.id,
-              &self.udp.id,
-              &self.dns.id
-            ],
-          );
-      }
-      PcapAttackType::CHARGEN => {
-        self.chargen.insert(conn);
-        result = conn.execute(
-            "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, chargen_id) values (?1, ?2, ?3, ?4, ?5)",
-            params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.chargen.id],
-          );
-      }
-      PcapAttackType::NTP => {
-        self.ntp.insert(conn);
-        result = conn.execute(
-            "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ntp_id) values (?1, ?2, ?3, ?4, ?5)",
-            params![
-              &self.id,
-              &self.frame.id,
-              &self.ip.id,
-              &self.udp.id,
-              &self.ntp.id
-            ],
-          );
-      }
-      PcapAttackType::SSDP => {
-        self.ssdp.insert(conn);
-        result = conn.execute(
-            "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ssdp_id) values (?1, ?2, ?3, ?4, ?5)",
-            params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.ssdp.id],
-          );
-      }
+      PcapAttackType::DNS => match &self.dns {
+        None => {
+          println!("Error inserting none dns")
+        }
+        Some(dns) => {
+          dns.insert(conn);
+          result = conn.execute(
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, dns_id) values (?1, ?2, ?3, ?4, ?5)",
+                params![
+                  &self.id,
+                  &self.frame.id,
+                  &self.ip.id,
+                  &self.udp.id,
+                  &dns.id
+                ],
+              );
+        }
+      },
+      PcapAttackType::CHARGEN => match &self.chargen {
+        None => {
+          println!("Error inserting none chargen")
+        }
+        Some(chargen) => {
+          chargen.insert(conn);
+          result = conn.execute(
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, chargen_id) values (?1, ?2, ?3, ?4, ?5)",
+                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &chargen.id],
+              );
+        }
+      },
+      PcapAttackType::NTP => match &self.ntp {
+        None => {
+          println!("Error inserting none ntp")
+        }
+        Some(ntp) => {
+          ntp.insert(conn);
+          result = conn.execute(
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ntp_id) values (?1, ?2, ?3, ?4, ?5)",
+                params![
+                  &self.id,
+                  &self.frame.id,
+                  &self.ip.id,
+                  &self.udp.id,
+                  &ntp.id
+                ],
+              );
+        }
+      },
+      PcapAttackType::SSDP => match &self.ssdp {
+        None => {
+          println!("Error inserting none ssdp")
+        }
+        Some(ssdp) => {
+          ssdp.insert(conn);
+          result = conn.execute(
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ssdp_id) values (?1, ?2, ?3, ?4, ?5)",
+                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &ssdp.id],
+              );
+        }
+      },
     }
 
     match result {

@@ -9,9 +9,7 @@ pub struct PcapChargen {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_CHARGEN", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_CHARGEN", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -22,15 +20,13 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_CHARGEN (
       id INTEGER NOT NULL,
       data TEXT NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -49,12 +45,10 @@ impl PcapChargen {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
+    match conn.execute(
       "INSERT INTO PCAP_CHARGEN (id, data) values (?1, ?2)",
       params![&self.id, &self.data],
-    );
-
-    match result {
+    ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting chargen: {:?}", err)
@@ -75,10 +69,6 @@ impl PcapChargen {
 
 pub fn pcap_process_layer_chargen(layer: &Layer, id: i32) -> PcapChargen {
   let mut pcap_chargen = PcapChargen::default(id);
-
-  // if layer.name() != "chargen" {
-  //   return pcap_chargen;
-  // }
 
   println!("Processing chargen");
   layer

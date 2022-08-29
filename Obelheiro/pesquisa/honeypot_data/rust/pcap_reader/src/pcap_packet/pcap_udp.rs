@@ -9,9 +9,7 @@ pub struct PcapUDP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_UDP", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_UDP", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -22,15 +20,13 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_UDP (
       id INTEGER NOT NULL,
       destination_port INTEGER NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -49,16 +45,10 @@ impl PcapUDP {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    if self.destination_port == 0 {
-      return;
-    }
-
-    let result = conn.execute(
+    match conn.execute(
       "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
       params![&self.id, &self.destination_port],
-    );
-
-    match result {
+    ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting udp: {:?}", err)

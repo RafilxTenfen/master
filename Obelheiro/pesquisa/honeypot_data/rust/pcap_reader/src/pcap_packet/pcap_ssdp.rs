@@ -9,9 +9,7 @@ pub struct PcapSSDP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_SSDP", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_SSDP", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -22,15 +20,13 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_SSDP (
       id INTEGER NOT NULL,
       full_uri TEXT NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -49,12 +45,10 @@ impl PcapSSDP {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
+    match conn.execute(
       "INSERT INTO PCAP_SSDP (id, full_uri) values (?1, ?2)",
       params![&self.id, &self.full_uri],
-    );
-
-    match result {
+    ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting ssdp: {:?}", err)

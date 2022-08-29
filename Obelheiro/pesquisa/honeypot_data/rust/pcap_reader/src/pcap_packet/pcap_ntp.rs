@@ -9,9 +9,7 @@ pub struct PcapNTP {
 }
 
 pub fn drop_table(conn: &Connection) {
-  let result = conn.execute("DROP TABLE IF EXISTS PCAP_NTP", []);
-
-  match result {
+  match conn.execute("DROP TABLE IF EXISTS PCAP_NTP", []) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -22,15 +20,13 @@ pub fn drop_table(conn: &Connection) {
 }
 
 pub fn create_table(conn: &Connection) {
-  let result = conn.execute(
+  match conn.execute(
     "CREATE TABLE IF NOT EXISTS PCAP_NTP (
       id INTEGER NOT NULL,
       refid TEXT NOT NULL
      )",
     [],
-  );
-
-  match result {
+  ) {
     Ok(_) => {
       println!("Table created!")
     }
@@ -49,12 +45,10 @@ impl PcapNTP {
   }
 
   pub fn insert(&self, conn: &Connection) {
-    let result = conn.execute(
+    match conn.execute(
       "INSERT INTO PCAP_NTP (id, refid) values (?1, ?2)",
       params![&self.id, &self.refid],
-    );
-
-    match result {
+    ) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting ntp: {:?}", err)
