@@ -74,17 +74,35 @@ impl PcapDNS {
     match name {
       "dns.id" => {
         let without_prefix = value.trim_start_matches("0x");
-        let tx_id = i32::from_str_radix(without_prefix, 16).unwrap();
-        self.tx_id = tx_id;
+        match i32::from_str_radix(without_prefix, 16) {
+          Ok(tx_id) => {
+            self.tx_id = tx_id;
+          }
+          Err(err) => {
+            println!("Problem parse dns.id: {:?}", err)
+          }
+        }
       }
       "dns.qry.name" => self.qname = value.to_string(),
       "dns.qry.type" => {
-        self.qtype = value.parse::<i32>().unwrap();
+        match value.parse::<i32>() {
+          Ok(qtype) => {
+            self.qtype = qtype;
+          }
+          Err(err) => {
+            println!("Problem parse qry.type: {:?}", err)
+          }
+        }
         self.qtype_text = display.to_string();
       }
-      "dns.rr.udp_payload_size" => {
-        self.udp_payload_size = value.parse::<i32>().unwrap();
-      }
+      "dns.rr.udp_payload_size" => match value.parse::<i32>() {
+        Ok(udp_payload_size) => {
+          self.udp_payload_size = udp_payload_size;
+        }
+        Err(err) => {
+          println!("Problem parse udp_payload_size: {:?}", err)
+        }
+      },
       _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }

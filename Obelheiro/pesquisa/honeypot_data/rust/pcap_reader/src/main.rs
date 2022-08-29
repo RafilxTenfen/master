@@ -62,56 +62,6 @@ pub struct PcapAttack {
   timestamp_fim: DateTime<FixedOffset>,
 }
 
-impl PcapAttack {
-  pub fn add_packet(&mut self, packet: pcap_packet::PcapPacket) {
-    self.timestamp_fim = packet.frame.timestamp;
-    self.packets.push(packet);
-  }
-
-  // same_attack chcks if the packet happened within 5 minutes from the last attack
-  pub fn same_attack(&self, packet: &pcap_packet::PcapPacket) -> bool {
-    match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
-      Some(fim_plus_1min) => {
-        return packet.frame.timestamp >= self.timestamp_fim
-          && packet.frame.timestamp <= fim_plus_1min
-      }
-      None => false,
-    }
-  }
-
-  pub fn db_insert(&self, conn: &Connection) {
-    match conn.execute(
-      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
-      params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
-    ) {
-      Ok(_) => {
-        println!("attack inserted");
-        self.insert_pcap_packets(conn);
-      }
-      Err(err) => {
-        println!("Problem inserting attack: {:?}", err)
-      }
-    }
-  }
-
-  fn insert_pcap_packets(&self, conn: &Connection) {
-    for packet in &self.packets {
-      packet.insert(conn);
-      match conn.execute(
-        "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
-        params![&self.id, &packet.id],
-      ) {
-        Ok(_) => {
-          println!("attack inserted")
-        }
-        Err(err) => {
-          println!("Problem inserting attack : {:?}", err)
-        }
-      }
-    }
-  }
-}
-
 fn get_current_working_dir() -> PathBuf {
   let working_dir = env::current_dir();
   let current_dir = match working_dir {
@@ -227,6 +177,56 @@ pub fn new_empty_attack(packet: pcap_packet::PcapPacket, id: &mut i32) -> PcapAt
     timestamp_inicio: timestamp,
     timestamp_fim: timestamp,
   };
+}
+
+impl PcapAttack {
+  pub fn add_packet(&mut self, packet: pcap_packet::PcapPacket) {
+    self.timestamp_fim = packet.frame.timestamp;
+    self.packets.push(packet);
+  }
+
+  // same_attack chcks if the packet happened within 5 minutes from the last attack
+  pub fn same_attack(&self, packet: &pcap_packet::PcapPacket) -> bool {
+    match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
+      Some(fim_plus_1min) => {
+        return packet.frame.timestamp >= self.timestamp_fim
+          && packet.frame.timestamp <= fim_plus_1min
+      }
+      None => false,
+    }
+  }
+
+  pub fn db_insert(&self, conn: &Connection) {
+    match conn.execute(
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
+      params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+    ) {
+      Ok(_) => {
+        println!("attack inserted");
+        self.insert_pcap_packets(conn);
+      }
+      Err(err) => {
+        println!("Problem inserting attack: {:?}", err)
+      }
+    }
+  }
+
+  fn insert_pcap_packets(&self, conn: &Connection) {
+    for packet in &self.packets {
+      packet.insert(conn);
+      match conn.execute(
+        "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
+        params![&self.id, &packet.id],
+      ) {
+        Ok(_) => {
+          println!("attack inserted")
+        }
+        Err(err) => {
+          println!("Problem inserting attack : {:?}", err)
+        }
+      }
+    }
+  }
 }
 
 pub fn drop_tables(conn: &Connection) {

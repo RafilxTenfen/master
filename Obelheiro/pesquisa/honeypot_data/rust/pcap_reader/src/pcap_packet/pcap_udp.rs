@@ -59,9 +59,14 @@ impl PcapUDP {
   pub fn metadata_process(&mut self, metadata: &Metadata) {
     let (name, value) = (metadata.name(), metadata.value());
     match name {
-      "udp.dstport" => {
-        self.destination_port = value.parse::<i32>().unwrap();
-      }
+      "udp.dstport" => match value.parse::<i32>() {
+        Ok(destination_port) => {
+          self.destination_port = destination_port;
+        }
+        Err(err) => {
+          println!("Problem parse dns.id: {:?}", err)
+        }
+      },
       _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
