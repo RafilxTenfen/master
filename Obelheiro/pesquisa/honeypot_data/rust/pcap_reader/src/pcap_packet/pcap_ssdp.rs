@@ -77,7 +77,7 @@ pub fn pcap_process_layer_ssdp(layer: &Layer, id: &i32) -> PcapSSDP {
   //   return pcap_ssdp;
   // }
 
-  println!("Processing ssdp");
+  // println!("Processing ssdp");
   layer
     .iter()
     .for_each(|metadata| pcap_ssdp.metadata_process(metadata));

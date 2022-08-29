@@ -72,7 +72,7 @@ impl PcapChargen {
 pub fn pcap_process_layer_chargen(layer: &Layer, id: i32) -> PcapChargen {
   let mut pcap_chargen = PcapChargen::default(id);
 
-  println!("Processing chargen");
+  // println!("Processing chargen");
   layer
     .iter()
     .for_each(|metadata| pcap_chargen.metadata_process(metadata));

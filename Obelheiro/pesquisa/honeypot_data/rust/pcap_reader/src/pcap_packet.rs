@@ -189,7 +189,7 @@ impl PcapPacket {
       //   println!("layer is tcp - we don't want nothing here")
       // }
       _ => {
-        println!("layer is {} - we don't want nothing here", layer_name);
+        // println!("layer is {} - we don't want nothing here", layer_name);
         // let it = layer.iter();
         // for metadata in layer {
         //   println!(

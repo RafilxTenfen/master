@@ -90,7 +90,7 @@ impl PcapIP {
 pub fn pcap_process_layer_ip(layer: &Layer, id: &i32) -> PcapIP {
   let mut pcap_ip = PcapIP::default(*id);
 
-  println!("Processing ip");
+  // println!("Processing ip");
   layer
     .iter()
     .for_each(|metadata| pcap_ip.metadata_process(metadata));

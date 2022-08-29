@@ -110,6 +110,8 @@ fn main() -> Result<()> {
     .metadata_blacklist("dns.rrsig.signature")
     .metadata_blacklist("dns.resp.class")
     .metadata_blacklist("dns.resp.ttl")
+    .metadata_blacklist("dns.mx.preference")
+    .metadata_blacklist("dns.mx.mail_exchange")
     .metadata_blacklist("dns.rrsig.type_covered")
     .metadata_blacklist("dns.rrsig.algorithm")
     .metadata_blacklist("dns.rrsig.labels")
@@ -120,7 +122,7 @@ fn main() -> Result<()> {
     .metadata_blacklist("dns.rrsig.signers_name")
     .metadata_blacklist("dns.rrsig.signature")
     .metadata_blacklist("dns.response_to")
-    .metadata_blacklist("dns.time    ")
+    .metadata_blacklist("dns.time")
     .metadata_blacklist("ip.version")
     .metadata_blacklist("ip.hdr_len")
     .metadata_blacklist("ip.dsfield")
@@ -154,6 +156,64 @@ fn main() -> Result<()> {
     .metadata_blacklist("frame.marked")
     .metadata_blacklist("frame.ignored")
     .metadata_blacklist("frame.protocols")
+    .metadata_blacklist("dns.a")
+    .metadata_blacklist("dns.cname")
+    .metadata_blacklist("dns.time")
+    .metadata_blacklist("dns.opt")
+    .metadata_blacklist("dns.opt.code")
+    .metadata_blacklist("dns.opt.len")
+    .metadata_blacklist("dns.opt.data")
+    .metadata_blacklist("dns.opt.cookie.client")
+    .metadata_blacklist("dns.opt.cookie.server")
+    .metadata_blacklist("dns.ns")
+    .metadata_blacklist("dns.nsec3.algo")
+    .metadata_blacklist("dns.nsec3.flags")
+    .metadata_blacklist("dns.nsec3.flags.opt_out")
+    .metadata_blacklist("dns.nsec3.iterations")
+    .metadata_blacklist("dns.nsec3.salt_length")
+    .metadata_blacklist("dns.nsec3.salt_value")
+    .metadata_blacklist("dns.nsec3.hash_length")
+    .metadata_blacklist("dns.nsec3.hash_value")
+    .metadata_blacklist("dns.nsec3.algo")
+    .metadata_blacklist("dns.nsec3.flags")
+    .metadata_blacklist("dns.nsec3.flags.opt_out")
+    .metadata_blacklist("dns.nsec3.iterations")
+    .metadata_blacklist("dns.nsec3.salt_length")
+    .metadata_blacklist("dns.nsec3.salt_value")
+    .metadata_blacklist("dns.nsec3.hash_length")
+    .metadata_blacklist("dns.nsec3.hash_value")
+    .metadata_blacklist("dns.aaaa")
+    .metadata_blacklist("dns.ds.key_id")
+    .metadata_blacklist("dns.ds.algorithm")
+    .metadata_blacklist("dns.ds.digest_type")
+    .metadata_blacklist("dns.ds.digest")
+    .metadata_blacklist("dns.retransmit_response")
+    .metadata_blacklist("dns.retransmit_response_in")
+    .metadata_blacklist("http.chat")
+    .metadata_blacklist("http.request.method")
+    .metadata_blacklist("http.request.uri")
+    .metadata_blacklist("http.request.version")
+    .metadata_blacklist("http.host")
+    .metadata_blacklist("http.request.line")
+    .metadata_blacklist("http.request.line")
+    .metadata_blacklist("http.request.line")
+    .metadata_blacklist("http.request.line")
+    .metadata_blacklist("http.request")
+    .metadata_blacklist("http.request_number")
+    .metadata_blacklist("http.response.version")
+    .metadata_blacklist("http.response.code")
+    .metadata_blacklist("http.response.code.desc")
+    .metadata_blacklist("http.response.phrase")
+    .metadata_blacklist("http.cache_control")
+    .metadata_blacklist("http.date")
+    .metadata_blacklist("http.location")
+    .metadata_blacklist("http.server")
+    .metadata_blacklist("http.response.line")
+    .metadata_blacklist("http.response")
+    .metadata_blacklist("http.response_number")
+    .metadata_blacklist("http.time")
+    .metadata_blacklist("http.request_in")
+    .metadata_blacklist("http.response_for.uri")
     .display_filter("frame || ip || udp || dns || ntp || chargen || ssdp")
     .spawn()
     .unwrap_or_else(|e| panic!("Error starting tshark: {e}"));
@@ -205,6 +265,8 @@ pub fn pcap_process(
 ) {
   // read packets until the end of the PCAP file
 
+  let mut pcap_packet = pcap_packet::PcapPacket::default(0);
+
   while let Some(packet) = rtshark.read().unwrap_or_else(|e| {
     eprintln!("Error parsing TShark output: {e}");
     None
@@ -223,12 +285,32 @@ pub fn pcap_process(
     //   }
     // }
 
-    let packet = pcap_packet::pcap_process_packet(&packet, map_id);
-    add_packet_to_attacks(conn, map_attacks, packet, id_attack);
+    pcap_packet = pcap_packet::pcap_process_packet(&packet, map_id);
+    add_packet_to_attacks(conn, map_attacks, pcap_packet, id_attack);
 
+    // packet.frame.timestamp
     // TODO verificar a cada 10000 packets o que da pra limpar do hashmap...
   }
+
+  // call again at the end
 }
+
+// pub fn remove_old_attacks(
+//   cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i32, PcapAttack>>,
+//   timestamp: DateTime<FixedOffset>,
+// ) {
+//   for ele in cidr_udp_attack {
+//     let (ipv4, udp_attack) = (ele.0, ele.1);
+//     for udp0_attack1 in udp_attack {
+//       let (udp_dest_port, attack) = (udp0_attack1.0, udp0_attack1.1);
+//       if !attack.old_attack(timestamp) {
+//         continue;
+//       }
+
+//       ele.1.remove(udp0_attack1.0)
+//     }
+//   }
+// }
 
 pub fn add_packet_to_attacks(
   conn: &Connection,
@@ -311,12 +393,22 @@ impl PcapAttack {
     self.packets.push(packet);
   }
 
-  // same_attack chcks if the packet happened within 5 minutes from the last attack
+  // same_attack chcks if the packet happened within 1 minute from the last attack
   pub fn same_attack(&self, packet: &pcap_packet::PcapPacket) -> bool {
     match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
       Some(fim_plus_1min) => {
         return packet.frame.timestamp >= self.timestamp_fim
           && packet.frame.timestamp <= fim_plus_1min
+      }
+      None => false,
+    }
+  }
+
+  // if the attack past 1min without new packages, can be removed
+  pub fn old_attack(&self, timestamp: DateTime<FixedOffset>) -> bool {
+    match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
+      Some(fim_plus_1min) => {
+        return timestamp > fim_plus_1min
       }
       None => false,
     }
@@ -328,7 +420,7 @@ impl PcapAttack {
       params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     ) {
       Ok(_) => {
-        println!("attack inserted");
+        // println!("attack inserted");
         self.insert_pcap_packets(conn);
       }
       Err(err) => {
@@ -345,7 +437,7 @@ impl PcapAttack {
         params![&self.id, &packet.id],
       ) {
         Ok(_) => {
-          println!("attack inserted")
+          // println!("attack inserted")
         }
         Err(err) => {
           println!("Problem inserting attack : {:?}", err)

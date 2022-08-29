@@ -74,7 +74,7 @@ pub fn pcap_process_layer_ntp(layer: &Layer, id: &i32) -> PcapNTP {
   //   return pcap_ntp;
   // }
 
-  println!("Processing ntp");
+  // println!("Processing ntp");
   layer
     .iter()
     .for_each(|metadata| pcap_ntp.metadata_process(metadata));

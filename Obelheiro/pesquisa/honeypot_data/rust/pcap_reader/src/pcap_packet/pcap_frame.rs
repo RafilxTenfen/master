@@ -56,7 +56,7 @@ impl PcapFrame {
       params![&self.id, &self.timestamp_str.to_string(), &self.time_epoch],
     ) {
       Ok(_) => {
-        println!("frame inserted")
+        // println!("frame inserted")
       }
       Err(err) => {
         println!("Problem inserting frame: {:?}", err)
@@ -93,7 +93,7 @@ impl PcapFrame {
 pub fn pcap_process_layer_frame(layer: &Layer, id: &i32) -> PcapFrame {
   let mut pcap_frame = PcapFrame::default(*id);
 
-  println!("Processing frame");
+  // println!("Processing frame");
   layer
     .iter()
     .for_each(|metadata| pcap_frame.metadata_process(metadata));

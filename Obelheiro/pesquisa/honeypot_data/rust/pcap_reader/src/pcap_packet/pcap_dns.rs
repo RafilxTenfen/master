@@ -113,7 +113,7 @@ impl PcapDNS {
 pub fn pcap_process_layer_dns(layer: &Layer, id: i32) -> PcapDNS {
   let mut pcap_dns = PcapDNS::default(id);
 
-  println!("Processing dns");
+  // println!("Processing dns");
   layer
     .iter()
     .for_each(|metadata| pcap_dns.metadata_process(metadata));

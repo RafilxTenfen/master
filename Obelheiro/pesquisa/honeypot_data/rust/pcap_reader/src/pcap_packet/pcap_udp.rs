@@ -79,7 +79,7 @@ pub fn pcap_process_layer_udp(layer: &Layer, id: &i32) -> PcapUDP {
   //   return pcap_udp;
   // }
 
-  println!("Processing udp");
+  // println!("Processing udp");
   layer
     .iter()
     .for_each(|metadata| pcap_udp.metadata_process(metadata));
