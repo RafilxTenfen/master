@@ -72,8 +72,7 @@ impl PcapUDP {
       "udp.dstport" => {
         self.destination_port = value.parse::<i32>().unwrap();
       }
-      _ => {}
-      // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

@@ -91,8 +91,7 @@ impl PcapDNS {
       "dns.rr.udp_payload_size" => {
         self.udp_payload_size = value.parse::<i32>().unwrap();
       }
-      _ => {}
-      // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

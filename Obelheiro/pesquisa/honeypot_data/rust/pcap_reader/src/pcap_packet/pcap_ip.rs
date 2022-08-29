@@ -86,8 +86,7 @@ impl PcapIP {
         // let ipv4_addr = "012.004.002.000".parse::<Ipv4Addr>().unwrap();
         //  AnyIpCidr::new_host(value)
       }
-      _ => {}
-      // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

@@ -68,8 +68,7 @@ impl PcapChargen {
       "chargen.data" => {
         self.data = value.to_string();
       }
-      _ => {}
-      // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

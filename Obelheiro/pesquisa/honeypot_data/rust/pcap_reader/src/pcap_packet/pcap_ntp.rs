@@ -68,8 +68,7 @@ impl PcapNTP {
       "ntp.refid" => {
         self.refid = value.to_string();
       }
-      _ => {}
-      // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }
