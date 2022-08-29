@@ -207,6 +207,10 @@ impl PcapPacket {
   pub fn insert(&self, conn: &Connection) {
     let mut result: Result<usize, rusqlite::Error> = Ok(0);
 
+    self.frame.insert(conn);
+    self.ip.insert(conn);
+    self.udp.insert(conn);
+
     match self.attack_type {
       PcapAttackType::None => {}
       PcapAttackType::DNS => match &self.dns {
