@@ -220,12 +220,13 @@ impl PcapPacket {
         Some(dns) => {
           dns.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, dns_id) values (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, attack_type, dns_id) values (?1, ?2, ?3, ?4, ?5, ?6)",
                 params![
                   &self.id,
                   &self.frame.id,
                   &self.ip.id,
                   &self.udp.id,
+                  &self.attack_type.to_string(),
                   &dns.id
                 ],
               );
@@ -238,8 +239,8 @@ impl PcapPacket {
         Some(chargen) => {
           chargen.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, chargen_id) values (?1, ?2, ?3, ?4, ?5)",
-                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &chargen.id],
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, attack_type, chargen_id) values (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &chargen.id],
               );
         }
       },
@@ -250,12 +251,13 @@ impl PcapPacket {
         Some(ntp) => {
           ntp.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ntp_id) values (?1, ?2, ?3, ?4, ?5)",
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, attack_type, ntp_id) values (?1, ?2, ?3, ?4, ?5, ?6 )",
                 params![
                   &self.id,
                   &self.frame.id,
                   &self.ip.id,
                   &self.udp.id,
+                  &self.attack_type.to_string(),
                   &ntp.id
                 ],
               );
@@ -268,8 +270,8 @@ impl PcapPacket {
         Some(ssdp) => {
           ssdp.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, ssdp_id) values (?1, ?2, ?3, ?4, ?5)",
-                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &ssdp.id],
+                "INSERT INTO PCAP_PACKET (id, frame_id, ip_id, udp_id, attack_type, ssdp_id) values (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![&self.id, &self.frame.id, &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ssdp.id],
               );
         }
       },

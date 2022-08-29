@@ -62,7 +62,10 @@ impl PcapSSDP {
       "http.request.full_uri" => {
         self.full_uri = value.to_string();
       }
-      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      // _ => {}
+      _ => {
+        println!("{}", name)
+      } // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

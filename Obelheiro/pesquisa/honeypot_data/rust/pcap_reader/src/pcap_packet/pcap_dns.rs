@@ -103,7 +103,9 @@ impl PcapDNS {
           println!("Problem parse udp_payload_size: {:?}", err)
         }
       },
-      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {
+        println!("{}", name)
+      } // _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }

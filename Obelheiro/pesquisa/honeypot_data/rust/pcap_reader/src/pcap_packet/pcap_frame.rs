@@ -83,7 +83,9 @@ impl PcapFrame {
       "frame.time_epoch" => {
         self.time_epoch = value.to_string();
       }
-      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, _display),
+      _ => {
+        println!("{}", name)
+      } // _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, _display),
     }
   }
 }

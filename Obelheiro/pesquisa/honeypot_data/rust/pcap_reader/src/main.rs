@@ -4,7 +4,9 @@ use rtshark::{RTShark, RTSharkBuilder};
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
 use std::env;
-use std::path::PathBuf;
+use std::fs::File;
+use std::io::{self, BufRead};
+use std::path::{Path, PathBuf};
 // use std::time::Duration;
 
 mod pcap_packet;
@@ -36,10 +38,123 @@ fn main() -> Result<()> {
   let mut id_attack = 0;
 
   let builder = RTSharkBuilder::builder().input_path(&pcap_str);
-  // builder.metadata_blacklist(blacklist)
-  // builder.metadata_blacklist(blacklist)
+
+  // let main_path =  get_current_working_dir();
+  // let metadata_blacklist_path = ;
+
+  // println!("rust fields {}", metadata_blacklist_path.to_str().stri);
+
+  // File hosts must exist in current path before this produces output
+  // if let Ok(lines) = read_lines(currently_dir.as_path().join("../tshark.fields").as_path()) {
+  //   // Consumes the iterator, returns an (Optional) String
+  //   for line in lines {
+  //     if let Ok(field) = line {
+  //       // println!("{}", field);
+  //       // let mut strfield = field.clone();
+  //       // builder = builder.metadata_blacklist(&strfield);
+  //       builder.metadata_blacklist(&field);
+  //     }
+  //   }
+  // }
+
   // Start a new TShark process
   let rtshark = builder
+    .metadata_blacklist("dns.flags")
+    .metadata_blacklist("dns.flags.response")
+    .metadata_blacklist("dns.flags.opcode")
+    .metadata_blacklist("dns.flags.truncated")
+    .metadata_blacklist("dns.flags.recdesired")
+    .metadata_blacklist("dns.flags.checkdisable")
+    .metadata_blacklist("dns.retransmit_request")
+    .metadata_blacklist("dns.retransmit_request_in")
+    .metadata_blacklist("dns.retransmission")
+    .metadata_blacklist("dns.count.queries")
+    .metadata_blacklist("dns.count.answers")
+    .metadata_blacklist("dns.count.auth_rr")
+    .metadata_blacklist("dns.count.add_rr")
+    .metadata_blacklist("dns.resp.name")
+    .metadata_blacklist("dns.resp.type")
+    .metadata_blacklist("dns.resp.ext_rcode")
+    .metadata_blacklist("dns.resp.edns0_version")
+    .metadata_blacklist("dns.resp.len")
+    .metadata_blacklist("dns.flags.z")
+    .metadata_blacklist("dns.resp.z")
+    .metadata_blacklist("dns.resp.z.do")
+    .metadata_blacklist("dns.resp.z.reserved")
+    .metadata_blacklist("dns.qry.name.len")
+    .metadata_blacklist("dns.qry.class")
+    .metadata_blacklist("dns.count.labels")
+    .metadata_blacklist("dns.flags.authoritative")
+    .metadata_blacklist("dns.flags.recavail")
+    .metadata_blacklist("dns.flags.authenticated")
+    .metadata_blacklist("dns.flags.rcode")
+    .metadata_blacklist("dns.resp.class")
+    .metadata_blacklist("dns.resp.ttl")
+    .metadata_blacklist("dns.soa.mname")
+    .metadata_blacklist("dns.soa.rname")
+    .metadata_blacklist("dns.soa.serial_number")
+    .metadata_blacklist("dns.soa.refresh_interval")
+    .metadata_blacklist("dns.soa.retry_interval")
+    .metadata_blacklist("dns.soa.expire_limit")
+    .metadata_blacklist("dns.soa.minimum_ttl")
+    .metadata_blacklist("dns.resp.class")
+    .metadata_blacklist("dns.resp.ttl")
+    .metadata_blacklist("dns.rrsig.type_covered")
+    .metadata_blacklist("dns.rrsig.algorithm")
+    .metadata_blacklist("dns.rrsig.labels")
+    .metadata_blacklist("dns.rrsig.original_ttl")
+    .metadata_blacklist("dns.rrsig.signature_expiration")
+    .metadata_blacklist("dns.rrsig.signature_inception")
+    .metadata_blacklist("dns.rrsig.key_tag")
+    .metadata_blacklist("dns.rrsig.signers_name")
+    .metadata_blacklist("dns.rrsig.signature")
+    .metadata_blacklist("dns.resp.class")
+    .metadata_blacklist("dns.resp.ttl")
+    .metadata_blacklist("dns.rrsig.type_covered")
+    .metadata_blacklist("dns.rrsig.algorithm")
+    .metadata_blacklist("dns.rrsig.labels")
+    .metadata_blacklist("dns.rrsig.original_ttl")
+    .metadata_blacklist("dns.rrsig.signature_expiration")
+    .metadata_blacklist("dns.rrsig.signature_inception")
+    .metadata_blacklist("dns.rrsig.key_tag")
+    .metadata_blacklist("dns.rrsig.signers_name")
+    .metadata_blacklist("dns.rrsig.signature")
+    .metadata_blacklist("dns.response_to")
+    .metadata_blacklist("dns.time    ")
+    .metadata_blacklist("ip.version")
+    .metadata_blacklist("ip.hdr_len")
+    .metadata_blacklist("ip.dsfield")
+    .metadata_blacklist("ip.dsfield.dscp")
+    .metadata_blacklist("ip.dsfield.ecn")
+    .metadata_blacklist("ip.len")
+    .metadata_blacklist("ip.id")
+    .metadata_blacklist("ip.flags")
+    .metadata_blacklist("ip.flags.rb")
+    .metadata_blacklist("ip.flags.df")
+    .metadata_blacklist("ip.flags.mf")
+    .metadata_blacklist("ip.frag_offset")
+    .metadata_blacklist("ip.ttl")
+    .metadata_blacklist("ip.proto")
+    .metadata_blacklist("ip.checksum")
+    .metadata_blacklist("ip.checksum.status")
+    .metadata_blacklist("ip.src")
+    .metadata_blacklist("ip.src_host")
+    .metadata_blacklist("ip.host")
+    .metadata_blacklist("ip.dst")
+    .metadata_blacklist("ip.dst_host")
+    .metadata_blacklist("ip.host")
+    .metadata_blacklist("frame.encap_type")
+    .metadata_blacklist("frame.offset_shift")
+    .metadata_blacklist("frame.time_delta")
+    .metadata_blacklist("frame.time_delta_displayed")
+    .metadata_blacklist("frame.time_relative")
+    .metadata_blacklist("frame.number")
+    .metadata_blacklist("frame.len")
+    .metadata_blacklist("frame.cap_len")
+    .metadata_blacklist("frame.marked")
+    .metadata_blacklist("frame.ignored")
+    .metadata_blacklist("frame.protocols")
+    .display_filter("frame || ip || udp || dns || ntp || chargen || ssdp")
     .spawn()
     .unwrap_or_else(|e| panic!("Error starting tshark: {e}"));
 
@@ -52,6 +167,16 @@ fn main() -> Result<()> {
   );
 
   Ok(())
+}
+
+// The output is wrapped in a Result to allow matching on errors
+// Returns an Iterator to the Reader of the lines of the file.
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where
+  P: AsRef<Path>,
+{
+  let file = File::open(filename)?;
+  Ok(io::BufReader::new(file).lines())
 }
 
 pub struct PcapAttack {
@@ -89,11 +214,12 @@ pub fn pcap_process(
     // intervalo de 1 minutos
     // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
     // cidr utils
+    // println!("-----------------------");
 
     // for layer in packet {
-    //   println!("Layer name: {}", layer.name());
+    //   // println!("Layer name: {}", layer.name());
     //   for metadata in layer {
-    //     println!("\t metadata Name: {} = {}", metadata.name(), metadata.display());
+    //     println!("{}", metadata.name());
     //   }
     // }
 
@@ -198,7 +324,7 @@ impl PcapAttack {
 
   pub fn db_insert(&self, conn: &Connection) {
     match conn.execute(
-      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4)",
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4, ?5)",
       params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     ) {
       Ok(_) => {

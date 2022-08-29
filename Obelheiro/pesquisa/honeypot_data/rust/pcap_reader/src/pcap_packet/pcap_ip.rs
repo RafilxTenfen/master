@@ -52,8 +52,8 @@ impl PcapIP {
 
   pub fn insert(&self, conn: &Connection) {
     match conn.execute(
-      "INSERT INTO PCAP_IP (vitima_addr, vitima_cidr) values (?1, ?2)",
-      params![&self.vitima_addr, &self.vitima_cidr.to_string()],
+      "INSERT INTO PCAP_IP (id, vitima_addr, vitima_cidr) values (?1, ?2, ?3)",
+      params![&self.id, &self.vitima_addr, &self.vitima_cidr.to_string()],
     ) {
       Ok(_) => {}
       Err(err) => {
@@ -80,7 +80,9 @@ impl PcapIP {
         // let ipv4_addr = "012.004.002.000".parse::<Ipv4Addr>().unwrap();
         //  AnyIpCidr::new_host(value)
       }
-      _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
+      _ => {
+        println!("{}", name)
+      } // _ => {} // _ => println!("ignored field: {} = {} - {}", name, value, display),
     }
   }
 }
