@@ -1,12 +1,13 @@
 use chrono::{DateTime, Duration, FixedOffset};
 use cidr_utils::cidr::Ipv4Cidr;
-use rtshark::{RTShark, RTSharkBuilder};
+use rtshark::{RTShark, RTSharkBuilder, RTSharkBuilderReady};
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
+use pcap_parser::*;
 // use std::time::Duration;
 
 mod pcap_packet;
@@ -37,6 +38,9 @@ fn main() -> Result<()> {
   let mut map_id = HashMap::<&str, i32>::new();
   let mut id_attack = 0;
 
+  // pcap_parser::P
+
+  // RTSharkBuilderReady
   let builder = RTSharkBuilder::builder().input_path(&pcap_str);
 
   // let main_path =  get_current_working_dir();
@@ -217,6 +221,7 @@ fn main() -> Result<()> {
     .display_filter("frame || ip || udp || dns || ntp || chargen || ssdp")
     .spawn()
     .unwrap_or_else(|e| panic!("Error starting tshark: {e}"));
+  // add match
 
   pcap_process(
     rtshark,
@@ -267,30 +272,55 @@ pub fn pcap_process(
 
   let mut pcap_packet = pcap_packet::PcapPacket::default(0);
 
-  while let Some(packet) = rtshark.read().unwrap_or_else(|e| {
-    eprintln!("Error parsing TShark output: {e}");
-    None
-  }) {
-    // packet.into()
-    // 5 pacotes
-    // intervalo de 1 minutos
-    // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
-    // cidr utils
-    // println!("-----------------------");
+  // let rt =  rtshark.into();
 
-    // for layer in packet {
-    //   // println!("Layer name: {}", layer.name());
-    //   for metadata in layer {
-    //     println!("{}", metadata.name());
-    //   }
-    // }
+  // rtshark.read()
 
-    pcap_packet = pcap_packet::pcap_process_packet(&packet, map_id);
-    add_packet_to_attacks(conn, map_attacks, pcap_packet, id_attack);
-
-    // packet.frame.timestamp
-    // TODO verificar a cada 10000 packets o que da pra limpar do hashmap...
+  loop {
+    match rtshark.read() {
+      Ok(opt_packet) => match opt_packet {
+        Some(packet) => {
+          pcap_packet = pcap_packet::pcap_process_packet(&packet, map_id);
+          add_packet_to_attacks(conn, map_attacks, pcap_packet, id_attack);
+        }
+        None => {
+          println!("None packet")
+        }
+      },
+      Err(err) => {
+        print!("Error parsing TShark output: {}", err);
+        break;
+      }
+    }
   }
+
+  // while let Some(packet) = rtshark.read().unwrap_or_else(|e| {
+  //   eprintln!("Error parsing TShark output: {e}");
+  //   None
+  // }) {
+  // packet.into()
+  // 5 pacotes
+  // intervalo de 1 minutos
+  // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
+  // cidr utils
+  // println!("-----------------------");
+
+  // for layer in packet {
+  //   // println!("Layer name: {}", layer.name());
+  //   for metadata in layer {
+  //     println!("{}", metadata.name());
+  //   }
+  // }
+
+  // pcap_packet = pcap_packet::pcap_process_packet(&packet, map_id);
+  // add_packet_to_attacks(conn, map_attacks, pcap_packet, id_attack);
+
+  // packet.frame.timestamp
+  // TODO verificar a cada 10000 packets o que da pra limpar do hashmap...
+  // if pcap_packet.id % 1000 == 0 {
+
+  // }
+  // }
 
   // call again at the end
 }
@@ -407,9 +437,7 @@ impl PcapAttack {
   // if the attack past 1min without new packages, can be removed
   pub fn old_attack(&self, timestamp: DateTime<FixedOffset>) -> bool {
     match self.timestamp_fim.checked_add_signed(Duration::minutes(1)) {
-      Some(fim_plus_1min) => {
-        return timestamp > fim_plus_1min
-      }
+      Some(fim_plus_1min) => return timestamp > fim_plus_1min,
       None => false,
     }
   }
