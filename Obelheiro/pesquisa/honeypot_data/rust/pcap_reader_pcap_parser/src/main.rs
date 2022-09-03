@@ -22,13 +22,13 @@ use std::path::PathBuf;
 //                // use packet::ether;
 //                // use std::time::Duration;
 use libpcap_tools::*;
+mod database;
 
-
-fn get_current_working_dir() -> PathBuf {
+pub fn get_current_working_dir() -> PathBuf {
   let working_dir = env::current_dir();
   let current_dir = match working_dir {
     Ok(workdir) => workdir,
-    Err(error) => panic!("Problem reading current dir: {:?}", error),
+    Err(_) => PathBuf::from("./"),
   };
   return current_dir;
 }
@@ -37,12 +37,10 @@ fn main() -> Result<()> {
   let currently_dir = get_current_working_dir();
   println!("Working dir {}", currently_dir.display());
 
-  let db_path = currently_dir
-    .as_path()
-    .join("../../db/database-2022-05-11/mix_protocol.sqlite");
-  let _conn = Connection::open(db_path)?;
-  // // drop_tables(&conn);
-  // // create_tables(&conn);
+  let conn = database::conn_get_mix_protocol()?;
+  database::drop_tables(&conn);
+  database::create_tables(&conn);
+  database::close(conn);
 
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   let pcap_str = currently_dir
@@ -82,16 +80,6 @@ fn main() -> Result<()> {
                 // }
               }
               PcapBlockOwned::Legacy(b) => {
-
-                // match dns_parser::Packet::parse(b.data) {
-                //   Ok(_packet) => {
-                //     println!("SlicedPacket DNS parsed");
-                //   },
-                //   Err(_err) => {
-                //     println!("Err dns_parser::Packet::parse {}", _err)
-                //   }
-                // }
-
                 match SlicedPacket::from_ethernet(b.data) {
                   Ok(_sliced_packet) => {
                     println!("SlicedPacket::from_ethernet parsed");
@@ -107,67 +95,67 @@ fn main() -> Result<()> {
                           match dns_question.qtype {
                             dns_parser::QueryType::A => {
                               println!("DNS parse _packet.questions.dns_question.qtype: A");
-                            },
+                            }
                             dns_parser::QueryType::NS => {
                               println!("DNS parse _packet.questions.dns_question.qtype: NS");
-                            },
+                            }
                             dns_parser::QueryType::MF => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MF");
-                            },
+                            }
                             dns_parser::QueryType::CNAME => {
                               println!("DNS parse _packet.questions.dns_question.qtype: CNAME");
-                            },
+                            }
                             dns_parser::QueryType::SOA => {
                               println!("DNS parse _packet.questions.dns_question.qtype: SOA");
-                            },
+                            }
                             dns_parser::QueryType::MB => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MB");
-                            },
+                            }
                             dns_parser::QueryType::MG => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MG");
-                            },
+                            }
                             dns_parser::QueryType::MR => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MR");
-                            },
+                            }
                             dns_parser::QueryType::NULL => {
                               println!("DNS parse _packet.questions.dns_question.qtype: NULL");
-                            },
+                            }
                             dns_parser::QueryType::WKS => {
                               println!("DNS parse _packet.questions.dns_question.qtype: WKS");
-                            },
+                            }
                             dns_parser::QueryType::PTR => {
                               println!("DNS parse _packet.questions.dns_question.qtype: PTR");
-                            },
+                            }
                             dns_parser::QueryType::HINFO => {
                               println!("DNS parse _packet.questions.dns_question.qtype: HINFO");
-                            },
+                            }
                             dns_parser::QueryType::MINFO => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MINFO");
-                            },
+                            }
                             dns_parser::QueryType::MX => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MX");
-                            },
+                            }
                             dns_parser::QueryType::TXT => {
                               println!("DNS parse _packet.questions.dns_question.qtype: TXT");
-                            },
+                            }
                             dns_parser::QueryType::AAAA => {
                               println!("DNS parse _packet.questions.dns_question.qtype: AAAA");
-                            },
+                            }
                             dns_parser::QueryType::SRV => {
                               println!("DNS parse _packet.questions.dns_question.qtype: SRV");
-                            },
+                            }
                             dns_parser::QueryType::AXFR => {
                               println!("DNS parse _packet.questions.dns_question.qtype: AXFR");
-                            },
+                            }
                             dns_parser::QueryType::MAILB => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MAILB");
-                            },
+                            }
                             dns_parser::QueryType::MAILA => {
                               println!("DNS parse _packet.questions.dns_question.qtype: MAILA");
-                            },
+                            }
                             dns_parser::QueryType::All => {
                               println!("DNS parse _packet.questions.dns_question.qtype: All");
-                            },
+                            }
                           }
                           println!(
                             "DNS parse _packet.questions.dns_question.qname: {}",
