@@ -651,4 +651,4 @@ stack_qnames %>%
 ```
 
 
-
+- Agrupar (QNAME & QTYPE) para verificar os ataques que duram somente um dia 
