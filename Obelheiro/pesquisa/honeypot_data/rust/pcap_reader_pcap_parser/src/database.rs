@@ -15,19 +15,15 @@ pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
   return Connection::open(db_path);
 }
 
-pub fn drop_tables(conn: &Connection) {
+pub fn drop_tables(conn: &Connection) {}
 
-}
-
-pub fn create_tables(conn: &Connection) {
-
-}
+pub fn create_tables(conn: &Connection) {}
 
 pub fn close(conn: Connection) {
   match conn.close() {
     Ok(_) => {
       println!("Connection closed")
-    },
+    }
     Err(_) => todo!(),
   }
 }
