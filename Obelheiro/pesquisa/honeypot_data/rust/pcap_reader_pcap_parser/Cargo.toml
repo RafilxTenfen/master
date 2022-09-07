@@ -25,6 +25,8 @@ dnslogger = { path = "./dnslogger" } # giving error // need to install libpcap-d
 dns-parser = { version = "0.8.0" }
 libpcap-tools = { path = "./pcap-analyzer-2/libpcap-tools" }
 etherparse = { version = "0.12.0" }
+chrono = { version = "0.4.22" }
+cidr-utils = { version = "0.5.7" }
 # snoopy = { version = "0.3.2" } # giving error
 # pcap-analyzer = { path = "/home/rafilx/projects/github.com/RafilxTenfen/master/Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/pcap-analyzer" }
 
