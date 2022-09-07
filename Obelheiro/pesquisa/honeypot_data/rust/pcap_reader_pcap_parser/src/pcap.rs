@@ -1,8 +1,9 @@
+use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
 use std::fs;
 use std::fs::File;
-use std::path::PathBuf;
 use std::io::BufReader;
-use pcap_parser::{LegacyPcapReader};
+use std::path::PathBuf;
+mod block;
 
 fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
   Some(
@@ -10,12 +11,14 @@ fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
       .ok()?
       .filter_map(|entry| {
         Some(
-          pathname.join(entry
-            .ok()?
-            .path()
-            .strip_prefix(pathname)
-            .ok()?
-            .to_path_buf()),
+          pathname.join(
+            entry
+              .ok()?
+              .path()
+              .strip_prefix(pathname)
+              .ok()?
+              .to_path_buf(),
+          ),
         )
       })
       .filter(|path| path.ends_with(filter))
@@ -58,15 +61,29 @@ pub fn pcap_process(pcap: &PathBuf) {
 
   match File::open(pcap) {
     Ok(file) => {
+      // let mut reader = LegacyPcapReader::new(65536, reader).expect("LegacyPcapReader");
       match LegacyPcapReader::new(65536, BufReader::new(file)) {
-        Ok(LegacyPcapReader) => {
-
-        },
+        Ok(ref mut reader) => {
+          loop {
+            match reader.next() {
+              Ok((offset, ref block)) => {
+                block::process_block(block);
+                reader.consume(offset)
+              }
+              Err(PcapError::Eof) => break,
+              Err(PcapError::Incomplete) => {
+                reader.refill().unwrap();
+              }
+              Err(e) => panic!("error while reading: {:?}", e),
+            }
+          }
+          // legacy_pcap_reader::process_legacy_pcap_reader(legacyPcapReader);
+        }
         Err(err) => {
           println!("Error reading LegacyPcapReader {}", err)
         }
       };
-    },
+    }
     Err(err) => {
       println!("Error openning file {}", err)
     }

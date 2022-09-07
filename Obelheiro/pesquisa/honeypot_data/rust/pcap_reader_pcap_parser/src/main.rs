@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     .into_os_string()
     .into_string()
     .unwrap();
-  // println!("PCAP dir {}", pcap_str);
+  println!("PCAP dir {}", pcap_str);
 
   pcap::pcap_process_dir(&currently_dir.join("../../pcap"));
 
@@ -62,7 +62,6 @@ fn main() -> Result<()> {
   // match file_result {
   //   Ok(file) => {
   //     let reader = BufReader::new(file);
-
   //     let mut num_blocks = 0;
   //     let mut reader = LegacyPcapReader::new(65536, reader).expect("LegacyPcapReader");
 
