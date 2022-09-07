@@ -5,5 +5,6 @@ db/database-2022-05-11/*
 mix-protocolos/G1-evolucao-mix-protocolos.ods
 *.rar
 *.zip
-./pcap/
+pcap/zip
+pcap/tcpdump.*
 rust/pcap_reader/target/*
