@@ -20,6 +20,8 @@ rusqlite = { version = "0.28.0", features = ["bundled"]}
 pcap-parser = { version = "0.14.0", features = ["data"] }
 # circular = { version = "0.3.0" }
 # packet = { version = "0.1.4" } # 0.1
+ntp-parser = { version = "0.6" }
+ldap-parser = { version = "0.3" }
 pktparse = { version = "0.7.1" }
 dnslogger = { path = "./dnslogger" } # giving error // need to install libpcap-dev
 dns-parser = { version = "0.8.0" }

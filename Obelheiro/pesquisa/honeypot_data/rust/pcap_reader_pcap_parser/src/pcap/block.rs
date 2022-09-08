@@ -7,6 +7,7 @@ use pcap_parser::{parse_pcap_frame, LegacyPcapBlock};
 mod dns;
 mod ip;
 mod udp;
+mod ntp;
 
 pub fn process_block(block: &PcapBlockOwned) {
   match block {
@@ -63,29 +64,30 @@ fn process_sliced_packet(sliced_packet: SlicedPacket) {
 
   match sliced_packet.transport {
     Some(transport_slice) => match transport_slice {
-      etherparse::TransportSlice::Icmpv4(_icmpv4_slice) => {
-        println!("parsed icmpv4_slice");
-      }
-      etherparse::TransportSlice::Icmpv6(_icmpv6_slice) => {
-        println!("parsed icmpv6_slice");
-      }
       etherparse::TransportSlice::Udp(ref udp_slice) => {
         udp::process_udp(udp_slice, 0);
 
+        match ntp_parser::parse_ntp(sliced_packet.payload) {
+          Ok((_, ref ntp_packet)) => {
+            ntp::process_ntp(ntp_packet, 0);
+          }
+          Err(err) => {
+            // println!("failed ntp_parser::parse_ntp {}", err)
+          }
+        }
+
         match dns_parser::Packet::parse(sliced_packet.payload) {
           Ok(ref dns_packet) => {
-            // dns::process_dns(dns_packet, 0);
+            dns::process_dns(dns_packet, 0);
           }
           Err(_err) => {
             // println!("Err dns_parser::Packet::parse {}", err)
           }
         }
       }
-      etherparse::TransportSlice::Tcp(ref _tcp_slice) => {
-        // println!("parsed tcp_slice");
-        // tcp_slice.slice()
-        // ip::process_ip(tcp_slice, 0);
-      }
+      etherparse::TransportSlice::Icmpv4(_icmpv4_slice) => {}
+      etherparse::TransportSlice::Icmpv6(_icmpv6_slice) => {}
+      etherparse::TransportSlice::Tcp(ref _tcp_slice) => {}
       etherparse::TransportSlice::Unknown(_unknown) => {}
     },
     None => {}
