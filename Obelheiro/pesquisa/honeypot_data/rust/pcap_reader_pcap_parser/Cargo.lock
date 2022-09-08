@@ -404,17 +404,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
 
 [[package]]
-name = "libpcap-tools"
-version = "0.1.0"
-dependencies = [
- "log 0.4.17",
- "pcap-parser",
- "serde",
- "thiserror",
- "toml",
-]
-
-[[package]]
 name = "libsqlite3-sys"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -573,7 +562,6 @@ dependencies = [
  "dnslogger",
  "etherparse",
  "ldap-parser",
- "libpcap-tools",
  "ntp-parser",
  "pcap-parser",
  "pktparse",
@@ -789,9 +777,6 @@ name = "serde"
 version = "1.0.144"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0f747710de3dcd43b88c9168773254e809d8ddbdf9653b84e2554ab219f17860"
-dependencies = [
- "serde_derive",
-]
 
 [[package]]
 name = "serde_derive"
@@ -989,15 +974,6 @@ dependencies = [
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "toml"
-version = "0.5.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
-dependencies = [
- "serde",
 ]
 
 [[package]]

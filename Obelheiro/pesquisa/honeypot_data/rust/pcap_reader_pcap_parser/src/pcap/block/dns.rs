@@ -78,6 +78,7 @@ pub fn process_dns(dns_packet: &dns_parser::Packet, id: u32) -> PcapDNS {
       }
     }
 
+    // we just want the first qname/qtype
     break;
   }
 

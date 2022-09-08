@@ -61,14 +61,13 @@ pub fn pcap_process(pcap: &PathBuf) {
 
   match File::open(pcap) {
     Ok(file) => {
-      // let mut reader = LegacyPcapReader::new(65536, reader).expect("LegacyPcapReader");
       match LegacyPcapReader::new(65536, BufReader::new(file)) {
         Ok(ref mut reader) => {
           loop {
             match reader.next() {
               Ok((offset, ref block)) => {
                 block::process_block(block);
-                reader.consume(offset)
+                reader.consume(offset) // !important, otherwise it will not read the next
               }
               Err(PcapError::Eof) => break,
               Err(PcapError::Incomplete) => {
@@ -77,7 +76,6 @@ pub fn pcap_process(pcap: &PathBuf) {
               Err(e) => panic!("error while reading: {:?}", e),
             }
           }
-          // legacy_pcap_reader::process_legacy_pcap_reader(legacyPcapReader);
         }
         Err(err) => {
           println!("Error reading LegacyPcapReader {}", err)

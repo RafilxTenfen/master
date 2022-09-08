@@ -1,9 +1,8 @@
-use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use chrono::{NaiveDateTime};
 use etherparse::SlicedPacket;
-use libpcap_tools::PcapBlockOwned;
-use libpcap_tools::PcapBlockOwned::{Legacy, LegacyHeader, NG};
-use pcap_parser::{parse_pcap_frame, LegacyPcapBlock};
-// use pktparse::ethernet;
+use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
+use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
+
 mod dns;
 mod ip;
 mod udp;
@@ -24,22 +23,9 @@ pub fn process_block(block: &PcapBlockOwned) {
 }
 
 fn process_legacy_block(b: &LegacyPcapBlock) {
-  // println!("process_legacy_block: {}, {}", b.ts_sec, b.ts_usec);
-
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
 
   // println!("process_legacy_block: {}, {} - {}", b.ts_sec, b.ts_usec, naive_date_time.to_string());
-
-  // DateTime::naive_local(&self)
-  // match ethernet::parse_ethernet_frame(b.data) {
-  //   Ok((_, ethernet_frame)) => {
-  //     // println!("ETHERNET parsed",);
-
-  //   }
-  //   Err(err) => {
-  //     println!("Err parse_ethernet_frame {}", err)
-  //   }
-  // }
 
   match SlicedPacket::from_ethernet(b.data) {
     Ok(sliced_packet) => {

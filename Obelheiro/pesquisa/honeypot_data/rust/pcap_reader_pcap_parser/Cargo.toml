@@ -25,7 +25,10 @@ ldap-parser = { version = "0.3" }
 pktparse = { version = "0.7.1" }
 dnslogger = { path = "./dnslogger" } # giving error // need to install libpcap-dev
 dns-parser = { version = "0.8.0" }
-libpcap-tools = { path = "./pcap-analyzer-2/libpcap-tools" }
+# libpcap-tools = { path = "./pcap-analyzer-2/libpcap-tools" }
+# regex = { git = "https://github.com/rust-lang/regex", branch = "next" }
+
+# libpcap-tools = { git = "./pcap-analyzer-2/libpcap-tools" }
 etherparse = { version = "0.12.0" }
 chrono = { version = "0.4.22" }
 cidr-utils = { version = "0.5.7" }
