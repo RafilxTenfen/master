@@ -7,6 +7,38 @@ mod dns;
 mod ip;
 mod udp;
 mod ntp;
+mod ldap;
+
+pub struct PcapPacket {
+  pub id: i32,
+  pub timestamp: NaiveDateTime,
+  pub ip: ip::PcapIP,
+  pub udp: udp::PcapUDP,
+  pub attack_type: PcapAttackType,
+  pub dns: Option<dns::PcapDNS>,
+  pub ldap: Option<ldap::PcapLDAP>,
+  pub ntp: Option<ntp::PcapNTP>,
+}
+
+pub enum PcapAttackType {
+  None,
+  DNS,
+  CHARGEN,
+  NTP,
+  SSDP,
+}
+
+impl PcapAttackType {
+  pub fn to_string(&self) -> String {
+    match self {
+      PcapAttackType::None => String::from("None"),
+      PcapAttackType::DNS => String::from("DNS"),
+      PcapAttackType::CHARGEN => String::from("CHARGEN"),
+      PcapAttackType::NTP => String::from("NTP"),
+      PcapAttackType::SSDP => String::from("SSDP"),
+    }
+  }
+}
 
 pub fn process_block(block: &PcapBlockOwned) {
   match block {
@@ -48,6 +80,19 @@ fn process_sliced_packet(sliced_packet: SlicedPacket) {
     None => {}
   }
 
+
+  match ldap_parser::parse_ldap_messages(sliced_packet.payload) {
+    Ok((_, ref ldap)) => {
+      for msg in ldap {
+        ldap::process_ldap(msg, 0);
+        break;
+      }
+    },
+    Err(_err) => {
+      // println!("Err ldap_parser::parse_ldap_messages {}", _err)
+    }
+}
+
   match sliced_packet.transport {
     Some(transport_slice) => match transport_slice {
       etherparse::TransportSlice::Udp(ref udp_slice) => {
@@ -57,10 +102,11 @@ fn process_sliced_packet(sliced_packet: SlicedPacket) {
           Ok((_, ref ntp_packet)) => {
             ntp::process_ntp(ntp_packet, 0);
           }
-          Err(err) => {
+          Err(_err) => {
             // println!("failed ntp_parser::parse_ntp {}", err)
           }
         }
+
 
         match dns_parser::Packet::parse(sliced_packet.payload) {
           Ok(ref dns_packet) => {

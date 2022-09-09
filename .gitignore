@@ -54,3 +54,5 @@ dkms.conf
 PPA/matrix/main
 PAA/pilha4_gabriela/main
 .Rproj.user
+Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/out.txt
+Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/out1.txt

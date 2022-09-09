@@ -61,6 +61,7 @@ pub fn pcap_process(pcap: &PathBuf) {
 
   match File::open(pcap) {
     Ok(file) => {
+      // 65536 recommended by the lib
       match LegacyPcapReader::new(65536, BufReader::new(file)) {
         Ok(ref mut reader) => {
           loop {
