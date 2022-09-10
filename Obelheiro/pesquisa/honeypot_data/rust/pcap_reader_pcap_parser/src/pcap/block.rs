@@ -1,13 +1,13 @@
-use chrono::{NaiveDateTime};
+use chrono::NaiveDateTime;
 use etherparse::SlicedPacket;
-use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
+use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 
 mod dns;
 mod ip;
-mod udp;
-mod ntp;
 mod ldap;
+mod ntp;
+mod udp;
 
 pub struct PcapPacket {
   pub id: i32,
@@ -21,107 +21,129 @@ pub struct PcapPacket {
 }
 
 pub enum PcapAttackType {
-  None,
+  // None,
+  // CHARGEN,
+  // SSDP,
   DNS,
-  CHARGEN,
   NTP,
-  SSDP,
+  LDAP,
 }
 
 impl PcapAttackType {
   pub fn to_string(&self) -> String {
     match self {
-      PcapAttackType::None => String::from("None"),
+      // PcapAttackType::None => String::from("None"),
+      // PcapAttackType::CHARGEN => String::from("CHARGEN"),
+      // PcapAttackType::SSDP => String::from("SSDP"),
       PcapAttackType::DNS => String::from("DNS"),
-      PcapAttackType::CHARGEN => String::from("CHARGEN"),
+      PcapAttackType::LDAP => String::from("LDAP"),
       PcapAttackType::NTP => String::from("NTP"),
-      PcapAttackType::SSDP => String::from("SSDP"),
     }
   }
 }
 
-pub fn process_block(block: &PcapBlockOwned) {
+pub fn process_block(block: &PcapBlockOwned) -> Option<PcapPacket> {
   match block {
     LegacyHeader(header) => {
       println!("PCAP Header size {}", header.size());
+      return None;
     }
     Legacy(block) => {
-      process_legacy_block(block);
+      return process_legacy_block(block);
     }
     NG(new_block) => {
       println!("NG new block in pcap {}", new_block.magic());
+      return None;
     }
   }
 }
 
-fn process_legacy_block(b: &LegacyPcapBlock) {
+fn process_legacy_block(b: &LegacyPcapBlock) -> Option<PcapPacket> {
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
-
-  // println!("process_legacy_block: {}, {} - {}", b.ts_sec, b.ts_usec, naive_date_time.to_string());
 
   match SlicedPacket::from_ethernet(b.data) {
     Ok(sliced_packet) => {
-      process_sliced_packet(sliced_packet);
+      return process_sliced_packet(sliced_packet, naive_date_time);
     }
     Err(err) => {
-      println!("Err SlicedPacket::from_ethernet {}", err)
+      println!("Err SlicedPacket::from_ethernet {}", err);
+      return None;
     }
   }
 }
 
-fn process_sliced_packet(sliced_packet: SlicedPacket) {
-  match sliced_packet.ip {
+fn process_sliced_packet(
+  sliced_packet: SlicedPacket,
+  timestamp: NaiveDateTime,
+) -> Option<PcapPacket> {
+  let ip = match sliced_packet.ip {
     Some(ip) => match ip {
       etherparse::InternetSlice::Ipv4(ipv4_header, _) => {
-        ip::process_ip(ipv4_header, 0);
+        ip::process_ip(ipv4_header, 0)
       }
-      etherparse::InternetSlice::Ipv6(_, _) => {}
+      etherparse::InternetSlice::Ipv6(_, _) => {
+        println!("Parsed etherparse::InternetSlice::Ipv6");
+        return None;
+      }
     },
-    None => {}
-  }
+    None => {
+      println!("Err parse IP");
+      return None;
+    }
+  };
 
+  let udp = match sliced_packet.transport {
+    Some(transport_slice) => match transport_slice {
+      etherparse::TransportSlice::Udp(ref udp_slice) => {
+        udp::process_udp(udp_slice, 0)
+      }
+      etherparse::TransportSlice::Icmpv4(_) => {return None}
+      etherparse::TransportSlice::Icmpv6(_) => {return None}
+      etherparse::TransportSlice::Tcp(_) => {return None}
+      etherparse::TransportSlice::Unknown(_) => {return None}
+    },
+    None => {return None;}
+  };
+
+  let mut packet = PcapPacket{
+    id: 0,
+    ip,
+    udp,
+    timestamp,
+    attack_type: PcapAttackType::NTP,
+    ntp: None,
+    dns: None,
+    ldap: None,
+  };
+
+  match ntp_parser::parse_ntp(sliced_packet.payload) {
+    Ok((_, ref ntp_packet)) => {
+      packet.ntp = Some(ntp::process_ntp(ntp_packet, 0));
+      return Some(packet);
+    }
+    Err(_) => {}
+  }
 
   match ldap_parser::parse_ldap_messages(sliced_packet.payload) {
     Ok((_, ref ldap)) => {
       for msg in ldap {
-        ldap::process_ldap(msg, 0);
-        break;
+        packet.ldap = Some(ldap::process_ldap(msg, 0));
+        packet.attack_type = PcapAttackType::LDAP;
+        // we only care for the first msg
+        return Some(packet);
       }
-    },
-    Err(_err) => {
-      // println!("Err ldap_parser::parse_ldap_messages {}", _err)
     }
-}
-
-  match sliced_packet.transport {
-    Some(transport_slice) => match transport_slice {
-      etherparse::TransportSlice::Udp(ref udp_slice) => {
-        udp::process_udp(udp_slice, 0);
-
-        match ntp_parser::parse_ntp(sliced_packet.payload) {
-          Ok((_, ref ntp_packet)) => {
-            ntp::process_ntp(ntp_packet, 0);
-          }
-          Err(_err) => {
-            // println!("failed ntp_parser::parse_ntp {}", err)
-          }
-        }
-
-
-        match dns_parser::Packet::parse(sliced_packet.payload) {
-          Ok(ref dns_packet) => {
-            dns::process_dns(dns_packet, 0);
-          }
-          Err(_err) => {
-            // println!("Err dns_parser::Packet::parse {}", err)
-          }
-        }
-      }
-      etherparse::TransportSlice::Icmpv4(_icmpv4_slice) => {}
-      etherparse::TransportSlice::Icmpv6(_icmpv6_slice) => {}
-      etherparse::TransportSlice::Tcp(ref _tcp_slice) => {}
-      etherparse::TransportSlice::Unknown(_unknown) => {}
-    },
-    None => {}
+    Err(_) => {}
   }
+
+  match dns_parser::Packet::parse(sliced_packet.payload) {
+    Ok(ref dns_packet) => {
+      packet.dns = Some(dns::process_dns(dns_packet, 0));
+      packet.attack_type = PcapAttackType::DNS;
+      return Some(packet);
+    }
+    Err(_) => {}
+  }
+
+  return None;
 }

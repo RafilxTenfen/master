@@ -7,9 +7,9 @@ pub struct PcapLDAP {
 }
 
 pub fn process_ldap(ldap_message: &LdapMessage, id: u32) -> PcapLDAP {
-    return PcapLDAP {
-      id,
-      message_id: ldap_message.message_id.0,
-      protocol_op: ldap_message.protocol_op.tag().0,
-    };
+  return PcapLDAP {
+    id,
+    message_id: ldap_message.message_id.0,
+    protocol_op: ldap_message.protocol_op.tag().0,
+  };
 }

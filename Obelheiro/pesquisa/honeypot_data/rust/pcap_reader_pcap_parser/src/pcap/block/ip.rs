@@ -1,6 +1,6 @@
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
+// use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 
 pub struct PcapIP {
   pub id: u32,
@@ -10,7 +10,8 @@ pub struct PcapIP {
 
 pub fn process_ip(ipv4_header: Ipv4HeaderSlice, id: u32) -> PcapIP {
   let vitima_addr = ipv4_header.source_addr().to_string();
-  let vitima_cidr = match Ipv4Cidr::from_str(vitima_addr.as_str()) {  // adding CIDR takes 10sec +
+  let vitima_cidr = match Ipv4Cidr::from_str(vitima_addr.as_str()) {
+    // adding CIDR takes 10sec +
     Ok(cidr) => cidr,
     Err(err) => {
       println!("Problem Ipv4Cidr ip: {:?}, - err {:?}", vitima_addr, err);
