@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 mod block;
+mod attack;
 
 fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
   Some(
@@ -48,7 +49,9 @@ pub fn pcap_process_dir(dir: &PathBuf) {
   println!("pcap_process_dir {}", dir.display());
 
   let pcaps = get_pcaps_ordered(dir);
-  pcaps.iter().for_each(|pcap| pcap_process(pcap));
+  pcaps.iter().for_each(|pcap| {
+    pcap_process(pcap)
+  });
 }
 
 pub fn pcap_process(pcap: &PathBuf) {
@@ -67,7 +70,12 @@ pub fn pcap_process(pcap: &PathBuf) {
           loop {
             match reader.next() {
               Ok((offset, ref block)) => {
-                block::process_block(block);
+                match block::process_block(block) {
+                  Some(ref new_packet) => {
+                    attack::process_packet(new_packet);
+                  },
+                  None => {},
+                }
                 reader.consume(offset) // !important, otherwise it will not read the next
               }
               Err(PcapError::Eof) => break,

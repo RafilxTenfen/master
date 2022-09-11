@@ -23,6 +23,10 @@ fn main() -> Result<()> {
   database::create_tables(&conn);
   database::close(conn);
 
+  // // HashMap CIDR => UDP dest port => Attack
+  // let mut map_attacks = HashMap::<Ipv4Cidr, HashMap<i32, PcapAttack>>::new();
+  // let mut map_id = HashMap::<&str, i32>::new();
+
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   pcap::pcap_process_dir(&currently_dir.join("../../pcap"));
 
