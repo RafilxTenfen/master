@@ -23,7 +23,6 @@ fn main() -> Result<()> {
   let conn = database::conn_get_mix_protocol()?;
   database::drop_tables(&conn);
   database::create_tables(&conn);
-  database::close(conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
@@ -32,9 +31,12 @@ fn main() -> Result<()> {
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   pcap::pcap_process_dir(
     &currently_dir.join("../../pcap"),
+    &conn,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
   );
+
+  database::close(conn);
 
   Ok(())
 }

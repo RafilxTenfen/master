@@ -1,12 +1,8 @@
 use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
+use rusqlite::{params, Connection};
 use std::collections::HashMap;
-// use std::time::Duration;
-// use cidr_utils::cidr::Ipv4Cidr;
-// use etherparse::SlicedPacket;
-// use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
-// use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 
 use super::block::PcapPacket;
 
@@ -46,6 +42,40 @@ impl PcapAttack {
       timestamp_fim: timestamp,
     };
   }
+
+  // DATABASE FUNCTIONS
+
+  pub fn insert(&self, conn: &Connection) {
+    match conn.execute(
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4, ?5)",
+      params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+    ) {
+      Ok(_) => {
+        // println!("attack inserted");
+        self.insert_pcap_packets(conn);
+      }
+      Err(err) => {
+        println!("Problem inserting attack: {:?}", err)
+      }
+    }
+  }
+
+  fn insert_pcap_packets(&self, conn: &Connection) {
+    for packet in &self.packets {
+      packet.insert(conn);
+      match conn.execute(
+        "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
+        params![&self.id, &packet.id],
+      ) {
+        Ok(_) => {
+          // println!("attack inserted")
+        }
+        Err(err) => {
+          println!("Problem inserting attack_packet : {:?}", err)
+        }
+      }
+    }
+  }
 }
 
 pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut u32) -> HashMap<u16, PcapAttack> {
@@ -62,6 +92,7 @@ pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut u32) -> HashMap<u16
 // intervalo de 1 minutos
 // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
 pub fn process_new_packet(
+  conn: &Connection,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
   new_packet: PcapPacket,
@@ -87,7 +118,7 @@ pub fn process_new_packet(
           // not same attack, timestamp passed
           // should check if len(packets) > 5 to dbinsert or just replace by a new attack
           if attack.packets.len() > 5 {
-            // attack.db_insert(conn); // inserts db
+            attack.insert(conn); // inserts db
           }
 
           let id_attack = hm_id.entry("attack").or_insert(0);

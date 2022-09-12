@@ -1,8 +1,24 @@
+use rusqlite::{params, Connection};
+
 pub struct PcapDNS {
   pub id: u32,
   pub tx_id: u16,
   pub qname: String,
   pub qtype: String,
+}
+
+impl PcapDNS {
+  pub fn insert(&self, conn: &Connection) {
+    match conn.execute(
+      "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype) values (?1, ?2, ?3, ?4)",
+      params![&self.id, &self.tx_id, &self.qname, &self.qtype],
+    ) {
+      Ok(_) => {}
+      Err(err) => {
+        println!("Problem inserting dns: {:?}", err)
+      }
+    }
+  }
 }
 
 pub fn process_dns(dns_packet: &dns_parser::Packet, id: u32) -> PcapDNS {
