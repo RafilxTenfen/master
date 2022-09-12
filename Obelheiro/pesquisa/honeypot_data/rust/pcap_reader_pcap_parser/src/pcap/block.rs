@@ -78,9 +78,7 @@ fn process_sliced_packet(
 ) -> Option<PcapPacket> {
   let ip = match sliced_packet.ip {
     Some(ip) => match ip {
-      etherparse::InternetSlice::Ipv4(ipv4_header, _) => {
-        ip::process_ip(ipv4_header, 0)
-      }
+      etherparse::InternetSlice::Ipv4(ipv4_header, _) => ip::process_ip(ipv4_header, 0),
       etherparse::InternetSlice::Ipv6(_, _) => {
         println!("Parsed etherparse::InternetSlice::Ipv6");
         return None;
@@ -94,18 +92,18 @@ fn process_sliced_packet(
 
   let udp = match sliced_packet.transport {
     Some(transport_slice) => match transport_slice {
-      etherparse::TransportSlice::Udp(ref udp_slice) => {
-        udp::process_udp(udp_slice, 0)
-      }
-      etherparse::TransportSlice::Icmpv4(_) => {return None}
-      etherparse::TransportSlice::Icmpv6(_) => {return None}
-      etherparse::TransportSlice::Tcp(_) => {return None}
-      etherparse::TransportSlice::Unknown(_) => {return None}
+      etherparse::TransportSlice::Udp(ref udp_slice) => udp::process_udp(udp_slice, 0),
+      etherparse::TransportSlice::Icmpv4(_) => return None,
+      etherparse::TransportSlice::Icmpv6(_) => return None,
+      etherparse::TransportSlice::Tcp(_) => return None,
+      etherparse::TransportSlice::Unknown(_) => return None,
     },
-    None => {return None;}
+    None => {
+      return None;
+    }
   };
 
-  let mut packet = PcapPacket{
+  let mut packet = PcapPacket {
     id: 0,
     ip,
     udp,

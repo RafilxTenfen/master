@@ -1,10 +1,17 @@
+use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-mod block;
 mod attack;
+mod block;
+
+// HashMap CIDR => UDP dest port => Attack
+pub fn new_hm_cidr_udp_attack() -> HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>> {
+  return HashMap::<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>::new();
+}
 
 fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
   Some(
@@ -45,16 +52,24 @@ pub fn get_pcaps_ordered(dir: &PathBuf) -> Vec<PathBuf> {
   return pcaps;
 }
 
-pub fn pcap_process_dir(dir: &PathBuf) {
+pub fn pcap_process_dir(
+  dir: &PathBuf,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+) {
   println!("pcap_process_dir {}", dir.display());
 
   let pcaps = get_pcaps_ordered(dir);
-  pcaps.iter().for_each(|pcap| {
-    pcap_process(pcap)
-  });
+  pcaps
+    .iter()
+    .for_each(|pcap| pcap_process(pcap, hm_cidr_udp_attack, hm_id));
 }
 
-pub fn pcap_process(pcap: &PathBuf) {
+pub fn pcap_process(
+  pcap: &PathBuf,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+) {
   if !pcap.is_file() {
     println!("pcap {} is not a file", pcap.display());
     return;
@@ -71,10 +86,10 @@ pub fn pcap_process(pcap: &PathBuf) {
             match reader.next() {
               Ok((offset, ref block)) => {
                 match block::process_block(block) {
-                  Some(ref new_packet) => {
-                    attack::process_packet(new_packet);
-                  },
-                  None => {},
+                  Some(new_packet) => {
+                    attack::process_new_packet(hm_cidr_udp_attack, hm_id, new_packet);
+                  }
+                  None => {}
                 }
                 reader.consume(offset) // !important, otherwise it will not read the next
               }
