@@ -1,5 +1,5 @@
 use etherparse::UdpHeaderSlice;
-use rusqlite::{params, Connection};
+use rusqlite::Statement;
 
 pub struct PcapUDP {
   pub id: u32,
@@ -7,11 +7,8 @@ pub struct PcapUDP {
 }
 
 impl PcapUDP {
-  pub fn insert(&self, conn: &Connection) {
-    match conn.execute(
-      "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
-      params![&self.id, &self.destination_port],
-    ) {
+  pub fn insert(&self, stmt_pcap_udp: &mut Statement) {
+    match stmt_pcap_udp.execute((&self.id, &self.destination_port)) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting udp: {:?}", err)

@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Statement};
 use std::collections::HashMap;
 
 mod dns;
@@ -32,11 +32,16 @@ pub enum PcapAttackType {
 }
 
 impl PcapPacket {
-  pub fn insert(&self, conn: &Connection) {
+  pub fn insert(
+    &self,
+    conn: &Connection,
+    stmt_pcap_ip: &mut Statement,
+    stmt_pcap_udp: &mut Statement,
+  ) {
     let mut result: Result<usize, rusqlite::Error> = Ok(0);
 
-    self.ip.insert(conn);
-    self.udp.insert(conn);
+    self.ip.insert(stmt_pcap_ip);
+    self.udp.insert(stmt_pcap_udp);
 
     match self.attack_type {
       PcapAttackType::DNS => match self.dns {

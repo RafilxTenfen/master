@@ -1,6 +1,6 @@
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use rusqlite::{params, Connection};
+use rusqlite::Statement;
 // use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 
 pub struct PcapIP {
@@ -10,11 +10,8 @@ pub struct PcapIP {
 }
 
 impl PcapIP {
-  pub fn insert(&self, conn: &Connection) {
-    match conn.execute(
-      "INSERT INTO PCAP_IP (id, vitima_addr, vitima_cidr) values (?1, ?2, ?3)",
-      params![&self.id, &self.vitima_addr, &self.vitima_cidr.to_string()],
-    ) {
+  pub fn insert(&self, stmt_pcap_ip: &mut Statement) {
+    match stmt_pcap_ip.execute((&self.id, &self.vitima_addr, &self.vitima_cidr.to_string())) {
       Ok(_) => {}
       Err(err) => {
         println!("Problem inserting ip: {:?}", err)

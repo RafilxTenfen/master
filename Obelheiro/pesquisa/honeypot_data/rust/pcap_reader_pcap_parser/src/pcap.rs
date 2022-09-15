@@ -58,6 +58,8 @@ pub fn pcap_process_dir(
   conn: &Connection,
   stmt_pcap_attack: &mut Statement,
   stmt_pcap_attack_packet: &mut Statement,
+  stmt_pcap_ip: &mut Statement,
+  stmt_pcap_udp: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
@@ -70,6 +72,8 @@ pub fn pcap_process_dir(
       conn,
       stmt_pcap_attack,
       stmt_pcap_attack_packet,
+      stmt_pcap_ip,
+      stmt_pcap_udp,
       hm_cidr_udp_attack,
       hm_id,
     )
@@ -81,6 +85,8 @@ pub fn pcap_process(
   conn: &Connection,
   stmt_pcap_attack: &mut Statement,
   stmt_pcap_attack_packet: &mut Statement,
+  stmt_pcap_ip: &mut Statement,
+  stmt_pcap_udp: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
@@ -105,6 +111,8 @@ pub fn pcap_process(
                       conn,
                       stmt_pcap_attack,
                       stmt_pcap_attack_packet,
+                      stmt_pcap_ip,
+                      stmt_pcap_udp,
                       hm_cidr_udp_attack,
                       hm_id,
                       new_packet,

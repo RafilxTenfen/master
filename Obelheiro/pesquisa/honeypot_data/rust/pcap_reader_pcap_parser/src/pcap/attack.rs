@@ -51,6 +51,8 @@ impl PcapAttack {
     conn: &Connection,
     stmt_pcap_attack: &mut Statement,
     stmt_pcap_attack_packet: &mut Statement,
+    stmt_pcap_ip: &mut Statement,
+    stmt_pcap_udp: &mut Statement,
   ) {
     match stmt_pcap_attack.execute((
       &self.id,
@@ -60,7 +62,7 @@ impl PcapAttack {
       &self.timestamp_fim.to_string(),
     )) {
       Ok(_) => {
-        self.insert_pcap_packets(conn, stmt_pcap_attack_packet);
+        self.insert_pcap_packets(conn, stmt_pcap_attack_packet, stmt_pcap_ip, stmt_pcap_udp);
       }
       Err(err) => {
         println!("Problem inserting attack: {:?}", err)
@@ -68,10 +70,16 @@ impl PcapAttack {
     }
   }
 
-  fn insert_pcap_packets(&self, conn: &Connection, stmt_pcap_attack_packet: &mut Statement) {
+  fn insert_pcap_packets(
+    &self,
+    conn: &Connection,
+    stmt_pcap_attack_packet: &mut Statement,
+    stmt_pcap_ip: &mut Statement,
+    stmt_pcap_udp: &mut Statement,
+  ) {
     for packet in &self.packets {
-      packet.insert(conn);
-      match stmt_pcap_attack_packet.execute([self.id, packet.id]) {
+      packet.insert(conn, stmt_pcap_ip, stmt_pcap_udp);
+      match stmt_pcap_attack_packet.execute((&self.id, &packet.id)) {
         Ok(_) => {
           // println!("attack inserted")
         }
@@ -100,6 +108,8 @@ pub fn process_new_packet(
   conn: &Connection,
   stmt_pcap_attack: &mut Statement,
   stmt_pcap_attack_packet: &mut Statement,
+  stmt_pcap_ip: &mut Statement,
+  stmt_pcap_udp: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
   new_packet: PcapPacket,
@@ -130,7 +140,13 @@ pub fn process_new_packet(
             //   attack.id,
             //   attack.packets.len()
             // );
-            attack.insert(conn, stmt_pcap_attack, stmt_pcap_attack_packet); // inserts db
+            attack.insert(
+              conn,
+              stmt_pcap_attack,
+              stmt_pcap_attack_packet,
+              stmt_pcap_ip,
+              stmt_pcap_udp,
+            ); // inserts db
           }
 
           let id_attack = hm_id.entry("attack").or_insert(0);

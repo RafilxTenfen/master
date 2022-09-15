@@ -38,7 +38,7 @@ pub fn drop_tables(conn: &Connection) {
 }
 
 pub fn journal_mode(conn: &Connection) {
-  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=ON;") {
     Ok(_) => {
       println!("journal_mode=WAL!")
     }
@@ -121,6 +121,18 @@ pub fn get_stmt_pcap_attack(conn: &Connection) -> Statement {
 pub fn get_stmt_pcap_attack_packet(conn: &Connection) -> Statement {
   return conn
     .prepare("INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?, ?)")
+    .unwrap();
+}
+
+pub fn get_stmt_pcap_ip(conn: &Connection) -> Statement {
+  return conn
+    .prepare("INSERT INTO PCAP_IP (id, vitima_addr, vitima_cidr) values (?, ?, ?)")
+    .unwrap();
+}
+
+pub fn get_stmt_pcap_udp(conn: &Connection) -> Statement {
+  return conn
+    .prepare("INSERT INTO PCAP_UDP (id, destination_port) values (?, ?)")
     .unwrap();
 }
 

@@ -38,6 +38,8 @@ fn main() -> Result<()> {
 
   let mut stmt_pcap_attack = database::get_stmt_pcap_attack(&conn);
   let mut stmt_pcap_attack_packet = database::get_stmt_pcap_attack_packet(&conn);
+  let mut stmt_pcap_ip = database::get_stmt_pcap_ip(&conn);
+  let mut stmt_pcap_udp = database::get_stmt_pcap_udp(&conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
@@ -49,6 +51,8 @@ fn main() -> Result<()> {
     &conn,
     &mut stmt_pcap_attack,
     &mut stmt_pcap_attack_packet,
+    &mut stmt_pcap_ip,
+    &mut stmt_pcap_udp,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
   );
