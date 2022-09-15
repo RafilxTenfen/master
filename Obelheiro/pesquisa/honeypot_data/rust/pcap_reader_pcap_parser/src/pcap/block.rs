@@ -23,12 +23,15 @@ pub struct PcapPacket {
 }
 
 pub enum PcapAttackType {
-  // None,
-  // CHARGEN,
-  // SSDP,
-  DNS,
+  STEAM_GAMES,
+  SSDP,
+  QOTD,
   NTP,
+  MEMCACHED,
+  DNS,
+  COAP,
   LDAP,
+  CHARGEN,
 }
 
 impl PcapPacket {
@@ -89,6 +92,7 @@ impl PcapPacket {
               );
         }
       },
+      _ => {}
     }
 
     match result {
@@ -106,12 +110,15 @@ impl PcapPacket {
 impl PcapAttackType {
   pub fn to_string(&self) -> String {
     match self {
-      // PcapAttackType::None => String::from("None"),
-      // PcapAttackType::CHARGEN => String::from("CHARGEN"),
-      // PcapAttackType::SSDP => String::from("SSDP"),
-      PcapAttackType::DNS => String::from("DNS"),
-      PcapAttackType::LDAP => String::from("LDAP"),
+      PcapAttackType::STEAM_GAMES => String::from("STEAM_GAMES"),
+      PcapAttackType::SSDP => String::from("SSDP"),
+      PcapAttackType::QOTD => String::from("QOTD"),
       PcapAttackType::NTP => String::from("NTP"),
+      PcapAttackType::MEMCACHED => String::from("MEMCACHED"),
+      PcapAttackType::DNS => String::from("DNS"),
+      PcapAttackType::COAP => String::from("COAP"),
+      PcapAttackType::LDAP => String::from("LDAP"),
+      PcapAttackType::CHARGEN => String::from("CHARGEN"),
     }
   }
 }
@@ -159,7 +166,6 @@ fn process_sliced_packet(
         ip::process_ip(ipv4_header, *id_ipv4)
       }
       etherparse::InternetSlice::Ipv6(_, _) => {
-        println!("Parsed etherparse::InternetSlice::Ipv6");
         return None;
       }
     },
@@ -186,6 +192,23 @@ fn process_sliced_packet(
     }
   };
 
+  // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=68&page=3
+  let attack_type = match udp.destination_port {
+    27015 => PcapAttackType::STEAM_GAMES,
+    1900 => PcapAttackType::SSDP,
+    17 => PcapAttackType::QOTD,
+    123 => PcapAttackType::NTP,
+    11211 => PcapAttackType::MEMCACHED,
+    53 => PcapAttackType::DNS,
+    5683 => PcapAttackType::COAP,
+    389 => PcapAttackType::LDAP, // LDAP CLDAP USES the same port
+    19 => PcapAttackType::CHARGEN,
+    _ => {
+      // means that is none of those ports and then we do not need to use this packet
+      return None;
+    }
+  };
+
   let id_packet = hm_id.entry("ipv4").or_insert(0);
   *id_packet += 1;
   let mut packet = PcapPacket {
@@ -193,46 +216,56 @@ fn process_sliced_packet(
     ip,
     udp,
     timestamp,
-    attack_type: PcapAttackType::NTP,
+    attack_type,
     ntp: None,
     dns: None,
     ldap: None,
   };
 
-  match ntp_parser::parse_ntp(sliced_packet.payload) {
-    Ok((_, ref ntp_packet)) => {
-      let id_ntp = hm_id.entry("ntp").or_insert(0);
-      *id_ntp += 1;
-      packet.ntp = Some(ntp::process_ntp(ntp_packet, *id_ntp));
-      return Some(packet);
-    }
-    Err(_) => {}
-  }
-
-  match ldap_parser::parse_ldap_messages(sliced_packet.payload) {
-    Ok((_, ref ldap)) => {
-      for msg in ldap {
-        let id_ldap = hm_id.entry("ldap").or_insert(0);
-        *id_ldap += 1;
-        packet.ldap = Some(ldap::process_ldap(msg, *id_ldap));
-        packet.attack_type = PcapAttackType::LDAP;
-        // we only care for the first msg
+  match packet.attack_type {
+    PcapAttackType::NTP => match ntp_parser::parse_ntp(sliced_packet.payload) {
+      Ok((_, ref ntp_packet)) => {
+        let id_ntp = hm_id.entry("ntp").or_insert(0);
+        *id_ntp += 1;
+        packet.ntp = Some(ntp::process_ntp(ntp_packet, *id_ntp));
+        packet.attack_type = PcapAttackType::NTP;
         return Some(packet);
       }
+      Err(_) => {
+        return None;
+      }
+    },
+    PcapAttackType::DNS => match dns_parser::Packet::parse(sliced_packet.payload) {
+      Ok(ref dns_packet) => {
+        let id_dns = hm_id.entry("dns").or_insert(0);
+        *id_dns += 1;
+        packet.dns = Some(dns::process_dns(dns_packet, *id_dns));
+        packet.attack_type = PcapAttackType::DNS;
+        return Some(packet);
+      }
+      Err(_) => {
+        return None;
+      }
+    },
+    PcapAttackType::LDAP => {
+      match ldap_parser::parse_ldap_messages(sliced_packet.payload) {
+        Ok((_, ref ldap)) => {
+          for msg in ldap {
+            let id_ldap = hm_id.entry("ldap").or_insert(0);
+            *id_ldap += 1;
+            packet.ldap = Some(ldap::process_ldap(msg, *id_ldap));
+            packet.attack_type = PcapAttackType::LDAP;
+            // we only care for the first msg
+            return Some(packet);
+          }
+        }
+        Err(_) => {
+          return None;
+        }
+      }
     }
-    Err(_) => {}
+    _ => {}
   }
 
-  match dns_parser::Packet::parse(sliced_packet.payload) {
-    Ok(ref dns_packet) => {
-      let id_dns = hm_id.entry("dns").or_insert(0);
-      *id_dns += 1;
-      packet.dns = Some(dns::process_dns(dns_packet, *id_dns));
-      packet.attack_type = PcapAttackType::DNS;
-      return Some(packet);
-    }
-    Err(_) => {}
-  }
-
-  return None;
+  return Some(packet);
 }

@@ -64,16 +64,29 @@ pub fn pcap_process_dir(
   println!("pcap_process_dir {}", dir.display());
 
   let pcaps = get_pcaps_ordered(dir);
-  pcaps.iter().for_each(|pcap| {
-    pcap_process(
-      pcap,
-      conn,
-      hm_cidr_udp_attack,
-      hm_id,
-    )
-  });
+  pcaps
+    .iter()
+    .for_each(|pcap| pcap_process(pcap, conn, hm_cidr_udp_attack, hm_id));
 
-  // TODO: check again all the attacks with > 5 packets that were not inserted
+  let tx_conn = match conn.unchecked_transaction() {
+    Ok(tx) => tx,
+    Err(err) => {
+      println!("Error creating tx {}", err);
+      return;
+    }
+  };
+
+  // check again all the attacks with > 5 packets that were not inserted
+  pcap_process_end(&tx_conn, hm_cidr_udp_attack);
+
+  match tx_conn.commit() {
+    Ok(_) => {
+      // println!("Sending commit");
+    }
+    Err(err) => {
+      println!("Error openning file {}", err);
+    }
+  };
 }
 
 pub fn pcap_process(
@@ -107,12 +120,7 @@ pub fn pcap_process(
               Ok((offset, ref block)) => {
                 match block::process_block(block, hm_id) {
                   Some(new_packet) => {
-                    attack::process_new_packet(
-                      &tx_conn,
-                      hm_cidr_udp_attack,
-                      hm_id,
-                      new_packet,
-                    );
+                    attack::process_new_packet(&tx_conn, hm_cidr_udp_attack, hm_id, new_packet);
                   }
                   None => {}
                 }
@@ -140,9 +148,24 @@ pub fn pcap_process(
   match tx_conn.commit() {
     Ok(_) => {
       // println!("Sending commit");
-    },
+    }
     Err(err) => {
       println!("Error openning file {}", err);
     }
   };
+}
+
+// inserts all the attacks with packets.len > 5 that weren't inserted in the
+// add new packet loop
+pub fn pcap_process_end(
+  conn: &Connection,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+) {
+  for (_, udp_attack) in hm_cidr_udp_attack {
+    for (_, attack) in udp_attack {
+      if attack.packets.len() > 5 {
+        attack.insert(conn);
+      }
+    }
+  }
 }

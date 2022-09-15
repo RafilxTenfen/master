@@ -8,11 +8,11 @@ use std::collections::HashMap;
 use super::block::PcapPacket;
 
 pub struct PcapAttack {
-  id: u32,
-  ip_vitima_cidr: Ipv4Cidr,
-  packets: Vec<PcapPacket>,
-  timestamp_inicio: NaiveDateTime,
-  timestamp_fim: NaiveDateTime,
+  pub id: u32,
+  pub ip_vitima_cidr: Ipv4Cidr,
+  pub packets: Vec<PcapPacket>,
+  pub timestamp_inicio: NaiveDateTime,
+  pub timestamp_fim: NaiveDateTime,
 }
 
 impl PcapAttack {
