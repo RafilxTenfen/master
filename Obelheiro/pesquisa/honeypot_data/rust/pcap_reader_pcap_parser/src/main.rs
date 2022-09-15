@@ -28,16 +28,10 @@ fn main() -> Result<()> {
   // This command will cause SQLite to not wait on data to reach the disk surface,
   // which will make write operations appear to be much faster.
   // But if you lose power in the middle of a transaction, your database file might go corrupt.
-  let conn = database::conn_get_mix_protocol()?;
+  let mut conn = database::conn_get_mix_protocol()?;
   database::journal_mode(&conn);
   database::drop_tables(&conn);
   database::create_tables(&conn);
-
-  // let conn_bmut = conn.borrow_mut();
-  // let ref_to_conn = &conn;
-
-  let mut stmt_pcap_attack = database::get_stmt_pcap_attack(&conn);
-  let mut stmt_pcap_attack_packet = database::get_stmt_pcap_attack_packet(&conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
@@ -45,20 +39,14 @@ fn main() -> Result<()> {
 
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   pcap::pcap_process_dir(
+    // &currently_dir.join("../../pcap/test/pcap_files"),
     &currently_dir.join("../../pcap"),
-    &conn,
-    &mut stmt_pcap_attack,
-    &mut stmt_pcap_attack_packet,
+    &mut conn,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
   );
 
-  // conn.begi
-  // conn.borrow_mut().close();
-  // astmt_pcap_attack.execute([&123])?;
-  // stmt_pcap_attack.
-  // conn.close();
-  // database::close(conn);
+  database::close(conn);
 
   Ok(())
 }

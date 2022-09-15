@@ -23,6 +23,7 @@ impl PcapIP {
   }
 }
 
+// TODO: hashmap of ipv4cidr vitima_addr -> vitima cidr
 pub fn process_ip(ipv4_header: Ipv4HeaderSlice, id: u32) -> PcapIP {
   let vitima_addr = ipv4_header.source_addr().to_string();
   let vitima_cidr = match Ipv4Cidr::from_str(vitima_addr.as_str()) {

@@ -2,7 +2,7 @@ use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
 use rusqlite::Connection;
-use rusqlite::Statement;
+use rusqlite::{params, Statement, Transaction};
 use std::collections::HashMap;
 
 use super::block::PcapPacket;
@@ -46,21 +46,14 @@ impl PcapAttack {
 
   // DATABASE FUNCTIONS
 
-  pub fn insert(
-    &self,
-    conn: &Connection,
-    stmt_pcap_attack: &mut Statement,
-    stmt_pcap_attack_packet: &mut Statement,
-  ) {
-    match stmt_pcap_attack.execute((
-      &self.id,
-      &self.ip_vitima_cidr.to_string(),
-      &self.packets.len(),
-      &self.timestamp_inicio.to_string(),
-      &self.timestamp_fim.to_string(),
-    )) {
+  pub fn insert(&self, conn: &Connection) {
+    match conn.execute(
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?1, ?2, ?3, ?4, ?5)",
+      params![&self.id, &self.ip_vitima_cidr.to_string(), &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+    ) {
       Ok(_) => {
-        self.insert_pcap_packets(conn, stmt_pcap_attack_packet);
+        // println!("attack inserted");
+        self.insert_pcap_packets(conn);
       }
       Err(err) => {
         println!("Problem inserting attack: {:?}", err)
@@ -68,10 +61,13 @@ impl PcapAttack {
     }
   }
 
-  fn insert_pcap_packets(&self, conn: &Connection, stmt_pcap_attack_packet: &mut Statement) {
+  fn insert_pcap_packets(&self, conn: &Connection) {
     for packet in &self.packets {
       packet.insert(conn);
-      match stmt_pcap_attack_packet.execute([self.id, packet.id]) {
+      match conn.execute(
+        "INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?1, ?2)",
+        params![&self.id, &packet.id],
+      ) {
         Ok(_) => {
           // println!("attack inserted")
         }
@@ -98,8 +94,6 @@ pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut u32) -> HashMap<u16
 // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
 pub fn process_new_packet(
   conn: &Connection,
-  stmt_pcap_attack: &mut Statement,
-  stmt_pcap_attack_packet: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
   new_packet: PcapPacket,
@@ -130,7 +124,7 @@ pub fn process_new_packet(
             //   attack.id,
             //   attack.packets.len()
             // );
-            attack.insert(conn, stmt_pcap_attack, stmt_pcap_attack_packet); // inserts db
+            attack.insert(conn); // inserts db
           }
 
           let id_attack = hm_id.entry("attack").or_insert(0);
