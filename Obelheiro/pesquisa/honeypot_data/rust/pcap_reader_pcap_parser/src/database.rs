@@ -129,6 +129,8 @@ pub fn close(conn: Connection) {
     Ok(_) => {
       println!("Connection closed")
     }
-    Err(_) => todo!(),
+    Err(_) => {
+      println!("Error closing connection")
+    }
   }
 }
