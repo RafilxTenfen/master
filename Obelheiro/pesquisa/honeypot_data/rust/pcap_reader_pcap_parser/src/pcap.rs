@@ -1,6 +1,6 @@
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
-use rusqlite::Connection;
+use rusqlite::{Connection, Statement};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -56,6 +56,7 @@ pub fn get_pcaps_ordered(dir: &PathBuf) -> Vec<PathBuf> {
 pub fn pcap_process_dir(
   dir: &PathBuf,
   conn: &Connection,
+  stmt_pcap_attack: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
@@ -64,12 +65,13 @@ pub fn pcap_process_dir(
   let pcaps = get_pcaps_ordered(dir);
   pcaps
     .iter()
-    .for_each(|pcap| pcap_process(pcap, conn, hm_cidr_udp_attack, hm_id));
+    .for_each(|pcap| pcap_process(pcap, conn, stmt_pcap_attack, hm_cidr_udp_attack, hm_id));
 }
 
 pub fn pcap_process(
   pcap: &PathBuf,
   conn: &Connection,
+  stmt_pcap_attack: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
@@ -90,7 +92,13 @@ pub fn pcap_process(
               Ok((offset, ref block)) => {
                 match block::process_block(block, hm_id) {
                   Some(new_packet) => {
-                    attack::process_new_packet(conn, hm_cidr_udp_attack, hm_id, new_packet);
+                    attack::process_new_packet(
+                      conn,
+                      stmt_pcap_attack,
+                      hm_cidr_udp_attack,
+                      hm_id,
+                      new_packet,
+                    );
                   }
                   None => {}
                 }

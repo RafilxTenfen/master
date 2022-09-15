@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, Statement};
 use std::{env, path::PathBuf};
 
 pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
@@ -103,7 +103,14 @@ pub fn create_tables(conn: &Connection) {
   }
 }
 
+
+pub fn get_stmt_pcap_attack(conn: &Connection) -> Statement {
+  return conn.prepare("INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?, ?, ?, ?, ?)").unwrap()
+}
+
 pub fn close(conn: Connection) {
+  // conn.clone;
+  // conn.close();
   match conn.close() {
     Ok(_) => {
       println!("Connection closed")

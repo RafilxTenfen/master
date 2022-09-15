@@ -1,4 +1,5 @@
 use rusqlite::Result;
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
@@ -20,9 +21,21 @@ fn main() -> Result<()> {
   let currently_dir = get_current_working_dir();
   println!("Working dir {}", currently_dir.display());
 
+  // remind to set wal
+  // PRAGMA journal_mode=WAL;
+  // https://sqlite.org/wal.html
+  // Another option is to run PRAGMA synchronous=OFF.
+  // This command will cause SQLite to not wait on data to reach the disk surface,
+  // which will make write operations appear to be much faster.
+  // But if you lose power in the middle of a transaction, your database file might go corrupt.
   let conn = database::conn_get_mix_protocol()?;
   database::drop_tables(&conn);
   database::create_tables(&conn);
+
+  // let conn_bmut = conn.borrow_mut();
+  // let ref_to_conn = &conn;
+
+  let mut stmt_pcap_attack = database::get_stmt_pcap_attack(&conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
@@ -32,11 +45,17 @@ fn main() -> Result<()> {
   pcap::pcap_process_dir(
     &currently_dir.join("../../pcap"),
     &conn,
+    &mut stmt_pcap_attack,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
   );
 
-  database::close(conn);
+  // conn.begi
+  // conn.borrow_mut().close();
+  // astmt_pcap_attack.execute([&123])?;
+  // stmt_pcap_attack.
+  // conn.close();
+  // database::close(conn);
 
   Ok(())
 }

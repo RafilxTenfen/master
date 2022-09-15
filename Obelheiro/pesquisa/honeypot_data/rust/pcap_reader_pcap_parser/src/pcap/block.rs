@@ -12,7 +12,7 @@ mod ntp;
 mod udp;
 
 pub struct PcapPacket {
-  pub id: i32,
+  pub id: u32,
   pub timestamp: NaiveDateTime,
   pub ip: ip::PcapIP,
   pub udp: udp::PcapUDP,
@@ -186,8 +186,10 @@ fn process_sliced_packet(
     }
   };
 
+  let id_packet = hm_id.entry("ipv4").or_insert(0);
+  *id_packet += 1;
   let mut packet = PcapPacket {
-    id: 0,
+    id: *id_packet,
     ip,
     udp,
     timestamp,
