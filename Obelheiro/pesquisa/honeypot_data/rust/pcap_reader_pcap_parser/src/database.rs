@@ -32,7 +32,18 @@ pub fn drop_tables(conn: &Connection) {
       println!("drop Tables!")
     }
     Err(err) => {
-      println!("Problem creating table: {:?}", err)
+      println!("Problem dropping table: {:?}", err)
+    }
+  }
+}
+
+pub fn journal_mode(conn: &Connection) {
+  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+    Ok(_) => {
+      println!("journal_mode=WAL!")
+    }
+    Err(err) => {
+      println!("Problem setting journal: {:?}", err)
     }
   }
 }
@@ -103,18 +114,23 @@ pub fn create_tables(conn: &Connection) {
   }
 }
 
-
 pub fn get_stmt_pcap_attack(conn: &Connection) -> Statement {
-  return conn.prepare("INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?, ?, ?, ?, ?)").unwrap()
+  return conn.prepare("INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?, ?, ?, ?, ?)").unwrap();
 }
 
-pub fn close(conn: Connection) {
-  // conn.clone;
-  // conn.close();
-  match conn.close() {
-    Ok(_) => {
-      println!("Connection closed")
-    }
-    Err(_) => todo!(),
-  }
+pub fn get_stmt_pcap_attack_packet(conn: &Connection) -> Statement {
+  return conn
+    .prepare("INSERT INTO PCAP_ATTACK_PACKET (attack_id, packet_id) values (?, ?)")
+    .unwrap();
 }
+
+// pub fn close(conn: Connection) {
+//   // conn.clone;
+//   // conn.close();
+//   match conn.close() {
+//     Ok(_) => {
+//       println!("Connection closed")
+//     }
+//     Err(_) => todo!(),
+//   }
+// }

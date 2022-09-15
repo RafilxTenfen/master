@@ -57,21 +57,30 @@ pub fn pcap_process_dir(
   dir: &PathBuf,
   conn: &Connection,
   stmt_pcap_attack: &mut Statement,
+  stmt_pcap_attack_packet: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
   println!("pcap_process_dir {}", dir.display());
 
   let pcaps = get_pcaps_ordered(dir);
-  pcaps
-    .iter()
-    .for_each(|pcap| pcap_process(pcap, conn, stmt_pcap_attack, hm_cidr_udp_attack, hm_id));
+  pcaps.iter().for_each(|pcap| {
+    pcap_process(
+      pcap,
+      conn,
+      stmt_pcap_attack,
+      stmt_pcap_attack_packet,
+      hm_cidr_udp_attack,
+      hm_id,
+    )
+  });
 }
 
 pub fn pcap_process(
   pcap: &PathBuf,
   conn: &Connection,
   stmt_pcap_attack: &mut Statement,
+  stmt_pcap_attack_packet: &mut Statement,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
 ) {
@@ -95,6 +104,7 @@ pub fn pcap_process(
                     attack::process_new_packet(
                       conn,
                       stmt_pcap_attack,
+                      stmt_pcap_attack_packet,
                       hm_cidr_udp_attack,
                       hm_id,
                       new_packet,

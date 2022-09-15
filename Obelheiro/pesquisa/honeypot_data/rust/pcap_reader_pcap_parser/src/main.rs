@@ -1,5 +1,5 @@
 use rusqlite::Result;
-use std::borrow::BorrowMut;
+// use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
@@ -29,6 +29,7 @@ fn main() -> Result<()> {
   // which will make write operations appear to be much faster.
   // But if you lose power in the middle of a transaction, your database file might go corrupt.
   let conn = database::conn_get_mix_protocol()?;
+  database::journal_mode(&conn);
   database::drop_tables(&conn);
   database::create_tables(&conn);
 
@@ -36,6 +37,7 @@ fn main() -> Result<()> {
   // let ref_to_conn = &conn;
 
   let mut stmt_pcap_attack = database::get_stmt_pcap_attack(&conn);
+  let mut stmt_pcap_attack_packet = database::get_stmt_pcap_attack_packet(&conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
@@ -46,6 +48,7 @@ fn main() -> Result<()> {
     &currently_dir.join("../../pcap"),
     &conn,
     &mut stmt_pcap_attack,
+    &mut stmt_pcap_attack_packet,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
   );
