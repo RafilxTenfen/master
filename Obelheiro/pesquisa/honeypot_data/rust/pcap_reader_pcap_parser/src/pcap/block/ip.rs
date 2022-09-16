@@ -8,6 +8,7 @@ use rusqlite::{params, Connection};
 pub struct PcapIP {
   pub id: u32,
   pub vitima_addr: String,
+  pub dest_addr: String,
   pub vitima_cidr: Ipv4Cidr,
 }
 
@@ -31,12 +32,14 @@ pub fn process_ip(
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> PcapIP {
 
+
   // let addr = vitima_addr.clone();
   let vitima_cidr = process_ip_cidr(ipv4_header.source_addr().to_string(), hm_ip_cidr);
 
   return PcapIP {
     id,
     vitima_addr: ipv4_header.source_addr().to_string(),
+    dest_addr: ipv4_header.destination_addr().to_string(),
     vitima_cidr,
   };
 }
