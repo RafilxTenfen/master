@@ -25,6 +25,7 @@ pub fn process_ntp(ntp_packet: &NtpPacket, id: u32) -> PcapNTP {
     ntp_parser::NtpPacket::V3(ntp_v3) => {
       return PcapNTP {
         id,
+        // TODO: verify monlist check bytes
         refid: ntp_v3.ref_id,
       };
     }

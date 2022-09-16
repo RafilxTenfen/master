@@ -31,14 +31,12 @@ pub fn process_ip(
   id: u32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> PcapIP {
-
-
-  // let addr = vitima_addr.clone();
-  let vitima_cidr = process_ip_cidr(ipv4_header.source_addr().to_string(), hm_ip_cidr);
+  let vitima_addr = ipv4_header.source_addr().to_string();
+  let (vitima_cidr, vitima) = process_ip_cidr(vitima_addr, hm_ip_cidr);
 
   return PcapIP {
     id,
-    vitima_addr: ipv4_header.source_addr().to_string(),
+    vitima_addr: vitima,
     dest_addr: ipv4_header.destination_addr().to_string(),
     vitima_cidr,
   };
@@ -47,9 +45,9 @@ pub fn process_ip(
 pub fn process_ip_cidr(
   vitima_addr: String,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
-) -> Ipv4Cidr {
+) -> (Ipv4Cidr, String) {
   match hm_ip_cidr.get(&vitima_addr) {
-    Some(cidr) => *cidr,
+    Some(cidr) => (*cidr, vitima_addr),
     None => {
       let cidr = match Ipv4Cidr::from_str(vitima_addr.to_string()) {
         Ok(cidr) => cidr,
@@ -58,8 +56,8 @@ pub fn process_ip_cidr(
           Ipv4Cidr::from_str("192.168.51.0/24").unwrap()
         }
       };
-      hm_ip_cidr.insert(vitima_addr, cidr);
-      cidr
+      hm_ip_cidr.insert(vitima_addr.to_string(), cidr);
+      (cidr, vitima_addr)
     }
   }
 }
