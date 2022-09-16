@@ -24,7 +24,7 @@ pub struct PcapPacket {
 }
 
 pub enum PcapAttackType {
-  STEAM_GAMES,
+  STEAM,
   SSDP,
   QOTD,
   NTP,
@@ -111,7 +111,7 @@ impl PcapPacket {
 impl PcapAttackType {
   pub fn to_string(&self) -> String {
     match self {
-      PcapAttackType::STEAM_GAMES => String::from("STEAM_GAMES"),
+      PcapAttackType::STEAM => String::from("STEAM_GAMES"),
       PcapAttackType::SSDP => String::from("SSDP"),
       PcapAttackType::QOTD => String::from("QOTD"),
       PcapAttackType::NTP => String::from("NTP"),
@@ -204,7 +204,7 @@ fn process_sliced_packet(
 
   // https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=68&page=3
   let attack_type = match udp.destination_port {
-    27015 => PcapAttackType::STEAM_GAMES,
+    27015 => PcapAttackType::STEAM,
     1900 => PcapAttackType::SSDP,
     17 => PcapAttackType::QOTD,
     123 => PcapAttackType::NTP,
