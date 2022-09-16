@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
-use etherparse::{Ipv4HeaderSlice, SlicedPacket};
+use etherparse::{SlicedPacket};
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 use rusqlite::{params, Connection};

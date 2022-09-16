@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result, Statement};
+use rusqlite::{Connection, Result};
 use std::{env, path::PathBuf};
 
 pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
