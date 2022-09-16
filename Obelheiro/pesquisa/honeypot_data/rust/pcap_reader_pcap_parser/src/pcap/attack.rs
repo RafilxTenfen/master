@@ -2,7 +2,7 @@ use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
 use rusqlite::Connection;
-use rusqlite::{params, Statement, Transaction};
+use rusqlite::{params};
 use std::collections::HashMap;
 
 use super::block::PcapPacket;

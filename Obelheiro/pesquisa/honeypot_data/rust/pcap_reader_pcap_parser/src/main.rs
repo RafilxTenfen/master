@@ -1,3 +1,4 @@
+use cidr_utils::cidr::Ipv4Cidr;
 use rusqlite::Result;
 // use std::borrow::BorrowMut;
 use std::collections::HashMap;
@@ -36,6 +37,7 @@ fn main() -> Result<()> {
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
   let mut hm_id = HashMap::<&str, u32>::new();
+  let mut hm_ip_cidr = HashMap::<String, Ipv4Cidr>::new();
 
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   pcap::pcap_process_dir(
@@ -44,6 +46,7 @@ fn main() -> Result<()> {
     &mut conn,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
+    &mut hm_ip_cidr,
   );
 
   database::close(conn);

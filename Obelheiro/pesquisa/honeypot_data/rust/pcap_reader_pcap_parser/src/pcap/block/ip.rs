@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
 use rusqlite::{params, Connection};
@@ -24,20 +26,39 @@ impl PcapIP {
 }
 
 // TODO: hashmap of ipv4cidr vitima_addr -> vitima cidr
-pub fn process_ip(ipv4_header: Ipv4HeaderSlice, id: u32) -> PcapIP {
+pub fn process_ip(
+  ipv4_header: Ipv4HeaderSlice,
+  id: u32,
+  hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+) -> PcapIP {
   let vitima_addr = ipv4_header.source_addr().to_string();
-  let vitima_cidr = match Ipv4Cidr::from_str(vitima_addr.as_str()) {
-    // adding CIDR takes 10sec +
-    Ok(cidr) => cidr,
-    Err(err) => {
-      println!("Problem Ipv4Cidr ip: {:?}, - err {:?}", vitima_addr, err);
-      Ipv4Cidr::from_str("192.168.51.0/24").unwrap()
-    }
-  };
+
+  let addr = vitima_addr.clone();
+  let vitima_cidr = process_ip_cidr(vitima_addr, hm_ip_cidr);
 
   return PcapIP {
     id,
-    vitima_addr,
+    vitima_addr: addr,
     vitima_cidr,
   };
+}
+
+pub fn process_ip_cidr(
+  vitima_addr: String,
+  hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+) -> Ipv4Cidr {
+  match hm_ip_cidr.get(&vitima_addr) {
+    Some(cidr) => *cidr,
+    None => {
+      let cidr = match Ipv4Cidr::from_str(vitima_addr.to_string()) {
+        Ok(cidr) => cidr,
+        Err(err) => {
+          println!("Err parsing cidr {}", err);
+          Ipv4Cidr::from_str("192.168.51.0/24").unwrap()
+        }
+      };
+      hm_ip_cidr.insert(vitima_addr, cidr);
+      cidr
+    }
+  }
 }

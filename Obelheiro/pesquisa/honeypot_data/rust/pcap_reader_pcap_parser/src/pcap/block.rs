@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
-use etherparse::SlicedPacket;
+use cidr_utils::cidr::Ipv4Cidr;
+use etherparse::{Ipv4HeaderSlice, SlicedPacket};
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 use rusqlite::{params, Connection};
@@ -123,14 +124,18 @@ impl PcapAttackType {
   }
 }
 
-pub fn process_block(block: &PcapBlockOwned, hm_id: &mut HashMap<&str, u32>) -> Option<PcapPacket> {
+pub fn process_block(
+  block: &PcapBlockOwned,
+  hm_id: &mut HashMap<&str, u32>,
+  hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+) -> Option<PcapPacket> {
   match block {
     LegacyHeader(header) => {
       println!("PCAP Header size {}", header.size());
       return None;
     }
     Legacy(block) => {
-      return process_legacy_block(block, hm_id);
+      return process_legacy_block(block, hm_id, hm_ip_cidr);
     }
     NG(new_block) => {
       println!("NG new block in pcap {}", new_block.magic());
@@ -139,12 +144,16 @@ pub fn process_block(block: &PcapBlockOwned, hm_id: &mut HashMap<&str, u32>) -> 
   }
 }
 
-fn process_legacy_block(b: &LegacyPcapBlock, hm_id: &mut HashMap<&str, u32>) -> Option<PcapPacket> {
+fn process_legacy_block(
+  b: &LegacyPcapBlock,
+  hm_id: &mut HashMap<&str, u32>,
+  hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+) -> Option<PcapPacket> {
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
 
   match SlicedPacket::from_ethernet(b.data) {
     Ok(sliced_packet) => {
-      return process_sliced_packet(sliced_packet, naive_date_time, hm_id);
+      return process_sliced_packet(sliced_packet, naive_date_time, hm_id, hm_ip_cidr);
     }
     Err(err) => {
       println!("Err SlicedPacket::from_ethernet {}", err);
@@ -157,13 +166,14 @@ fn process_sliced_packet(
   sliced_packet: SlicedPacket,
   timestamp: NaiveDateTime,
   hm_id: &mut HashMap<&str, u32>,
+  hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let ip = match sliced_packet.ip {
     Some(ip) => match ip {
       etherparse::InternetSlice::Ipv4(ipv4_header, _) => {
         let id_ipv4 = hm_id.entry("ipv4").or_insert(0);
         *id_ipv4 += 1;
-        ip::process_ip(ipv4_header, *id_ipv4)
+        ip::process_ip(ipv4_header, *id_ipv4, hm_ip_cidr)
       }
       etherparse::InternetSlice::Ipv6(_, _) => {
         return None;
