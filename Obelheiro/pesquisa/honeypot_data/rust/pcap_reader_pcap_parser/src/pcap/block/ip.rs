@@ -25,7 +25,6 @@ impl PcapIP {
   }
 }
 
-// TODO: hashmap of ipv4cidr vitima_addr -> vitima cidr
 pub fn process_ip(
   ipv4_header: Ipv4HeaderSlice,
   id: u32,
