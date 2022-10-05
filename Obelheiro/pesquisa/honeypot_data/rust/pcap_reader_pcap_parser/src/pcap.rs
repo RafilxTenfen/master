@@ -196,28 +196,11 @@ pub fn pcap_process_clear_old_attacks(
             attack.insert(conn);
           }
 
+          // insert to be deleted afterwards
           cidr_udp_attacks_to_delete.insert(*cidr, *attack_udp_dest_port);
-          // cidr_attacks_to_delete.push(cidr);
-          // udp_attacks_to_delete.push(attack_udp_dest_port);
-          // if let Entry::Occupied(o) = udp_attack.entry(*attack_udp_dest_port) {
-          //   o.remove();
-          // }
-          // match udp_attack.entry(*attack_udp_dest_port) {
-          //   std::collections::hash_map::Entry::Occupied(o) => {
-          //     o.remove();
-          //   },
-          //   std::collections::hash_map::Entry::Vacant(_) => {},
-          // }
-
-          // udp_attack.remove(attack_udp_dest_port);
         }
         None => continue,
       }
-
-      // attack.timestamp_fim
-      // if attack.packets.len() < 5 {
-      //   attack.insert(conn);
-      // }
     }
   }
 
@@ -225,25 +208,25 @@ pub fn pcap_process_clear_old_attacks(
   for (cidr, udp_port_to_delete) in cidr_udp_attacks_to_delete {
     match hm_cidr_udp_attack.get_mut(&cidr) {
       Some(udp_attack) => {
+
         if let Entry::Occupied(o) = udp_attack.entry(udp_port_to_delete) {
           o.remove();
         }
-        if udp_attack.is_empty() {
-        //   if let Entry::Occupied(o) = cidr_udp_attacks_to_delete.entry(cidr) {
-        //     o.remove();
-        //   }
+
+        // now we check if the second hashmap is empty for that cidr entry
+        if !udp_attack.is_empty() {
+          continue
+        }
+
+        // if it is we can delete it
+        if let Entry::Occupied(o) = hm_cidr_udp_attack.entry(cidr) {
+          o.remove();
         }
       }
       None => {}
     }
   }
 
-
-  // for attack_udp_dest_port_to_delete in udp_attacks_to_delete {
-  //   if let Entry::Occupied(o) = udp_attack.entry(*attack_udp_dest_port_to_delete) {
-  //     o.remove();
-  //   }
-  // }
 }
 
 // inserts all the attacks with packets.len > 5 that weren't inserted in the
