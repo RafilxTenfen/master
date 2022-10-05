@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
-use etherparse::{SlicedPacket};
+use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
 use rusqlite::{params, Connection};
@@ -220,12 +220,13 @@ fn process_sliced_packet(
   };
 
   // só queremos pacotes em que o ip de destino é "200.19.107.238" "200.19.107.255"
-  if !(ip.dest_addr.eq(&String::from("200.19.107.238")) || ip.dest_addr.eq(&String::from("200.19.107.255"))) {
+  if !(ip.dest_addr.eq(&String::from("200.19.107.238"))
+    || ip.dest_addr.eq(&String::from("200.19.107.255")))
+  {
     // println!("DESCARTAR: UDP dest port: {} ip source: {} ip dest: {}", udp.destination_port, ip.vitima_addr, ip.dest_addr);
     return None;
   }
   // println!("processando: UDP dest port: {} ip source: {} ip dest: {}", udp.destination_port, ip.vitima_addr, ip.dest_addr);
-
 
   let id_packet = hm_id.entry("ipv4").or_insert(0);
   *id_packet += 1;

@@ -39,16 +39,16 @@ fn main() -> Result<()> {
   let mut hm_id = HashMap::<&str, u32>::new();
   let mut hm_ip_cidr = HashMap::<String, Ipv4Cidr>::new();
 
-
   // TODO: PROCESSAR bzip, abrir e ler pcap
   // https://docs.rs/bzip2/latest/bzip2/
+  // ls | wc -l: 39066 pcap files
   // SALVAR SOMENTE ATAQUES de pcaps que foram totalmente processados
   // salvar no db os pcaps ja processados
 
   // loop entre vários arquivos pcaps, ordenados pela data '-'
   pcap::pcap_process_dir(
-    // &currently_dir.join("../../pcap/test/pcap_files"),
-    &currently_dir.join("../../pcap"),
+    &currently_dir.join("../../pcap/test/pcap_files"),
+    // &currently_dir.join("../../pcap"),
     &mut conn,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
