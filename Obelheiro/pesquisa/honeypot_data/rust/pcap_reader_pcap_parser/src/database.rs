@@ -1,22 +1,48 @@
-use rusqlite::{Connection, Result};
-use std::{env, path::PathBuf};
+// use rusqlite::{Connection, Result};
+use postgres::{Client, NoTls};
+use std::env; // https://crates.io/crates/postgres/0.17.0-alpha.1
 
-pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
-  let current_path = match env::current_dir() {
-    Ok(curpath) => curpath,
-    Err(_) => PathBuf::from("./"),
-  };
+// pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
+//   let current_path = match env::current_dir() {
+//     Ok(curpath) => curpath,
+//     Err(_) => PathBuf::from("./"),
+//   };
 
-  let db_path = current_path
-    .as_path()
-    .join("../../db/database-2022-05-11/mix_protocol.sqlite");
+//   let db_path = current_path
+//     .as_path()
+//     .join("../../db/database-2022-05-11/mix_protocol.sqlite");
 
-  println!("Opening connection to {}", db_path.display());
-  return Connection::open(db_path);
+//   println!("Opening connection to {}", db_path.display());
+//   return Connection::open(db_path);
+// }
+
+// pub fn conn_get_rust_pcap() -> Result<Connection, rusqlite::Error> {
+//   let current_path = match env::current_dir() {
+//     Ok(curpath) => curpath,
+//     Err(_) => PathBuf::from("./"),
+//   };
+
+//   let db_path = current_path
+//     .as_path()
+//     .join("../../db/database-2022-05-11/rust_pcap.sqlite");
+
+//   println!("Opening connection to {}", db_path.display());
+//   return Connection::open(db_path);
+// }
+
+pub fn conn_gcp_rust_pcap() -> Client {
+  let db_pass = env::var("DB_PASS").unwrap();
+  let uri = format!(
+    "host=localhost user=postgres password={} port=5431",
+    db_pass
+  )
+  .to_string();
+
+  return Client::connect(&uri, NoTls).unwrap();
 }
 
-pub fn drop_tables(conn: &Connection) {
-  match conn.execute_batch(
+pub fn drop_tables(conn: &mut Client) {
+  match conn.batch_execute(
     "
     DROP TABLE IF EXISTS PCAP_ATTACK;
     DROP TABLE IF EXISTS PCAP_ATTACK_PACKET;
@@ -37,8 +63,8 @@ pub fn drop_tables(conn: &Connection) {
   }
 }
 
-pub fn journal_mode(conn: &Connection) {
-  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+pub fn journal_mode(conn: &mut Client) {
+  match conn.batch_execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
     Ok(_) => {
       println!("journal_mode=WAL!")
     }
@@ -48,60 +74,56 @@ pub fn journal_mode(conn: &Connection) {
   }
 }
 
-pub fn create_tables(conn: &Connection) {
-  match conn.execute_batch(
+pub fn create_tables(conn: &mut Client) {
+  match conn.batch_execute(
     "
     CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
-      id INTEGER NOT NULL,
+      id BIGINT NOT NULL,
       ip_vitima_cidr TEXT NOT NULL,
-      packets_per_attack INTEGER NOT NULL,
+      packets_per_attack INT NOT NULL,
       timestamp_inicio TEXT NOT NULL,
       timestamp_fim TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS PCAP_ATTACK_PACKET (
-      attack_id INTEGER NOT NULL,
-      packet_id INTEGER NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS PCAP_PACKET (
-      id INTEGER NOT NULL,
+      id BIGINT NOT NULL,
       timestamp_str TEXT NOT NULL,
-      ip_id INTEGER NOT NULL,
-      udp_id INTEGER NOT NULL,
+      attack_id BIGINT NOT NULL,
+      ip_id BIGINT NOT NULL,
+      udp_id BIGINT NOT NULL,
       attack_type TEXT NOT NULL,
-      dns_id INTEGER,
-      ldap_id INTEGER,
-      ntp_id INTEGER
+      dns_id BIGINT,
+      ldap_id BIGINT,
+      ntp_id BIGINT
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_IP (
-      id INTEGER NOT NULL,
+      id BIGINT NOT NULL,
       vitima_addr TEXT NOT NULL,
       vitima_cidr TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_UDP (
-      id INTEGER NOT NULL,
-      destination_port INTEGER NOT NULL
+      id BIGINT NOT NULL,
+      destination_port SMALLINT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_DNS (
-      id INTEGER NOT NULL,
-      tx_id INTEGER NOT NULL,
+      id BIGINT NOT NULL,
+      tx_id INT NOT NULL,
       qname TEXT NOT NULL,
       qtype TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_LDAP (
-      id INTEGER NOT NULL,
-      message_id INTEGER NOT NULL,
-      protocol_op INTEGER NOT NULL
+      id BIGINT NOT NULL,
+      message_id INT NOT NULL,
+      protocol_op INT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_NTP (
-      id INTEGER NOT NULL,
-      refid INTEGER NOT NULL
+      id BIGINT NOT NULL,
+      refid BIGINT NOT NULL
     );
     ",
   ) {
@@ -124,13 +146,13 @@ pub fn create_tables(conn: &Connection) {
 //     .unwrap();
 // }
 
-pub fn close(conn: Connection) {
-  match conn.close() {
-    Ok(_) => {
-      println!("Connection closed")
-    }
-    Err(_) => {
-      println!("Error closing connection")
-    }
-  }
-}
+// pub fn close(conn: Connection) {
+//   match conn.close() {
+//     Ok(_) => {
+//       println!("Connection closed")
+//     }
+//     Err(_) => {
+//       println!("Error closing connection")
+//     }
+//   }
+// }

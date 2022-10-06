@@ -3,7 +3,8 @@ use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
-use rusqlite::{params, Connection};
+use postgres::Transaction;
+// use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
 mod dns;
@@ -13,7 +14,7 @@ mod ntp;
 mod udp;
 
 pub struct PcapPacket {
-  pub id: u32,
+  pub id: i64,
   pub timestamp: NaiveDateTime,
   pub ip: ip::PcapIP,
   pub udp: udp::PcapUDP,
@@ -36,8 +37,8 @@ pub enum PcapAttackType {
 }
 
 impl PcapPacket {
-  pub fn insert(&self, conn: &Connection) {
-    let mut result: Result<usize, rusqlite::Error> = Ok(0);
+  pub fn insert(&self, conn: &mut Transaction, attack_id: &i64) {
+    let mut result: Result<u64, postgres::Error> = Ok(0);
 
     self.ip.insert(conn);
     self.udp.insert(conn);
@@ -50,10 +51,11 @@ impl PcapPacket {
         Some(ref dns) => {
           dns.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, dns_id) values (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![
+                "INSERT INTO PCAP_PACKET (id, timestamp_str, attack_id, ip_id, udp_id, attack_type, dns_id) values ($1, $2, $3, $4, $5, $6)",
+                &[
                   &self.id,
                   &self.timestamp.to_string(),
+                  attack_id,
                   &self.ip.id,
                   &self.udp.id,
                   &self.attack_type.to_string(),
@@ -69,8 +71,8 @@ impl PcapPacket {
         Some(ref ldap) => {
           ldap.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ldap_id) values (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![&self.id, &self.timestamp.to_string(), &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ldap.id],
+                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ldap_id) values ($1, $2, $3, $4, $5, $6)",
+                &[&self.id, &self.timestamp.to_string(), &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ldap.id],
               );
         }
       },
@@ -81,8 +83,8 @@ impl PcapPacket {
         Some(ref ntp) => {
           ntp.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ntp_id) values (?1, ?2, ?3, ?4, ?5, ?6 )",
-                params![
+                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ntp_id) values ($1, $2, $3, $4, $5, $6)",
+                &[
                   &self.id,
                   &self.timestamp.to_string(),
                   &self.ip.id,
@@ -97,7 +99,9 @@ impl PcapPacket {
     }
 
     match result {
-      Ok(_) => {}
+      Ok(_) => {
+        println!("INSERTED Packet")
+      }
       Err(err) => {
         println!(
           "Problem inserting packet: {:?} - packet id: {}",
@@ -126,12 +130,12 @@ impl PcapAttackType {
 
 pub fn process_block(
   block: &PcapBlockOwned,
-  hm_id: &mut HashMap<&str, u32>,
+  hm_id: &mut HashMap<&str, i64>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   match block {
-    LegacyHeader(header) => {
-      println!("PCAP Header size {}", header.size());
+    LegacyHeader(_) => {
+      // println!("PCAP Header size {}", header.size());
       return None;
     }
     Legacy(block) => {
@@ -146,7 +150,7 @@ pub fn process_block(
 
 fn process_legacy_block(
   b: &LegacyPcapBlock,
-  hm_id: &mut HashMap<&str, u32>,
+  hm_id: &mut HashMap<&str, i64>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
@@ -165,7 +169,7 @@ fn process_legacy_block(
 fn process_sliced_packet(
   sliced_packet: SlicedPacket,
   timestamp: NaiveDateTime,
-  hm_id: &mut HashMap<&str, u32>,
+  hm_id: &mut HashMap<&str, i64>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let ip = match sliced_packet.ip {

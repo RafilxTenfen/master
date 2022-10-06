@@ -2,7 +2,8 @@ use bzip2::read::BzDecoder;
 use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
-use rusqlite::Connection;
+use postgres::{Client, Transaction};
+// use rusqlite::Connection;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs;
@@ -13,8 +14,8 @@ mod attack;
 mod block;
 
 // HashMap CIDR => UDP dest port => Attack
-pub fn new_hm_cidr_udp_attack() -> HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>> {
-  return HashMap::<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>::new();
+pub fn new_hm_cidr_udp_attack() -> HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>> {
+  return HashMap::<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>::new();
 }
 
 fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
@@ -58,9 +59,9 @@ pub fn get_pcaps_ordered(dir: &PathBuf) -> Vec<PathBuf> {
 
 pub fn pcap_process_dir(
   dir: &PathBuf,
-  conn: &mut Connection,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, u32>,
+  conn: &mut Client,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, i64>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) {
   println!("pcap_process_dir {}", dir.display());
@@ -74,7 +75,7 @@ pub fn pcap_process_dir(
   //   println!("processing file {}", pcap.display())
   // });
 
-  let tx_conn = match conn.unchecked_transaction() {
+  let mut tx_conn = match conn.build_transaction().start() {
     Ok(tx) => tx,
     Err(err) => {
       println!("Error creating tx {}", err);
@@ -83,7 +84,7 @@ pub fn pcap_process_dir(
   };
 
   // check again all the attacks with > 5 packets that were not inserted
-  pcap_process_end(&tx_conn, hm_cidr_udp_attack);
+  pcap_process_end(&mut tx_conn, hm_cidr_udp_attack);
 
   match tx_conn.commit() {
     Ok(_) => {
@@ -97,9 +98,9 @@ pub fn pcap_process_dir(
 
 pub fn pcap_process(
   pcap_bz2_path: &PathBuf,
-  conn: &mut Connection,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, u32>,
+  conn: &mut Client,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, i64>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) {
   // if !pcap.is_file() {
@@ -109,7 +110,7 @@ pub fn pcap_process(
 
   println!("processing pcap {}", pcap_bz2_path.display());
 
-  let tx_conn = match conn.unchecked_transaction() {
+  let mut tx_conn = match conn.build_transaction().start() {
     Ok(tx) => tx,
     Err(err) => {
       println!("Error creating tx {}", err);
@@ -139,7 +140,7 @@ pub fn pcap_process(
             match block::process_block(block, hm_id, hm_ip_cidr) {
               Some(new_packet) => {
                 last_packet_timestamp = new_packet.timestamp;
-                attack::process_new_packet(&tx_conn, hm_cidr_udp_attack, hm_id, new_packet);
+                attack::process_new_packet(&mut tx_conn, hm_cidr_udp_attack, hm_id, new_packet);
               }
               None => {}
             }
@@ -158,13 +159,12 @@ pub fn pcap_process(
     }
   };
 
+  pcap_process_clear_old_attacks(&mut tx_conn, last_packet_timestamp, hm_cidr_udp_attack);
 
-  pcap_process_clear_old_attacks(conn, last_packet_timestamp, hm_cidr_udp_attack);
-
-  // println!("Reached commit");
+  println!("Going to commit operations");
   match tx_conn.commit() {
     Ok(_) => {
-      // println!("Sending commit");
+      println!("commit ok");
     }
     Err(err) => {
       println!("Error openning file {}", err);
@@ -174,11 +174,11 @@ pub fn pcap_process(
 
 // checks if it can delete old attacks
 pub fn pcap_process_clear_old_attacks(
-  conn: &Connection,
+  conn: &mut Transaction,
   last_packet_timestamp: NaiveDateTime,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
 ) {
-  let mut cidr_udp_attacks_to_delete = HashMap::<Ipv4Cidr, u16>::new();
+  let mut cidr_udp_attacks_to_delete = HashMap::<Ipv4Cidr, i16>::new();
 
   for (cidr, udp_attack) in &*hm_cidr_udp_attack {
     for (attack_udp_dest_port, attack) in udp_attack {
@@ -209,14 +209,13 @@ pub fn pcap_process_clear_old_attacks(
   for (cidr, udp_port_to_delete) in cidr_udp_attacks_to_delete {
     match hm_cidr_udp_attack.get_mut(&cidr) {
       Some(udp_attack) => {
-
         if let Entry::Occupied(o) = udp_attack.entry(udp_port_to_delete) {
           o.remove();
         }
 
         // now we check if the second hashmap is empty for that cidr entry
         if !udp_attack.is_empty() {
-          continue
+          continue;
         }
 
         // if it is we can delete it
@@ -227,14 +226,13 @@ pub fn pcap_process_clear_old_attacks(
       None => {}
     }
   }
-
 }
 
 // inserts all the attacks with packets.len > 5 that weren't inserted in the
 // add new packet loop
 pub fn pcap_process_end(
-  conn: &Connection,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  conn: &mut Transaction,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
 ) {
   for (_, udp_attack) in hm_cidr_udp_attack {
     for (_, attack) in udp_attack {

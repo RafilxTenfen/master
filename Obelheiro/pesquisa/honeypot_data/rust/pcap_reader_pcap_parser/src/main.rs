@@ -1,9 +1,13 @@
+extern crate dotenv;
+
 use cidr_utils::cidr::Ipv4Cidr;
+use dotenv::dotenv;
 use rusqlite::Result;
 // use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
+
 // use cidr_utils::cidr::Ipv4Cidr;
 
 mod database;
@@ -19,6 +23,7 @@ pub fn get_current_working_dir() -> PathBuf {
 }
 
 fn main() -> Result<()> {
+  dotenv().ok();
   let currently_dir = get_current_working_dir();
   println!("Working dir {}", currently_dir.display());
 
@@ -29,14 +34,14 @@ fn main() -> Result<()> {
   // This command will cause SQLite to not wait on data to reach the disk surface,
   // which will make write operations appear to be much faster.
   // But if you lose power in the middle of a transaction, your database file might go corrupt.
-  let mut conn = database::conn_get_mix_protocol()?;
-  database::journal_mode(&conn);
-  database::drop_tables(&conn);
-  database::create_tables(&conn);
+  let mut conn = database::conn_gcp_rust_pcap();
+  database::journal_mode(&mut conn);
+  database::drop_tables(&mut conn);
+  database::create_tables(&mut conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
-  let mut hm_id = HashMap::<&str, u32>::new();
+  let mut hm_id = HashMap::<&str, i64>::new();
   let mut hm_ip_cidr = HashMap::<String, Ipv4Cidr>::new();
 
   // Done: PROCESSAR bzip, abrir e ler pcap
@@ -57,7 +62,15 @@ fn main() -> Result<()> {
     &mut hm_ip_cidr,
   );
 
-  database::close(conn);
+  match conn.close() {
+    Ok(_) => {
+      print!("gcp db conn closed")
+    }
+    Err(err) => {
+      println!("gcp sql close err {}", err)
+    }
+  }
+  // database::close(conn);
 
   Ok(())
 }

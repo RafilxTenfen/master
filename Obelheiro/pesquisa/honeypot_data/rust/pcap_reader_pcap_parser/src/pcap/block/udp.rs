@@ -1,18 +1,21 @@
 use etherparse::UdpHeaderSlice;
-use rusqlite::{params, Connection};
+use postgres::Transaction;
+// use rusqlite::{params, Connection};
 
 pub struct PcapUDP {
-  pub id: u32,
-  pub destination_port: u16,
+  pub id: i64,
+  pub destination_port: i16,
 }
 
 impl PcapUDP {
-  pub fn insert(&self, conn: &Connection) {
+  pub fn insert(&self, conn: &mut Transaction) {
     match conn.execute(
-      "INSERT INTO PCAP_UDP (id, destination_port) values (?1, ?2)",
-      params![&self.id, &self.destination_port],
+      "INSERT INTO PCAP_UDP (id, destination_port) values ($1, $2)",
+      &[&self.id, &self.destination_port],
     ) {
-      Ok(_) => {}
+      Ok(_) => {
+        println!("PcapUDP inserted")
+      }
       Err(err) => {
         println!("Problem inserting udp: {:?}", err)
       }
@@ -20,9 +23,9 @@ impl PcapUDP {
   }
 }
 
-pub fn process_udp(udp_header: &UdpHeaderSlice, id: u32) -> PcapUDP {
+pub fn process_udp(udp_header: &UdpHeaderSlice, id: i64) -> PcapUDP {
   return PcapUDP {
     id,
-    destination_port: udp_header.destination_port(),
+    destination_port: udp_header.destination_port() as i16,
   };
 }

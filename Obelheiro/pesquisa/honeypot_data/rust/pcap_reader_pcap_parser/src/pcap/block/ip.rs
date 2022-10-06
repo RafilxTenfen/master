@@ -2,23 +2,26 @@ use std::collections::HashMap;
 
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use rusqlite::{params, Connection};
+use postgres::Transaction;
+// use rusqlite::{params, Connection};
 // use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 
 pub struct PcapIP {
-  pub id: u32,
+  pub id: i64,
   pub vitima_addr: String,
   pub dest_addr: String,
   pub vitima_cidr: Ipv4Cidr,
 }
 
 impl PcapIP {
-  pub fn insert(&self, conn: &Connection) {
+  pub fn insert(&self, conn: &mut Transaction) {
     match conn.execute(
-      "INSERT INTO PCAP_IP (id, vitima_addr, vitima_cidr) values (?1, ?2, ?3)",
-      params![&self.id, &self.vitima_addr, &self.vitima_cidr.to_string()],
+      "INSERT INTO PCAP_IP (id, vitima_addr, vitima_cidr) values ($1, $2, $3)",
+      &[&self.id, &self.vitima_addr, &self.vitima_cidr.to_string()],
     ) {
-      Ok(_) => {}
+      Ok(_) => {
+        println!("PcapIP inserted")
+      }
       Err(err) => {
         println!("Problem inserting ip: {:?}", err)
       }
@@ -28,7 +31,7 @@ impl PcapIP {
 
 pub fn process_ip(
   ipv4_header: Ipv4HeaderSlice,
-  id: u32,
+  id: i64,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> PcapIP {
   let vitima_addr = ipv4_header.source_addr().to_string();

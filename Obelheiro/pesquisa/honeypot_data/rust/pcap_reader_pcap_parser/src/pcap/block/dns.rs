@@ -1,17 +1,18 @@
-use rusqlite::{params, Connection};
+use postgres::Transaction;
+// use rusqlite::{params, Connection};
 
 pub struct PcapDNS {
-  pub id: u32,
-  pub tx_id: u16,
+  pub id: i64,
+  pub tx_id: i32,
   pub qname: String,
   pub qtype: String,
 }
 
 impl PcapDNS {
-  pub fn insert(&self, conn: &Connection) {
+  pub fn insert(&self, conn: &mut Transaction) {
     match conn.execute(
-      "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype) values (?1, ?2, ?3, ?4)",
-      params![&self.id, &self.tx_id, &self.qname, &self.qtype],
+      "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype) values ($1, $2, $3, $4)",
+      &[&self.id, &self.tx_id, &self.qname, &self.qtype],
     ) {
       Ok(_) => {}
       Err(err) => {
@@ -21,7 +22,7 @@ impl PcapDNS {
   }
 }
 
-pub fn process_dns(dns_packet: &dns_parser::Packet, id: u32) -> PcapDNS {
+pub fn process_dns(dns_packet: &dns_parser::Packet, id: i64) -> PcapDNS {
   let mut qname = String::from("qname");
   let mut qtype = String::from("-");
 
@@ -100,7 +101,7 @@ pub fn process_dns(dns_packet: &dns_parser::Packet, id: u32) -> PcapDNS {
 
   return PcapDNS {
     id,
-    tx_id: dns_packet.header.id,
+    tx_id: dns_packet.header.id as i32,
     qname,
     qtype,
   };

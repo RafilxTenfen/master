@@ -1,16 +1,17 @@
 use ntp_parser::NtpPacket;
-use rusqlite::{params, Connection};
+use postgres::Transaction;
+// use rusqlite::{params, Connection};
 
 pub struct PcapNTP {
-  pub id: u32,
-  pub refid: u32,
+  pub id: i64,
+  pub refid: i64,
 }
 
 impl PcapNTP {
-  pub fn insert(&self, conn: &Connection) {
+  pub fn insert(&self, conn: &mut Transaction) {
     match conn.execute(
-      "INSERT INTO PCAP_NTP (id, refid) values (?1, ?2)",
-      params![&self.id, &self.refid],
+      "INSERT INTO PCAP_NTP (id, refid) values ($1, $2)",
+      &[&self.id, &self.refid],
     ) {
       Ok(_) => {}
       Err(err) => {
@@ -20,19 +21,19 @@ impl PcapNTP {
   }
 }
 
-pub fn process_ntp(ntp_packet: &NtpPacket, id: u32) -> PcapNTP {
+pub fn process_ntp(ntp_packet: &NtpPacket, id: i64) -> PcapNTP {
   match ntp_packet {
     ntp_parser::NtpPacket::V3(ntp_v3) => {
       return PcapNTP {
         id,
         // TODO: verify monlist check bytes
-        refid: ntp_v3.ref_id,
+        refid: ntp_v3.ref_id as i64,
       };
     }
     ntp_parser::NtpPacket::V4(ntp_v4) => {
       return PcapNTP {
         id,
-        refid: ntp_v4.ref_id,
+        refid: ntp_v4.ref_id as i64,
       };
     }
   }
