@@ -90,7 +90,7 @@ pub fn pcap_process_dir(
       // println!("Sending commit");
     }
     Err(err) => {
-      println!("Error openning file {}", err);
+      println!("Error commiting pcap_process_end {}", err);
     }
   };
 }
@@ -157,6 +157,7 @@ pub fn pcap_process(
       println!("Error reading LegacyPcapReader {}", err)
     }
   };
+
 
   pcap_process_clear_old_attacks(conn, last_packet_timestamp, hm_cidr_udp_attack);
 
