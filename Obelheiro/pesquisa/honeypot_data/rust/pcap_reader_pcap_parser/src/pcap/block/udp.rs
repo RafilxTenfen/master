@@ -14,7 +14,7 @@ impl PcapUDP {
       &[&self.id, &self.destination_port],
     ) {
       Ok(_) => {
-        println!("PcapUDP inserted")
+        // println!("PcapUDP inserted")
       }
       Err(err) => {
         println!("Problem inserting udp: {:?}", err)

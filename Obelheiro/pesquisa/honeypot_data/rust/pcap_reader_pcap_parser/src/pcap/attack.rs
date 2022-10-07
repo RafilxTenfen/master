@@ -54,7 +54,7 @@ impl PcapAttack {
       &[&self.id, &self.ip_vitima_cidr.to_string(), &packet_len, &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     ) {
       Ok(_) => {
-        println!("attack inserted");
+        // println!("attack inserted");
         self.insert_pcap_packets(conn);
       }
       Err(err) => {

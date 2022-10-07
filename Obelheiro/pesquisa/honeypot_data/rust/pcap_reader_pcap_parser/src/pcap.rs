@@ -161,10 +161,10 @@ pub fn pcap_process(
 
   pcap_process_clear_old_attacks(&mut tx_conn, last_packet_timestamp, hm_cidr_udp_attack);
 
-  println!("Going to commit operations");
+  // println!("Going to commit operations");
   match tx_conn.commit() {
     Ok(_) => {
-      println!("commit ok");
+      // println!("commit ok");
     }
     Err(err) => {
       println!("Error openning file {}", err);

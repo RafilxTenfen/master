@@ -20,7 +20,7 @@ impl PcapIP {
       &[&self.id, &self.vitima_addr, &self.vitima_cidr.to_string()],
     ) {
       Ok(_) => {
-        println!("PcapIP inserted")
+        // println!("PcapIP inserted")
       }
       Err(err) => {
         println!("Problem inserting ip: {:?}", err)
