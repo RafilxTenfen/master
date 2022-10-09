@@ -239,7 +239,7 @@ fn process_sliced_packet(
   }
   // println!("processando: UDP dest port: {} ip source: {} ip dest: {}", udp.destination_port, ip.vitima_addr, ip.dest_addr);
 
-  let id_packet = hm_id.entry("ipv4").or_insert(0);
+  let id_packet = hm_id.entry("packet").or_insert(0);
   *id_packet += 1;
   let mut packet = PcapPacket {
     id: *id_packet,
