@@ -1,5 +1,5 @@
 use ldap_parser::ldap::LdapMessage;
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapLDAP {
@@ -9,7 +9,7 @@ pub struct PcapLDAP {
 }
 
 impl PcapLDAP {
-  pub fn insert(&self, conn: &mut Transaction) {
+  pub fn insert(&self, conn: &mut Client) {
     match conn.execute(
       "INSERT INTO PCAP_LDAP (id, message_id, protocol_op) values ($1, $2, $3)",
       &[&self.id, &self.message_id, &self.protocol_op],

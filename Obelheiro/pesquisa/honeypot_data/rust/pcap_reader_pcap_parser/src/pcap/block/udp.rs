@@ -1,5 +1,5 @@
 use etherparse::UdpHeaderSlice;
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapUDP {
@@ -8,7 +8,7 @@ pub struct PcapUDP {
 }
 
 impl PcapUDP {
-  pub fn insert(&self, conn: &mut Transaction) {
+  pub fn insert(&self, conn: &mut Client) {
     match conn.execute(
       "INSERT INTO PCAP_UDP (id, destination_port) values ($1, $2)",
       &[&self.id, &self.destination_port],

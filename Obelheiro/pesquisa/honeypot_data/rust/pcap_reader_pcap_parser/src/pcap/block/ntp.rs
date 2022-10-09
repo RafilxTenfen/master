@@ -1,5 +1,5 @@
 use ntp_parser::NtpPacket;
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapNTP {
@@ -8,7 +8,7 @@ pub struct PcapNTP {
 }
 
 impl PcapNTP {
-  pub fn insert(&self, conn: &mut Transaction) {
+  pub fn insert(&self, conn: &mut Client) {
     match conn.execute(
       "INSERT INTO PCAP_NTP (id, refid) values ($1, $2)",
       &[&self.id, &self.refid],

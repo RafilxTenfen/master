@@ -2,7 +2,7 @@ use bzip2::read::BzDecoder;
 use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
-use postgres::{Client, Transaction};
+use postgres::{Client};
 // use rusqlite::Connection;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -87,33 +87,15 @@ pub fn pcap_process_dir(
   //   println!("processing file {}", pcap.display())
   // });
 
-  let mut tx_conn = match conn.build_transaction().start() {
-    Ok(tx) => tx,
-    Err(err) => {
-      println!("Error creating tx {}", err);
-      return;
-    }
-  };
-
   // check again all the attacks with > 5 packets that were not inserted
   pcap_process_end(
-    &mut tx_conn,
+    conn,
     hm_cidr_udp_attack,
     hm_id,
     tb_ip_id,
     hm_ip_id,
     hm_cidr_id,
   );
-
-  println!("Sending commit");
-  match tx_conn.commit() {
-    Ok(_) => {
-      println!("FINISH COMMIT");
-    }
-    Err(err) => {
-      println!("Error commiting pcap_process_end {}", err);
-    }
-  };
 }
 
 pub fn pcap_process(
@@ -133,13 +115,6 @@ pub fn pcap_process(
 
   println!("processing pcap {}", pcap_bz2_path.display());
 
-  let mut tx_conn = match conn.build_transaction().start() {
-    Ok(tx) => tx,
-    Err(err) => {
-      println!("Error creating tx {}", err);
-      return;
-    }
-  };
 
   let pcap_bz2_reader = match File::open(pcap_bz2_path) {
     Ok(pcap_bz2) => BzDecoder::new(pcap_bz2),
@@ -163,8 +138,9 @@ pub fn pcap_process(
             match block::process_block(block, hm_id, hm_ip_cidr) {
               Some(new_packet) => {
                 last_packet_timestamp = new_packet.timestamp;
+
                 attack::process_new_packet(
-                  &mut tx_conn,
+                  conn,
                   hm_cidr_udp_attack,
                   hm_id,
                   tb_ip_id,
@@ -191,7 +167,7 @@ pub fn pcap_process(
   };
 
   pcap_process_clear_old_attacks(
-    &mut tx_conn,
+    conn,
     last_packet_timestamp,
     hm_cidr_udp_attack,
     hm_id,
@@ -199,21 +175,11 @@ pub fn pcap_process(
     hm_ip_id,
     hm_cidr_id,
   );
-
-  println!("Reached commit");
-  match tx_conn.commit() {
-    Ok(_) => {
-      println!("commit ok");
-    }
-    Err(err) => {
-      println!("Error openning file {}", err);
-    }
-  };
 }
 
 // checks if it can delete old attacks
 pub fn pcap_process_clear_old_attacks(
-  conn: &mut Transaction,
+  conn: &mut Client,
   last_packet_timestamp: NaiveDateTime,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, i32>,
@@ -274,7 +240,7 @@ pub fn pcap_process_clear_old_attacks(
 // inserts all the attacks with packets.len > 5 that weren't inserted in the
 // add new packet loop
 pub fn pcap_process_end(
-  conn: &mut Transaction,
+  conn: &mut Client,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, i32>,
   tb_ip_id: &mut i32,

@@ -1,7 +1,7 @@
 use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::params;
 // use rusqlite::Connection;
 use std::collections::HashMap;
@@ -49,7 +49,7 @@ impl PcapAttack {
 
   pub fn insert(
     &self,
-    conn: &mut Transaction,
+    conn: &mut Client,
     hm_id: &mut HashMap<&str, i32>,
     tb_ip_id: &mut i32,
     hm_ip_id: &mut HashMap<String, i32>,
@@ -92,7 +92,7 @@ impl PcapAttack {
 
   fn insert_pcap_packets(
     &self,
-    conn: &mut Transaction,
+    conn: &mut Client,
     tb_ip_id: &mut i32,
     hm_ip_id: &mut HashMap<String, i32>,
     vitima_cidr_id: &i32,
@@ -117,7 +117,7 @@ pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut i32) -> HashMap<i16
 // intervalo de 1 minutos
 // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
 pub fn process_new_packet(
-  conn: &mut Transaction,
+  conn: &mut Client,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, PcapAttack>>,
   hm_id: &mut HashMap<&str, i32>,
   tb_ip_id: &mut i32,

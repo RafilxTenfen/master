@@ -1,4 +1,4 @@
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapDNS {
@@ -9,7 +9,7 @@ pub struct PcapDNS {
 }
 
 impl PcapDNS {
-  pub fn insert(&self, conn: &mut Transaction) {
+  pub fn insert(&self, conn: &mut Client) {
     match conn.execute(
       "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype) values ($1, $2, $3, $4)",
       &[&self.id, &self.tx_id, &self.qname, &self.qtype],

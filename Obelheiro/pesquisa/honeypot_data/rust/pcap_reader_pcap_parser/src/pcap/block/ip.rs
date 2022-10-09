@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 // use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 
@@ -16,7 +16,7 @@ pub struct PcapIP {
 impl PcapIP {
   pub fn insert(
     &self,
-    conn: &mut Transaction,
+    conn: &mut Client,
     tb_ip_id: &mut i32,
     hm_ip_id: &mut HashMap<String, i32>,
     vitima_cidr_id: &i32,

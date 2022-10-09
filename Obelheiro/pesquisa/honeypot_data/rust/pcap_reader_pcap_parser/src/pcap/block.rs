@@ -3,7 +3,7 @@ use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
-use postgres::Transaction;
+use postgres::Client;
 // use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
@@ -39,7 +39,7 @@ pub enum PcapAttackType {
 impl PcapPacket {
   pub fn insert(
     &self,
-    conn: &mut Transaction,
+    conn: &mut Client,
     attack_id: &i32,
     tb_ip_id: &mut i32,
     hm_ip_id: &mut HashMap<String, i32>,
