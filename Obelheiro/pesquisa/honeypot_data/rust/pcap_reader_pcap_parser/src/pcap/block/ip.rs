@@ -21,6 +21,8 @@ impl PcapIP {
     ) {
       Ok(_) => {
         println!("PcapIP inserted")
+
+        // println!("PcapIP inserted")
       }
       Err(err) => {
         println!("Problem inserting ip: {:?}", err)

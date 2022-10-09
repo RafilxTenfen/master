@@ -58,3 +58,5 @@ Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/out.txt
 Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/out1.txt
 Obelheiro/pesquisa/honeypot_data/pcap/test/get-all-pcap-files.sh
 Obelheiro/pesquisa/honeypot_data/pcap/test/*
+Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/src/.env
+Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/.env

@@ -81,7 +81,7 @@ decimals_digits = 2
 - Todos os protocolos foram agrupados em um único database para realizar a análise de dados
 
 ```{r}
-db_mix_protocol <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protocol.sqlite")
+db_mix_protocol <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/mix_protocol.sqlite")
 
 data_mix_protocol_unfetch <-dbSendQuery(db_mix_protocol, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period

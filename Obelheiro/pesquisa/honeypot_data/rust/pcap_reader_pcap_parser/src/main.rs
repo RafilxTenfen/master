@@ -35,7 +35,7 @@ fn main() -> Result<()> {
   // which will make write operations appear to be much faster.
   // But if you lose power in the middle of a transaction, your database file might go corrupt.
   let mut conn = database::conn_gcp_rust_pcap();
-  database::journal_mode(&mut conn);
+  // database::journal_mode(&mut conn);
   database::drop_tables(&mut conn);
   database::create_tables(&mut conn);
 

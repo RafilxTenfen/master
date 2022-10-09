@@ -52,6 +52,8 @@ pub fn drop_tables(conn: &mut Client) {
     DROP TABLE IF EXISTS PCAP_DNS;
     DROP TABLE IF EXISTS PCAP_LDAP;
     DROP TABLE IF EXISTS PCAP_NTP;
+    DROP TABLE IF EXISTS TBIP;
+    DROP TABLE IF EXISTS TBCIDR;
     ",
   ) {
     Ok(_) => {
@@ -63,16 +65,16 @@ pub fn drop_tables(conn: &mut Client) {
   }
 }
 
-pub fn journal_mode(conn: &mut Client) {
-  match conn.batch_execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
-    Ok(_) => {
-      println!("journal_mode=WAL!")
-    }
-    Err(err) => {
-      println!("Problem setting journal: {:?}", err)
-    }
-  }
-}
+// pub fn journal_mode(conn: &mut Client) {
+//   match conn.batch_execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+//     Ok(_) => {
+//       println!("journal_mode=WAL!")
+//     }
+//     Err(err) => {
+//       println!("Problem setting journal: {:?}", err)
+//     }
+//   }
+// }
 
 pub fn create_tables(conn: &mut Client) {
   match conn.batch_execute(
@@ -125,6 +127,17 @@ pub fn create_tables(conn: &mut Client) {
       id BIGINT NOT NULL,
       refid BIGINT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS TBIP (
+      id BIGINT NOT NULL,
+      TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS TBCIDR (
+      id BIGINT NOT NULL,
+      TEXT NOT NULL
+    );
+
     ",
   ) {
     Ok(_) => {

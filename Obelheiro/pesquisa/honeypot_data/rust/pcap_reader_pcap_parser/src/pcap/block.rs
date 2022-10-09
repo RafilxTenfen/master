@@ -100,7 +100,7 @@ impl PcapPacket {
 
     match result {
       Ok(_) => {
-        println!("INSERTED Packet")
+        //println!("INSERTED Packet")
       }
       Err(err) => {
         println!(

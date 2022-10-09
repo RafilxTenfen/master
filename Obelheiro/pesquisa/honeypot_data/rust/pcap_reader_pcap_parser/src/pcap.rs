@@ -86,9 +86,10 @@ pub fn pcap_process_dir(
   // check again all the attacks with > 5 packets that were not inserted
   pcap_process_end(&mut tx_conn, hm_cidr_udp_attack);
 
+  println!("Sending commit");
   match tx_conn.commit() {
     Ok(_) => {
-      // println!("Sending commit");
+      println!("FINISH COMMIT");
     }
     Err(err) => {
       println!("Error commiting pcap_process_end {}", err);
@@ -161,7 +162,7 @@ pub fn pcap_process(
 
   pcap_process_clear_old_attacks(&mut tx_conn, last_packet_timestamp, hm_cidr_udp_attack);
 
-  println!("Going to commit operations");
+  println!("Reached commit");
   match tx_conn.commit() {
     Ok(_) => {
       println!("commit ok");

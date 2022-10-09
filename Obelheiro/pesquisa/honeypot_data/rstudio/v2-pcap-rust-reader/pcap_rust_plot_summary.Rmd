@@ -1,0 +1,107 @@
+---
+title: "rust_pcap_compiled"
+author: "Rafilx"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+library('RSQLite')
+library('ggplot2')
+library(DBI)
+options("scipen"=100, "digits"=4)
+library(dplyr)
+require(gridExtra)
+library(tibble)
+library(tidyr)
+library(viridis)
+library(lubridate)
+library(blob)
+library(scales)
+library(ggrepel)
+# library("dplyr.teradata")
+```
+```{r echo=FALSE}
+addUnits <- function(n) {
+  labels <- ifelse(n < 1000, n, # less than thousands
+    ifelse(n < 1e6, paste0(round(n/1e3), 'k'), # in thousands
+      ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+addUnitMeses <- function(n){
+  return(paste(n, "meses"))
+}
+
+minutes = 60
+hours = minutes * 60
+days = hours * 24
+months = days * 30
+years = months * 12
+
+addUnitsHours <- function(n) {
+  labels <- ifelse(n < minutes, n, # less than 60
+    ifelse(n < hours, paste0(round(n/minutes), 'Min'), # in hours
+      ifelse(n < months, paste0(round(n/hours, 1), 'Horas'), # in millions
+        ifelse(n < years, paste0(round(n/months, 2), 'Meses'), # in billions
+          ifelse(n < 1e15, paste0(round(n/years, 3), 'Anos'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+
+labelBiggerThan9 <- function(n){
+  labels <- ifelse(n > 9, paste(round(n, 2), "%"), "")
+  return(labels)
+}
+
+safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+                             "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
+minimum_percentage_as_others = 5
+decimals_digits = 2
+```
+
+### Dados Gerais 
+
+### Dados analisados
+- Todos os protocolos foram agrupados em um único database para realizar a análise de dados
+
+```{r}
+db_mix_protocol <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/mix_protocol.sqlite")
+
+data_pcap_attack_unfetch <-dbSendQuery(db_mix_protocol, "
+  SELECT *
+    FROM PCAP_ATTACK
+")
+data_pcap_attack <- fetch(data_pcap_attack_unfetch)
+
+
+
+data_pcakets_unfetch <-dbSendQuery(db_mix_protocol, "
+  SELECT *
+    FROM PCAP_PACKET
+")
+data_packets <- fetch(data_pcakets_unfetch)
+
+# 
+data_pcap_attack_packet_unfetch <-dbSendQuery(db_mix_protocol, "
+  SELECT *
+    FROM PCAP_ATTACK_PACKET
+")
+data_pcap_attack_packet <- fetch(data_pcap_attack_packet_unfetch)
+# 
+
+dbDisconnect(db_mix_protocol)
+```
+- Formatando os timestamp
+
+```{r}
+# data_mix_protocol['tempo_final_cast'] = as.POSIXct(data_mix_protocol[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+# data_mix_protocol['tempo_inicio_cast'] = as.POSIXct(data_mix_protocol[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
+```
