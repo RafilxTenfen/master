@@ -3,7 +3,7 @@ use postgres::Transaction;
 // use rusqlite::{params, Connection};
 
 pub struct PcapUDP {
-  pub id: i64,
+  pub id: i32,
   pub destination_port: i16,
 }
 
@@ -14,7 +14,7 @@ impl PcapUDP {
       &[&self.id, &self.destination_port],
     ) {
       Ok(_) => {
-        println!("PcapUDP inserted")
+        // println!("PcapUDP inserted")
       }
       Err(err) => {
         println!("Problem inserting udp: {:?}", err)
@@ -23,7 +23,7 @@ impl PcapUDP {
   }
 }
 
-pub fn process_udp(udp_header: &UdpHeaderSlice, id: i64) -> PcapUDP {
+pub fn process_udp(udp_header: &UdpHeaderSlice, id: i32) -> PcapUDP {
   return PcapUDP {
     id,
     destination_port: udp_header.destination_port() as i16,

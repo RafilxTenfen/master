@@ -3,7 +3,7 @@ use postgres::Transaction;
 // use rusqlite::{params, Connection};
 
 pub struct PcapLDAP {
-  pub id: i64,
+  pub id: i32,
   pub message_id: i32,
   pub protocol_op: i32,
 }
@@ -22,7 +22,7 @@ impl PcapLDAP {
   }
 }
 
-pub fn process_ldap(ldap_message: &LdapMessage, id: i64) -> PcapLDAP {
+pub fn process_ldap(ldap_message: &LdapMessage, id: i32) -> PcapLDAP {
   return PcapLDAP {
     id,
     message_id: ldap_message.message_id.0 as i32,

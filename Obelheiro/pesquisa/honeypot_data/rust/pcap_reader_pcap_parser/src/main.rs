@@ -38,11 +38,15 @@ fn main() -> Result<()> {
   // database::journal_mode(&mut conn);
   database::drop_tables(&mut conn);
   database::create_tables(&mut conn);
+  database::disable_vacuum(&mut conn);
 
   // HashMap CIDR => UDP dest port => Attack
   let mut hm_cidr_udp_attack = pcap::new_hm_cidr_udp_attack();
-  let mut hm_id = HashMap::<&str, i64>::new();
+  let mut hm_id = HashMap::<&str, i32>::new();
   let mut hm_ip_cidr = HashMap::<String, Ipv4Cidr>::new();
+  let mut hm_ip_id = HashMap::<String, i32>::new();
+  let mut hm_cidr_id = HashMap::<Ipv4Cidr, i32>::new();
+  let mut tb_ip_id: i32 = 0;
 
   // Done: PROCESSAR bzip, abrir e ler pcap
   // https://docs.rs/bzip2/latest/bzip2/
@@ -59,7 +63,10 @@ fn main() -> Result<()> {
     &mut conn,
     &mut hm_cidr_udp_attack,
     &mut hm_id,
+    &mut tb_ip_id,
     &mut hm_ip_cidr,
+    &mut hm_ip_id,
+    &mut hm_cidr_id,
   );
 
   match conn.close() {

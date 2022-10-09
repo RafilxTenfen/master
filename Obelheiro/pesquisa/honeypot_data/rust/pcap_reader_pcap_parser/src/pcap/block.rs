@@ -14,7 +14,7 @@ mod ntp;
 mod udp;
 
 pub struct PcapPacket {
-  pub id: i64,
+  pub id: i32,
   pub timestamp: NaiveDateTime,
   pub ip: ip::PcapIP,
   pub udp: udp::PcapUDP,
@@ -37,10 +37,17 @@ pub enum PcapAttackType {
 }
 
 impl PcapPacket {
-  pub fn insert(&self, conn: &mut Transaction, attack_id: &i64) {
+  pub fn insert(
+    &self,
+    conn: &mut Transaction,
+    attack_id: &i32,
+    tb_ip_id: &mut i32,
+    hm_ip_id: &mut HashMap<String, i32>,
+    vitima_cidr_id: &i32,
+  ) {
     let mut result: Result<u64, postgres::Error> = Ok(0);
 
-    self.ip.insert(conn);
+    self.ip.insert(conn, tb_ip_id, hm_ip_id, vitima_cidr_id);
     self.udp.insert(conn);
 
     match self.attack_type {
@@ -130,7 +137,7 @@ impl PcapAttackType {
 
 pub fn process_block(
   block: &PcapBlockOwned,
-  hm_id: &mut HashMap<&str, i64>,
+  hm_id: &mut HashMap<&str, i32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   match block {
@@ -150,7 +157,7 @@ pub fn process_block(
 
 fn process_legacy_block(
   b: &LegacyPcapBlock,
-  hm_id: &mut HashMap<&str, i64>,
+  hm_id: &mut HashMap<&str, i32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
@@ -169,7 +176,7 @@ fn process_legacy_block(
 fn process_sliced_packet(
   sliced_packet: SlicedPacket,
   timestamp: NaiveDateTime,
-  hm_id: &mut HashMap<&str, i64>,
+  hm_id: &mut HashMap<&str, i32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let ip = match sliced_packet.ip {

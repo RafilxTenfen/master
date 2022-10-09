@@ -2,7 +2,7 @@ use postgres::Transaction;
 // use rusqlite::{params, Connection};
 
 pub struct PcapDNS {
-  pub id: i64,
+  pub id: i32,
   pub tx_id: i32,
   pub qname: String,
   pub qtype: String,
@@ -22,7 +22,7 @@ impl PcapDNS {
   }
 }
 
-pub fn process_dns(dns_packet: &dns_parser::Packet, id: i64) -> PcapDNS {
+pub fn process_dns(dns_packet: &dns_parser::Packet, id: i32) -> PcapDNS {
   let mut qname = String::from("qname");
   let mut qtype = String::from("-");
 

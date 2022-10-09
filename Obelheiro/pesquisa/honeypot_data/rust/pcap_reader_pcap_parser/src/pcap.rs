@@ -61,16 +61,28 @@ pub fn pcap_process_dir(
   dir: &PathBuf,
   conn: &mut Client,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i64>,
+  hm_id: &mut HashMap<&str, i32>,
+  tb_ip_id: &mut i32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+  hm_ip_id: &mut HashMap<String, i32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
 ) {
   println!("pcap_process_dir {}", dir.display());
 
   // todo normalize path, remove .. ../ https://docs.rs/normpath/latest/normpath/
   let pcaps = get_pcaps_ordered(dir);
-  pcaps
-    .iter()
-    .for_each(|pcap| pcap_process(pcap, conn, hm_cidr_udp_attack, hm_id, hm_ip_cidr));
+  pcaps.iter().for_each(|pcap| {
+    pcap_process(
+      pcap,
+      conn,
+      hm_cidr_udp_attack,
+      hm_id,
+      tb_ip_id,
+      hm_ip_cidr,
+      hm_ip_id,
+      hm_cidr_id,
+    )
+  });
   // .for_each(|pcap| {
   //   println!("processing file {}", pcap.display())
   // });
@@ -84,7 +96,14 @@ pub fn pcap_process_dir(
   };
 
   // check again all the attacks with > 5 packets that were not inserted
-  pcap_process_end(&mut tx_conn, hm_cidr_udp_attack);
+  pcap_process_end(
+    &mut tx_conn,
+    hm_cidr_udp_attack,
+    hm_id,
+    tb_ip_id,
+    hm_ip_id,
+    hm_cidr_id,
+  );
 
   println!("Sending commit");
   match tx_conn.commit() {
@@ -101,8 +120,11 @@ pub fn pcap_process(
   pcap_bz2_path: &PathBuf,
   conn: &mut Client,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i64>,
+  hm_id: &mut HashMap<&str, i32>,
+  tb_ip_id: &mut i32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
+  hm_ip_id: &mut HashMap<String, i32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
 ) {
   // if !pcap.is_file() {
   //   println!("pcap {} is not a file", pcap.display());
@@ -141,7 +163,15 @@ pub fn pcap_process(
             match block::process_block(block, hm_id, hm_ip_cidr) {
               Some(new_packet) => {
                 last_packet_timestamp = new_packet.timestamp;
-                attack::process_new_packet(&mut tx_conn, hm_cidr_udp_attack, hm_id, new_packet);
+                attack::process_new_packet(
+                  &mut tx_conn,
+                  hm_cidr_udp_attack,
+                  hm_id,
+                  tb_ip_id,
+                  hm_ip_id,
+                  hm_cidr_id,
+                  new_packet,
+                );
               }
               None => {}
             }
@@ -160,7 +190,15 @@ pub fn pcap_process(
     }
   };
 
-  pcap_process_clear_old_attacks(&mut tx_conn, last_packet_timestamp, hm_cidr_udp_attack);
+  pcap_process_clear_old_attacks(
+    &mut tx_conn,
+    last_packet_timestamp,
+    hm_cidr_udp_attack,
+    hm_id,
+    tb_ip_id,
+    hm_ip_id,
+    hm_cidr_id,
+  );
 
   println!("Reached commit");
   match tx_conn.commit() {
@@ -178,6 +216,10 @@ pub fn pcap_process_clear_old_attacks(
   conn: &mut Transaction,
   last_packet_timestamp: NaiveDateTime,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, i32>,
+  tb_ip_id: &mut i32,
+  hm_ip_id: &mut HashMap<String, i32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
 ) {
   let mut cidr_udp_attacks_to_delete = HashMap::<Ipv4Cidr, i16>::new();
 
@@ -195,7 +237,7 @@ pub fn pcap_process_clear_old_attacks(
           // then we can insert if any old attack with +5 packets and remove
           // it from the map to clear out memory
           if attack.packets.len() > 5 {
-            attack.insert(conn);
+            attack.insert(conn, hm_id, tb_ip_id, hm_ip_id, hm_cidr_id);
           }
 
           // insert to be deleted afterwards
@@ -234,11 +276,15 @@ pub fn pcap_process_clear_old_attacks(
 pub fn pcap_process_end(
   conn: &mut Transaction,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, i32>,
+  tb_ip_id: &mut i32,
+  hm_ip_id: &mut HashMap<String, i32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
 ) {
   for (_, udp_attack) in hm_cidr_udp_attack {
     for (_, attack) in udp_attack {
       if attack.packets.len() > 5 {
-        attack.insert(conn);
+        attack.insert(conn, hm_id, tb_ip_id, hm_ip_id, hm_cidr_id);
       }
     }
   }

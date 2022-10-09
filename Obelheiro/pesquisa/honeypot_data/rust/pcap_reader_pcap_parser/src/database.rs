@@ -80,62 +80,62 @@ pub fn create_tables(conn: &mut Client) {
   match conn.batch_execute(
     "
     CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
-      id BIGINT NOT NULL,
-      ip_vitima_cidr TEXT NOT NULL,
+      id INT NOT NULL,
+      vitima_cidr_id INT NOT NULL,
       packets_per_attack INT NOT NULL,
       timestamp_inicio TEXT NOT NULL,
       timestamp_fim TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_PACKET (
-      id BIGINT NOT NULL,
+      id INT NOT NULL,
       timestamp_str TEXT NOT NULL,
-      attack_id BIGINT NOT NULL,
-      ip_id BIGINT NOT NULL,
-      udp_id BIGINT NOT NULL,
+      attack_id INT NOT NULL,
+      ip_id INT NOT NULL,
+      udp_id INT NOT NULL,
       attack_type TEXT NOT NULL,
-      dns_id BIGINT,
-      ldap_id BIGINT,
-      ntp_id BIGINT
+      dns_id INT,
+      ldap_id INT,
+      ntp_id INT
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_IP (
-      id BIGINT NOT NULL,
-      vitima_addr TEXT NOT NULL,
-      vitima_cidr TEXT NOT NULL
+      id INT NOT NULL,
+      vitima_addr_id INT NOT NULL,
+      vitima_cidr_id INT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_UDP (
-      id BIGINT NOT NULL,
+      id INT NOT NULL,
       destination_port SMALLINT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_DNS (
-      id BIGINT NOT NULL,
+      id INT NOT NULL,
       tx_id INT NOT NULL,
       qname TEXT NOT NULL,
       qtype TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_LDAP (
-      id BIGINT NOT NULL,
+      id INT NOT NULL,
       message_id INT NOT NULL,
       protocol_op INT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_NTP (
-      id BIGINT NOT NULL,
-      refid BIGINT NOT NULL
+      id INT NOT NULL,
+      refid INT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS TBIP (
-      id BIGINT NOT NULL,
-      TEXT NOT NULL
+      id INT NOT NULL,
+      ip TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS TBCIDR (
-      id BIGINT NOT NULL,
-      TEXT NOT NULL
+      id INT NOT NULL,
+      cidr TEXT NOT NULL
     );
 
     ",
@@ -145,6 +145,64 @@ pub fn create_tables(conn: &mut Client) {
     }
     Err(err) => {
       println!("Problem creating table: {:?}", err)
+    }
+  }
+}
+
+pub fn disable_vacuum(conn: &mut Client) {
+  match conn.batch_execute(
+    "
+    ALTER TABLE PCAP_ATTACK SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_PACKET SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_IP SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_UDP SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_DNS SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_LDAP SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE PCAP_NTP SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE TBIP SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+
+    ALTER TABLE TBCIDR SET (
+      autovacuum_enabled = false,
+      toast.autovacuum_enabled = false
+    );
+    ",
+  ) {
+    Ok(_) => {
+      println!("disable autovacuum Tables!")
+    }
+    Err(err) => {
+      println!("Problem setting autovacuum table: {:?}", err)
     }
   }
 }
