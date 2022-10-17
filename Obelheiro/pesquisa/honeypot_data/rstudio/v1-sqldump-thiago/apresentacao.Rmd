@@ -64,10 +64,18 @@ labelBiggerThan9 <- function(n){
   return(labels)
 }
 
+add_percentage <- function(n){
+  labels <- paste(round(n, 2), "%")
+  return(labels)
+}
+
+
 safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 minimum_percentage_as_others = 5
 decimals_digits = 2
+
+plots_path = "/home/rafilx/projects/github.com/RafilxTenfen/master/Obelheiro/pesquisa/honeypot_data/rstudio/v1-sqldump-thiago/plots"
 ```
 
 ## R Markdown
@@ -487,7 +495,7 @@ data_mix_protocol_rm_cldap %>%
 # DNS
 
 ```{r}
-db_dns <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/dnstor_statistics_dns.sqlite")
+db_dns <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/dnstor_statistics_dns.sqlite")
 
 data_dns_unfetch <-dbSendQuery(db_dns, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
@@ -556,20 +564,36 @@ data_dns_grouped
 - Dessa forma é buscado apresentar quanto tempo um QNAME em conjunto com o QTYPE, permanece ativo, ex o qname "peacecorps.gov." do qtype "ANY" teve o primeiro ataque registrado em 31/10/2020 e o ultimo ataque com o mesmo qname e qtype em 11/05/2022 totalizando uma longevidade de aproximadamente um ano e meio (48092066 secs)
 
 ```{r fig.width = 12} 
-data_dns_grouped %>%
+dns_plot_logevidade_meses = data_dns_grouped %>%
   mutate(tempo_diff_secs = tempo_diff_secs / months) %>%
   ggplot(aes(x= tempo_diff_secs)) +
   geom_histogram(bins = 20, fill='blue', color ='black') +
-  ggtitle("Longevidade de um mesmo (QNAME + QTYPE)") +
+  ggtitle("Longevidade de um mesmo RR (QNAME + QTYPE)") +
   xlab("Longevidade") +
   ylab("Quantidade de Registros") + 
   scale_y_continuous(labels = addUnits) +
   scale_x_continuous(labels = addUnitMeses) + 
   theme(plot.margin = margin(r = 15))
 # verificar para colocar a cada 3 ou 4 meses
+
+pdf(paste(plots_path, "/dns_longevidade_rr_meses.pdf", sep=""), width = 16, height = 10)
+print(dns_plot_logevidade_meses)
+dev.off()
+
+dns_plot_logevidade_meses
 ```
 
 ```{r fig.width = 12} 
+data_dns_grouped %>%
+  filter(tempo_diff_secs < days)
+
+data_dns_grouped %>%
+  filter(tempo_diff_secs < months * 10) %>%
+  filter(tempo_diff_secs > days)
+
+# 16125 - 100
+# 863 - x
+
 data_dns_grouped %>%
   mutate(tempo_diff_secs = tempo_diff_secs / months) %>%
   ggplot(aes(x= tempo_diff_secs)) +
@@ -582,6 +606,16 @@ data_dns_grouped %>%
 
 ```{r fig.align="center", fig.width = 10}
 percentage_76_secs = quantile(data_dns_grouped$tempo_diff_secs, c(.76))[[1]]
+
+data_dns_grouped %>%
+  filter(grepl('cpsc', qname))
+  
+# TCC tiago que continua ativo 
+# 1x1.cz. ANY 
+# . ANY
+#  commerce.gov. A
+# cpsc.gov. A
+# filter(tempo_diff_secs > percentage_76_secs) 
 
 data_dns_bigger_than_76 = data_dns_grouped %>%
   filter(tempo_diff_secs > percentage_76_secs) %>%
@@ -668,6 +702,10 @@ data_quarters_new_removed_same.st %>%
 - Após o query id é possível ver a predominancia de ANY em ataques DNS
 
 ```{r}
+data_dns %>%
+  group_by(year_period) %>%
+  summarise( requests = sum(requests_per_attack),  ataques = n(),)
+
 
 data_dns_qtype_percentage = data_dns %>%
   group_by(year_period, qtype) %>%
@@ -699,7 +737,7 @@ data_dns_qtype_ataques_others_percentage = data_dns_qtype_percentage %>%
 
 
 ```{r fig.align="center", fig.width = 12}
-data_dns_qtype_ataques_others_percentage %>%
+dns_plot_ataque_qtype = data_dns_qtype_ataques_others_percentage %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%    
   ggplot( aes(x=year_period, y=ataques_percentage, fill=qtype)) +
     geom_bar(stat="identity", width = 0.8) +
@@ -712,6 +750,10 @@ data_dns_qtype_ataques_others_percentage %>%
     ylab("Porcentagem de ataques") +
     xlab("Período (Trimestre)") + 
     ggtitle("DNS: Ataques por QTYPE")
+
+
+dns_plot_ataque_qtype
+
 ```
 
 
@@ -728,19 +770,30 @@ data_dns_qtype_requests_others_percentage = data_dns_qtype_percentage %>%
   group_by(year_period, qtype) %>%
   summarise(requests_percentage = sum(requests_percentage)) 
 
-data_dns_qtype_requests_others_percentage %>%
+dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%    
   ggplot( aes(x=year_period, y=requests_percentage, fill=qtype)) +
     geom_bar(stat="identity", width = 0.8) +
     geom_text(
       aes(label = labelBiggerThan9(requests_percentage)), position = position_stack(vjust = 0.1)
       ) +
-    theme(legend.title= element_text(size=10, face="bold"),
+    theme(legend.title= element_text(size=12, face="bold"),
           plot.title = element_text(size=14, face="bold")) +
+    scale_y_continuous(labels = add_percentage) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     ylab("Porcentagem de requisições") +
     xlab("Período (Trimestre)") + 
     ggtitle("DNS: Requisições por QTYPE")
+
+dns_plot_request_qtype <- dns_plot_request_qtype + guides(fill=guide_legend(title="QTYPE"))
+
+
+pdf(paste(plots_path, "/dns_request_qtype.pdf", sep=""), width = 16, height = 10)
+print(dns_plot_request_qtype)
+dev.off()
+
+
+dns_plot_request_qtype
 ```
 
 
@@ -750,7 +803,7 @@ data_dns_qtype_requests_others_percentage %>%
 
 
 ```{r}
-db_ntp <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protocol.sqlite")
+db_ntp <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/mix_protocol.sqlite")
 
 data_ntp_unfetch <-dbSendQuery(db_ntp, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
@@ -784,7 +837,8 @@ data_ntp_grouped_period_ntp_type_percentage = data_ntp_grouped_period_ntp_type %
 
 - Gráfico de barras empilhadas apresentando a porcentagem da quantidade de ataques em cada "ntp_type" por período
 ```{r fig.width = 12}
-data_ntp_grouped_period_ntp_type_percentage %>% 
+
+ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>% 
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
     Comando = ntp_type,
@@ -797,6 +851,12 @@ data_ntp_grouped_period_ntp_type_percentage %>%
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
     ggtitle("NTP - Ataques por Comandos")
+
+pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10)
+print(ntp_plot_monlist)
+dev.off()
+
+ntp_plot_monlist
 ```
 
 
@@ -822,7 +882,7 @@ data_ntp_grouped_period_ntp_type_percentage %>%
 --------------------------------------------------------------------------------------------------------------------
 # Memcached
 ```{r}
-db_memcached <- dbConnect(RSQLite::SQLite(), dbname="../db/database-2022-05-11/mix_protocol.sqlite")
+db_memcached <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/mix_protocol.sqlite")
 
 
 data_memcached_payload_types_unfetch <-dbSendQuery(db_memcached, "
