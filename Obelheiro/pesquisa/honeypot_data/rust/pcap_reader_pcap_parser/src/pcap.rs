@@ -3,7 +3,7 @@ use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
 // use tokio_postgres::{Client};
-use rusqlite::Connection;
+use rusqlite::{Connection};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs;
@@ -87,15 +87,34 @@ pub fn pcap_process_dir(
   //   println!("processing file {}", pcap.display())
   // });
 
+
+  let tx_conn = match conn.unchecked_transaction() {
+    Ok(tx) => tx,
+    Err(err) => {
+      println!("Error creating tx {}", err);
+      return;
+    }
+  };
+
+
   // check again all the attacks with > 5 packets that were not inserted
   pcap_process_end(
-    conn,
+    &tx_conn,
     hm_cidr_udp_attack,
     hm_id,
     tb_ip_id,
     hm_ip_id,
     hm_cidr_id,
   );
+
+  match tx_conn.commit() {
+    Ok(_) => {
+      // println!("Sending commit");
+    }
+    Err(err) => {
+      println!("Error openning file {}", err);
+    }
+  };
 }
 
 pub fn pcap_process(
@@ -128,6 +147,14 @@ pub fn pcap_process(
     }
   };
 
+  let tx_conn = match conn.unchecked_transaction() {
+    Ok(tx) => tx,
+    Err(err) => {
+      println!("Error creating tx {}", err);
+      return;
+    }
+  };
+
   let mut last_packet_timestamp: NaiveDateTime = NaiveDateTime::default();
   // 65536 recommended by the lib
   match LegacyPcapReader::new(65536, pcap_bz2_reader) {
@@ -140,7 +167,7 @@ pub fn pcap_process(
                 last_packet_timestamp = new_packet.timestamp;
 
                 attack::process_new_packet(
-                  conn,
+                  &tx_conn,
                   hm_cidr_udp_attack,
                   hm_id,
                   tb_ip_id,
@@ -167,7 +194,7 @@ pub fn pcap_process(
   };
 
   pcap_process_clear_old_attacks(
-    conn,
+    &tx_conn,
     last_packet_timestamp,
     hm_cidr_udp_attack,
     hm_id,
@@ -175,11 +202,20 @@ pub fn pcap_process(
     hm_ip_id,
     hm_cidr_id,
   );
+
+  match tx_conn.commit() {
+    Ok(_) => {
+      // println!("Sending commit");
+    }
+    Err(err) => {
+      println!("Error openning file {}", err);
+    }
+  };
 }
 
 // checks if it can delete old attacks
 pub fn pcap_process_clear_old_attacks(
-  conn: &mut Connection,
+  conn: &Connection,
   last_packet_timestamp: NaiveDateTime,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
@@ -240,7 +276,7 @@ pub fn pcap_process_clear_old_attacks(
 // inserts all the attacks with packets.len > 5 that weren't inserted in the
 // add new packet loop
 pub fn pcap_process_end(
-  conn: &mut Connection,
+  conn: &Connection,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
   tb_ip_id: &mut u32,

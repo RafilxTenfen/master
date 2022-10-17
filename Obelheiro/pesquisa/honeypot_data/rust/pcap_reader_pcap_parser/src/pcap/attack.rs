@@ -49,7 +49,7 @@ impl PcapAttack {
 
   pub fn insert(
     &self,
-    conn: &mut Connection,
+    conn: &Connection,
     hm_id: &mut HashMap<&str, u32>,
     tb_ip_id: &mut u32,
     hm_ip_id: &mut HashMap<String, u32>,
@@ -91,7 +91,7 @@ impl PcapAttack {
 
   fn insert_pcap_packets(
     &self,
-    conn: &mut Connection,
+    conn: &Connection,
     tb_ip_id: &mut u32,
     hm_ip_id: &mut HashMap<String, u32>,
     vitima_cidr_id: &u32,
@@ -116,7 +116,7 @@ pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut u32) -> HashMap<u16
 // intervalo de 1 minutos
 // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
 pub fn process_new_packet(
-  conn: &mut Connection,
+  conn: &Connection,
   hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, PcapAttack>>,
   hm_id: &mut HashMap<&str, u32>,
   tb_ip_id: &mut u32,

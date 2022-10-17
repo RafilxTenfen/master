@@ -16,7 +16,7 @@ pub struct PcapIP {
 impl PcapIP {
   pub fn insert(
     &self,
-    conn: &mut Connection,
+    conn: &Connection,
     tb_ip_id: &mut u32,
     hm_ip_id: &mut HashMap<String, u32>,
     vitima_cidr_id: &u32,

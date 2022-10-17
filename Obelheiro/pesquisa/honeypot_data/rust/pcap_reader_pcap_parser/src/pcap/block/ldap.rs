@@ -9,7 +9,7 @@ pub struct PcapLDAP {
 }
 
 impl PcapLDAP {
-  pub fn insert(&self, conn: &mut Connection) {
+  pub fn insert(&self, conn: &Connection) {
     match conn.execute(
       "INSERT INTO PCAP_LDAP (id, message_id, protocol_op) values ($1, $2, $3)",
       params![&self.id, &self.message_id, &self.protocol_op],

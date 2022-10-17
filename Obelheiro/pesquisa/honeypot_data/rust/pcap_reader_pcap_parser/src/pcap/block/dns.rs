@@ -9,7 +9,7 @@ pub struct PcapDNS {
 }
 
 impl PcapDNS {
-  pub fn insert(&self, conn: &mut Connection) {
+  pub fn insert(&self, conn: &Connection) {
     match conn.execute(
       "INSERT INTO PCAP_DNS (id, tx_id, qname, qtype) values ($1, $2, $3, $4)",
       params![&self.id, &self.tx_id, &self.qname, &self.qtype],

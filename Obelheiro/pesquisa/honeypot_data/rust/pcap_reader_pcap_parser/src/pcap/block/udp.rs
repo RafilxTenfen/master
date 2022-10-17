@@ -8,7 +8,7 @@ pub struct PcapUDP {
 }
 
 impl PcapUDP {
-  pub fn insert(&self, conn: &mut Connection) {
+  pub fn insert(&self, conn: &Connection) {
     match conn.execute(
       "INSERT INTO PCAP_UDP (id, destination_port) values ($1, $2)",
       params![&self.id, &self.destination_port],

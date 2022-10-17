@@ -40,7 +40,7 @@ pub enum PcapAttackType {
 impl PcapPacket {
   pub fn insert(
     &self,
-    conn: &mut Connection,
+    conn: &Connection,
     attack_id: &u32,
     tb_ip_id: &mut u32,
     hm_ip_id: &mut HashMap<String, u32>,
