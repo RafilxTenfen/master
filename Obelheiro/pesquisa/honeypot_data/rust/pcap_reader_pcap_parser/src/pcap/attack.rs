@@ -1,15 +1,15 @@
 use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
-use tokio_postgres::Client;
+// use tokio_postgres::Client;
 // use rusqlite::params;
-// use rusqlite::Connection;
+use rusqlite::{Connection, params};
 use std::collections::HashMap;
 
 use super::block::PcapPacket;
 
 pub struct PcapAttack {
-  pub id: i32,
+  pub id: u32,
   pub ip_vitima_cidr: Ipv4Cidr,
   pub packets: Vec<PcapPacket>,
   pub timestamp_inicio: NaiveDateTime,
@@ -32,7 +32,7 @@ impl PcapAttack {
     }
   }
 
-  pub fn new_attack(packet: PcapPacket, id: &mut i32) -> PcapAttack {
+  pub fn new_attack(packet: PcapPacket, id: &mut u32) -> PcapAttack {
     let timestamp = packet.timestamp;
     *id += 1;
 
@@ -49,13 +49,12 @@ impl PcapAttack {
 
   pub fn insert(
     &self,
-    conn: &mut Client,
-    hm_id: &mut HashMap<&str, i32>,
-    tb_ip_id: &mut i32,
-    hm_ip_id: &mut HashMap<String, i32>,
-    hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+    conn: &mut Connection,
+    hm_id: &mut HashMap<&str, u32>,
+    tb_ip_id: &mut u32,
+    hm_ip_id: &mut HashMap<String, u32>,
+    hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
   ) {
-    let packet_len = self.packets.len() as i32;
 
     let vitima_cidr_id = match hm_cidr_id.get(&self.ip_vitima_cidr) {
       Some(id_cidr) => id_cidr,
@@ -63,8 +62,8 @@ impl PcapAttack {
         let cidr_id = hm_id.entry("tbcidr").or_insert(0);
         *cidr_id += 1;
         match conn.execute(
-          "INSERT INTO TBCIDR (id, cidr) values ($1, $2)",
-          &[cidr_id, &self.ip_vitima_cidr.to_string()],
+          "INSERT INTO TBCIDR (id, cidr) values (?1, ?2)",
+          params![*cidr_id, &self.ip_vitima_cidr.to_string()],
         ) {
           Ok(_) => {}
           Err(err) => {
@@ -78,7 +77,7 @@ impl PcapAttack {
 
     match conn.execute(
       "INSERT INTO PCAP_ATTACK (id, vitima_cidr_id, packets_per_attack, timestamp_inicio, timestamp_fim) values ($1, $2, $3, $4, $5)",
-      &[&self.id, vitima_cidr_id, &packet_len, &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+      params![&self.id, vitima_cidr_id, &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     ) {
       Ok(_) => {
         // println!("attack inserted");
@@ -92,10 +91,10 @@ impl PcapAttack {
 
   fn insert_pcap_packets(
     &self,
-    conn: &mut Client,
-    tb_ip_id: &mut i32,
-    hm_ip_id: &mut HashMap<String, i32>,
-    vitima_cidr_id: &i32,
+    conn: &mut Connection,
+    tb_ip_id: &mut u32,
+    hm_ip_id: &mut HashMap<String, u32>,
+    vitima_cidr_id: &u32,
   ) {
     for packet in &self.packets {
       packet.insert(conn, &self.id, tb_ip_id, hm_ip_id, vitima_cidr_id);
@@ -103,8 +102,8 @@ impl PcapAttack {
   }
 }
 
-pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut i32) -> HashMap<i16, PcapAttack> {
-  let mut map_attack = HashMap::<i16, PcapAttack>::new();
+pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut u32) -> HashMap<u16, PcapAttack> {
+  let mut map_attack = HashMap::<u16, PcapAttack>::new();
   map_attack.insert(
     packet.udp.destination_port,
     PcapAttack::new_attack(packet, id_attack),
@@ -117,12 +116,12 @@ pub fn new_hm_udp_attack(packet: PcapPacket, id_attack: &mut i32) -> HashMap<i16
 // intervalo de 1 minutos
 // source IP (ip.src - vítima) do mesmo CIDR block e mesma porta destino UDP
 pub fn process_new_packet(
-  conn: &mut Client,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, PcapAttack>>,
-  hm_id: &mut HashMap<&str, i32>,
-  tb_ip_id: &mut i32,
-  hm_ip_id: &mut HashMap<String, i32>,
-  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+  conn: &mut Connection,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+  tb_ip_id: &mut u32,
+  hm_ip_id: &mut HashMap<String, u32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
   new_packet: PcapPacket,
 ) {
   let cidr = new_packet.ip.vitima_cidr;

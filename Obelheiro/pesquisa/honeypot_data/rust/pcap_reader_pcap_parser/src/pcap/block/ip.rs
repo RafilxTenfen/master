@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use tokio_postgres::Client;
-// use rusqlite::{params, Connection};
+// use tokio_postgres::Client;
+use rusqlite::{params, Connection};
 // use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 
 pub struct PcapIP {
-  pub id: i32,
+  pub id: u32,
   pub vitima_addr: String,
   pub dest_addr: String,
   pub vitima_cidr: Ipv4Cidr,
@@ -16,10 +16,10 @@ pub struct PcapIP {
 impl PcapIP {
   pub fn insert(
     &self,
-    conn: &mut Client,
-    tb_ip_id: &mut i32,
-    hm_ip_id: &mut HashMap<String, i32>,
-    vitima_cidr_id: &i32,
+    conn: &mut Connection,
+    tb_ip_id: &mut u32,
+    hm_ip_id: &mut HashMap<String, u32>,
+    vitima_cidr_id: &u32,
   ) {
     let vitima_addr_id = match hm_ip_id.get(&self.vitima_addr) {
       Some(id_cidr) => id_cidr,
@@ -29,7 +29,7 @@ impl PcapIP {
         let vitima_addr_str = self.vitima_addr.to_string();
         match conn.execute(
           "INSERT INTO TBIP (id, ip) values ($1, $2)",
-          &[tb_ip_id, &vitima_addr_str],
+          params![*tb_ip_id, &vitima_addr_str],
         ) {
           Ok(_) => {
             // println!("attack inserted");
@@ -45,7 +45,7 @@ impl PcapIP {
 
     match conn.execute(
       "INSERT INTO PCAP_IP (id, vitima_addr_id, vitima_cidr_id) values ($1, $2, $3)",
-      &[&self.id, vitima_addr_id, vitima_cidr_id],
+      params![&self.id, vitima_addr_id, vitima_cidr_id],
     ) {
       Ok(_) => {
         // println!("PcapIP inserted")
@@ -59,7 +59,7 @@ impl PcapIP {
 
 pub fn process_ip(
   ipv4_header: Ipv4HeaderSlice,
-  id: i32,
+  id: u32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> PcapIP {
   let vitima_addr = ipv4_header.source_addr().to_string();

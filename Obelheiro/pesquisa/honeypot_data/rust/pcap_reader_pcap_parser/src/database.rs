@@ -1,8 +1,9 @@
-use postgres::tls::NoTlsStream;
+// use postgres::tls::NoTlsStream;
 // use postgres::{Socket, tls::NoTlsStream};
-// use rusqlite::{Connection, Result};
+use std::path::PathBuf;
+use rusqlite::{Connection, Result};
 // use tokio_postgres::{Client, NoTls};
-use tokio_postgres::{Client, NoTls, Socket};
+// use tokio_postgres::{Client, NoTls, Socket};
 
 use std::env; // https://crates.io/crates/postgres/0.17.0-alpha.1
 
@@ -20,30 +21,30 @@ use std::env; // https://crates.io/crates/postgres/0.17.0-alpha.1
 //   return Connection::open(db_path);
 // }
 
-// pub fn conn_get_rust_pcap() -> Result<Connection, rusqlite::Error> {
-//   let current_path = match env::current_dir() {
-//     Ok(curpath) => curpath,
-//     Err(_) => PathBuf::from("./"),
-//   };
+pub fn conn_get_rust_pcap() -> Result<rusqlite::Connection, rusqlite::Error> {
+  let current_path = match env::current_dir() {
+    Ok(curpath) => curpath,
+    Err(_) => PathBuf::from("./"),
+  };
 
-//   let db_path = current_path
-//     .as_path()
-//     .join("../../db/database-2022-05-11/rust_pcap.sqlite");
+  let db_path = current_path
+    .as_path()
+    .join("../../db/database-2022-05-11/rust_pcap.sqlite");
 
-//   println!("Opening connection to {}", db_path.display());
-//   return Connection::open(db_path);
-// }
-
-pub async fn conn_gcp_async_rust_pcap() -> (tokio_postgres::Client, tokio_postgres::Connection<Socket, NoTlsStream>) {
-  let db_pass = env::var("DB_PASS").unwrap();
-  let uri = format!(
-    "host=localhost user=postgres password={} port=5431",
-    db_pass
-  )
-  .to_string();
-
-  return tokio_postgres::connect(&uri, NoTls).await.unwrap();
+  println!("Opening connection to {}", db_path.display());
+  return rusqlite::Connection::open(db_path);
 }
+
+// pub async fn conn_gcp_async_rust_pcap() -> (tokio_postgres::Client, tokio_postgres::Connection<Socket, NoTlsStream>) {
+//   let db_pass = env::var("DB_PASS").unwrap();
+//   let uri = format!(
+//     "host=localhost user=postgres password={} port=5431",
+//     db_pass
+//   )
+//   .to_string();
+
+//   return tokio_postgres::connect(&uri, NoTls).await.unwrap();
+// }
 
 // pub fn conn_gcp_rust_pcap() -> Client {
 //   let db_pass = env::var("DB_PASS").unwrap();
@@ -56,8 +57,8 @@ pub async fn conn_gcp_async_rust_pcap() -> (tokio_postgres::Client, tokio_postgr
 //   return Client::connect(&uri, NoTls).unwrap();
 // }
 
-pub async fn drop_tables(conn: &mut Client) {
-  match conn.batch_execute(
+pub fn drop_tables(conn: &mut Connection) {
+  match conn.execute_batch(
     "
     DROP TABLE IF EXISTS PCAP_ATTACK;
     DROP TABLE IF EXISTS PCAP_ATTACK_PACKET;
@@ -70,7 +71,7 @@ pub async fn drop_tables(conn: &mut Client) {
     DROP TABLE IF EXISTS TBIP;
     DROP TABLE IF EXISTS TBCIDR;
     ",
-  ).await {
+  ) {
     Ok(_) => {
       println!("drop Tables!")
     }
@@ -80,19 +81,19 @@ pub async fn drop_tables(conn: &mut Client) {
   }
 }
 
-// pub fn journal_mode(conn: &mut Client) {
-//   match conn.batch_execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
-//     Ok(_) => {
-//       println!("journal_mode=WAL!")
-//     }
-//     Err(err) => {
-//       println!("Problem setting journal: {:?}", err)
-//     }
-//   }
-// }
+pub fn journal_mode(conn: &mut Connection) {
+  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+    Ok(_) => {
+      println!("journal_mode=WAL!")
+    }
+    Err(err) => {
+      println!("Problem setting journal: {:?}", err)
+    }
+  }
+}
 
-pub async fn create_tables(conn: &mut Client) {
-  match conn.batch_execute(
+pub fn create_tables(conn: &mut Connection) {
+  match conn.execute_batch(
     "
     CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
       id INT NOT NULL,
@@ -154,7 +155,7 @@ pub async fn create_tables(conn: &mut Client) {
     );
 
     ",
-  ).await {
+  ) {
     Ok(_) => {
       println!("create Tables!")
     }
@@ -164,63 +165,63 @@ pub async fn create_tables(conn: &mut Client) {
   }
 }
 
-pub async fn disable_vacuum(conn: &mut Client) {
-  match conn.batch_execute(
-    "
-    ALTER TABLE PCAP_ATTACK SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+// pub async fn disable_vacuum(conn: &mut Connection) {
+//   match conn.execute_batch(
+//     "
+//     ALTER TABLE PCAP_ATTACK SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_PACKET SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_PACKET SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_IP SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_IP SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_UDP SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_UDP SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_DNS SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_DNS SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_LDAP SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_LDAP SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE PCAP_NTP SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE PCAP_NTP SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE TBIP SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
+//     ALTER TABLE TBIP SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
 
-    ALTER TABLE TBCIDR SET (
-      autovacuum_enabled = false,
-      toast.autovacuum_enabled = false
-    );
-    ",
-  ).await {
-    Ok(_) => {
-      println!("disable autovacuum Tables!")
-    }
-    Err(err) => {
-      println!("Problem setting autovacuum table: {:?}", err)
-    }
-  }
-}
+//     ALTER TABLE TBCIDR SET (
+//       autovacuum_enabled = false,
+//       toast.autovacuum_enabled = false
+//     );
+//     ",
+//   ) {
+//     Ok(_) => {
+//       println!("disable autovacuum Tables!")
+//     }
+//     Err(err) => {
+//       println!("Problem setting autovacuum table: {:?}", err)
+//     }
+//   }
+// }
 
 // pub fn get_stmt_pcap_attack(conn: &Connection) -> Statement {
 //   return conn.prepare("INSERT INTO PCAP_ATTACK (id, ip_vitima_cidr, packets_per_attack, timestamp_inicio, timestamp_fim) values (?, ?, ?, ?, ?)").unwrap();
@@ -232,13 +233,13 @@ pub async fn disable_vacuum(conn: &mut Client) {
 //     .unwrap();
 // }
 
-// pub fn close(conn: Connection) {
-//   match conn.close() {
-//     Ok(_) => {
-//       println!("Connection closed")
-//     }
-//     Err(_) => {
-//       println!("Error closing connection")
-//     }
-//   }
-// }
+pub fn close(conn: rusqlite::Connection) {
+  match conn.close() {
+    Ok(_) => {
+      println!("Connection closed")
+    }
+    Err(_) => {
+      println!("Error closing connection")
+    }
+  }
+}

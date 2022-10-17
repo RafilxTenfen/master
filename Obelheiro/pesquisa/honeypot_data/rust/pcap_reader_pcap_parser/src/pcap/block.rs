@@ -3,7 +3,8 @@ use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
-use tokio_postgres::Client;
+use rusqlite::{params, Connection};
+// use tokio_postgres::Client;
 // use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
@@ -14,7 +15,7 @@ mod ntp;
 mod udp;
 
 pub struct PcapPacket {
-  pub id: i32,
+  pub id: u32,
   pub timestamp: NaiveDateTime,
   pub ip: ip::PcapIP,
   pub udp: udp::PcapUDP,
@@ -39,13 +40,13 @@ pub enum PcapAttackType {
 impl PcapPacket {
   pub fn insert(
     &self,
-    conn: &mut Client,
-    attack_id: &i32,
-    tb_ip_id: &mut i32,
-    hm_ip_id: &mut HashMap<String, i32>,
-    vitima_cidr_id: &i32,
+    conn: &mut Connection,
+    attack_id: &u32,
+    tb_ip_id: &mut u32,
+    hm_ip_id: &mut HashMap<String, u32>,
+    vitima_cidr_id: &u32,
   ) {
-    let mut result: Result<u64, postgres::Error> = Ok(0);
+    let mut result: Result<usize, rusqlite::Error> = Ok(0);
 
     self.ip.insert(conn, tb_ip_id, hm_ip_id, vitima_cidr_id);
     self.udp.insert(conn);
@@ -59,7 +60,7 @@ impl PcapPacket {
           dns.insert(conn);
           result = conn.execute(
                 "INSERT INTO PCAP_PACKET (id, timestamp_str, attack_id, ip_id, udp_id, attack_type, dns_id) values ($1, $2, $3, $4, $5, $6)",
-                &[
+                params![
                   &self.id,
                   &self.timestamp.to_string(),
                   attack_id,
@@ -79,7 +80,7 @@ impl PcapPacket {
           ldap.insert(conn);
           result = conn.execute(
                 "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ldap_id) values ($1, $2, $3, $4, $5, $6)",
-                &[&self.id, &self.timestamp.to_string(), &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ldap.id],
+                params![&self.id, &self.timestamp.to_string(), &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ldap.id],
               );
         }
       },
@@ -91,7 +92,7 @@ impl PcapPacket {
           ntp.insert(conn);
           result = conn.execute(
                 "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ntp_id) values ($1, $2, $3, $4, $5, $6)",
-                &[
+                params![
                   &self.id,
                   &self.timestamp.to_string(),
                   &self.ip.id,
@@ -137,7 +138,7 @@ impl PcapAttackType {
 
 pub fn process_block(
   block: &PcapBlockOwned,
-  hm_id: &mut HashMap<&str, i32>,
+  hm_id: &mut HashMap<&str, u32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   match block {
@@ -157,7 +158,7 @@ pub fn process_block(
 
 fn process_legacy_block(
   b: &LegacyPcapBlock,
-  hm_id: &mut HashMap<&str, i32>,
+  hm_id: &mut HashMap<&str, u32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let naive_date_time = NaiveDateTime::from_timestamp(i64::from(b.ts_sec), b.ts_usec);
@@ -176,7 +177,7 @@ fn process_legacy_block(
 fn process_sliced_packet(
   sliced_packet: SlicedPacket,
   timestamp: NaiveDateTime,
-  hm_id: &mut HashMap<&str, i32>,
+  hm_id: &mut HashMap<&str, u32>,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
 ) -> Option<PcapPacket> {
   let ip = match sliced_packet.ip {

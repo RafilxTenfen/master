@@ -2,8 +2,8 @@ use bzip2::read::BzDecoder;
 use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
-use tokio_postgres::{Client};
-// use rusqlite::Connection;
+// use tokio_postgres::{Client};
+use rusqlite::Connection;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs;
@@ -14,8 +14,8 @@ mod attack;
 mod block;
 
 // HashMap CIDR => UDP dest port => Attack
-pub fn new_hm_cidr_udp_attack() -> HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>> {
-  return HashMap::<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>::new();
+pub fn new_hm_cidr_udp_attack() -> HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>> {
+  return HashMap::<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>::new();
 }
 
 fn list_files(pathname: &PathBuf, filter: &str) -> Option<Vec<PathBuf>> {
@@ -59,13 +59,13 @@ pub fn get_pcaps_ordered(dir: &PathBuf) -> Vec<PathBuf> {
 
 pub fn pcap_process_dir(
   dir: &PathBuf,
-  conn: &mut Client,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i32>,
-  tb_ip_id: &mut i32,
+  conn: &mut Connection,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+  tb_ip_id: &mut u32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
-  hm_ip_id: &mut HashMap<String, i32>,
-  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+  hm_ip_id: &mut HashMap<String, u32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
 ) {
   println!("pcap_process_dir {}", dir.display());
 
@@ -100,13 +100,13 @@ pub fn pcap_process_dir(
 
 pub fn pcap_process(
   pcap_bz2_path: &PathBuf,
-  conn: &mut Client,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i32>,
-  tb_ip_id: &mut i32,
+  conn: &mut Connection,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+  tb_ip_id: &mut u32,
   hm_ip_cidr: &mut HashMap<String, Ipv4Cidr>,
-  hm_ip_id: &mut HashMap<String, i32>,
-  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+  hm_ip_id: &mut HashMap<String, u32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
 ) {
   // if !pcap.is_file() {
   //   println!("pcap {} is not a file", pcap.display());
@@ -179,15 +179,15 @@ pub fn pcap_process(
 
 // checks if it can delete old attacks
 pub fn pcap_process_clear_old_attacks(
-  conn: &mut Client,
+  conn: &mut Connection,
   last_packet_timestamp: NaiveDateTime,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i32>,
-  tb_ip_id: &mut i32,
-  hm_ip_id: &mut HashMap<String, i32>,
-  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+  tb_ip_id: &mut u32,
+  hm_ip_id: &mut HashMap<String, u32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
 ) {
-  let mut cidr_udp_attacks_to_delete = HashMap::<Ipv4Cidr, i16>::new();
+  let mut cidr_udp_attacks_to_delete = HashMap::<Ipv4Cidr, u16>::new();
 
   for (cidr, udp_attack) in &*hm_cidr_udp_attack {
     for (attack_udp_dest_port, attack) in udp_attack {
@@ -240,12 +240,12 @@ pub fn pcap_process_clear_old_attacks(
 // inserts all the attacks with packets.len > 5 that weren't inserted in the
 // add new packet loop
 pub fn pcap_process_end(
-  conn: &mut Client,
-  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<i16, attack::PcapAttack>>,
-  hm_id: &mut HashMap<&str, i32>,
-  tb_ip_id: &mut i32,
-  hm_ip_id: &mut HashMap<String, i32>,
-  hm_cidr_id: &mut HashMap<Ipv4Cidr, i32>,
+  conn: &mut Connection,
+  hm_cidr_udp_attack: &mut HashMap<Ipv4Cidr, HashMap<u16, attack::PcapAttack>>,
+  hm_id: &mut HashMap<&str, u32>,
+  tb_ip_id: &mut u32,
+  hm_ip_id: &mut HashMap<String, u32>,
+  hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
 ) {
   for (_, udp_attack) in hm_cidr_udp_attack {
     for (_, attack) in udp_attack {
