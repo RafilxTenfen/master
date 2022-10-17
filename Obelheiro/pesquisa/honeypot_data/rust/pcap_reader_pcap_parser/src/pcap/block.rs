@@ -3,7 +3,7 @@ use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::SlicedPacket;
 use pcap_parser::PcapBlockOwned::{Legacy, LegacyHeader, NG};
 use pcap_parser::{LegacyPcapBlock, PcapBlockOwned};
-use postgres::Client;
+use tokio_postgres::Client;
 // use rusqlite::{params, Connection};
 use std::collections::HashMap;
 

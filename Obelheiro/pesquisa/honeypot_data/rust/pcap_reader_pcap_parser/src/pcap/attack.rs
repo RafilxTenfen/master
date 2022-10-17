@@ -1,7 +1,7 @@
 use chrono::Duration;
 use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
-use postgres::Client;
+use tokio_postgres::Client;
 // use rusqlite::params;
 // use rusqlite::Connection;
 use std::collections::HashMap;

@@ -1,5 +1,5 @@
 use etherparse::UdpHeaderSlice;
-use postgres::Client;
+use tokio_postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapUDP {

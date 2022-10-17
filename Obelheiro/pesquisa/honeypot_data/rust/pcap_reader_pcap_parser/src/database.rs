@@ -1,5 +1,9 @@
+use postgres::tls::NoTlsStream;
+// use postgres::{Socket, tls::NoTlsStream};
 // use rusqlite::{Connection, Result};
-use postgres::{Client, NoTls};
+// use tokio_postgres::{Client, NoTls};
+use tokio_postgres::{Client, NoTls, Socket};
+
 use std::env; // https://crates.io/crates/postgres/0.17.0-alpha.1
 
 // pub fn conn_get_mix_protocol() -> Result<Connection, rusqlite::Error> {
@@ -30,7 +34,7 @@ use std::env; // https://crates.io/crates/postgres/0.17.0-alpha.1
 //   return Connection::open(db_path);
 // }
 
-pub fn conn_gcp_rust_pcap() -> Client {
+pub async fn conn_gcp_async_rust_pcap() -> (tokio_postgres::Client, tokio_postgres::Connection<Socket, NoTlsStream>) {
   let db_pass = env::var("DB_PASS").unwrap();
   let uri = format!(
     "host=localhost user=postgres password={} port=5431",
@@ -38,10 +42,21 @@ pub fn conn_gcp_rust_pcap() -> Client {
   )
   .to_string();
 
-  return Client::connect(&uri, NoTls).unwrap();
+  return tokio_postgres::connect(&uri, NoTls).await.unwrap();
 }
 
-pub fn drop_tables(conn: &mut Client) {
+// pub fn conn_gcp_rust_pcap() -> Client {
+//   let db_pass = env::var("DB_PASS").unwrap();
+//   let uri = format!(
+//     "host=localhost user=postgres password={} port=5431",
+//     db_pass
+//   )
+//   .to_string();
+
+//   return Client::connect(&uri, NoTls).unwrap();
+// }
+
+pub async fn drop_tables(conn: &mut Client) {
   match conn.batch_execute(
     "
     DROP TABLE IF EXISTS PCAP_ATTACK;
@@ -55,7 +70,7 @@ pub fn drop_tables(conn: &mut Client) {
     DROP TABLE IF EXISTS TBIP;
     DROP TABLE IF EXISTS TBCIDR;
     ",
-  ) {
+  ).await {
     Ok(_) => {
       println!("drop Tables!")
     }
@@ -76,7 +91,7 @@ pub fn drop_tables(conn: &mut Client) {
 //   }
 // }
 
-pub fn create_tables(conn: &mut Client) {
+pub async fn create_tables(conn: &mut Client) {
   match conn.batch_execute(
     "
     CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
@@ -139,7 +154,7 @@ pub fn create_tables(conn: &mut Client) {
     );
 
     ",
-  ) {
+  ).await {
     Ok(_) => {
       println!("create Tables!")
     }
@@ -149,7 +164,7 @@ pub fn create_tables(conn: &mut Client) {
   }
 }
 
-pub fn disable_vacuum(conn: &mut Client) {
+pub async fn disable_vacuum(conn: &mut Client) {
   match conn.batch_execute(
     "
     ALTER TABLE PCAP_ATTACK SET (
@@ -197,7 +212,7 @@ pub fn disable_vacuum(conn: &mut Client) {
       toast.autovacuum_enabled = false
     );
     ",
-  ) {
+  ).await {
     Ok(_) => {
       println!("disable autovacuum Tables!")
     }

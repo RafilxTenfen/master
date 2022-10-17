@@ -2,7 +2,7 @@ use bzip2::read::BzDecoder;
 use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
-use postgres::{Client};
+use tokio_postgres::{Client};
 // use rusqlite::Connection;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;

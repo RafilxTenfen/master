@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use cidr_utils::cidr::Ipv4Cidr;
 use etherparse::Ipv4HeaderSlice;
-use postgres::Client;
+use tokio_postgres::Client;
 // use rusqlite::{params, Connection};
 // use std::{convert::TryFrom, net::Ipv4Addr, str::FromStr};
 

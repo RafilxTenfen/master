@@ -1,5 +1,5 @@
 use ldap_parser::ldap::LdapMessage;
-use postgres::Client;
+use tokio_postgres::Client;
 // use rusqlite::{params, Connection};
 
 pub struct PcapLDAP {

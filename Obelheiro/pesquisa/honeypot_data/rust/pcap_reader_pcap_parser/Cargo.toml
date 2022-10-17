@@ -22,7 +22,9 @@ etherparse = { version = "0.12.0" }
 chrono = { version = "0.4.22" }
 cidr-utils = { version = "0.5.7" }
 bzip2 = { version = "0.4", features = ["tokio"] }
-postgres = { version = "0.19.4" }
+# postgres = { version = "0.19.4" }
+tokio-postgres = { version = "0.7.7" }
+tokio = { version = "1.20.1", features = ["full"] }
 dotenv = { version = "0.15.0" }
 
 # rtshark = "2.3.1"

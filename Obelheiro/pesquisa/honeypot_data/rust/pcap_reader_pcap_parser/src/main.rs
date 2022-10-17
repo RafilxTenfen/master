@@ -9,7 +9,7 @@ use std::env;
 use std::path::PathBuf;
 
 // use cidr_utils::cidr::Ipv4Cidr;
-
+use tokio;
 mod database;
 mod pcap;
 
@@ -22,6 +22,7 @@ pub fn get_current_working_dir() -> PathBuf {
   return current_dir;
 }
 
+#[tokio::main] // By default, tokio_postgres uses the tokio crate as its runtime.
 fn main() -> Result<()> {
   dotenv().ok();
   let currently_dir = get_current_working_dir();
@@ -34,7 +35,13 @@ fn main() -> Result<()> {
   // This command will cause SQLite to not wait on data to reach the disk surface,
   // which will make write operations appear to be much faster.
   // But if you lose power in the middle of a transaction, your database file might go corrupt.
-  let mut conn = database::conn_gcp_rust_pcap();
+  let (conn, connection) = database::conn_gcp_async_rust_pcap().await;
+  tokio::spawn(async move {
+    if let Err(e) = connection.await {
+        eprintln!("connection error: {}", e);
+    }
+  });
+
   // database::journal_mode(&mut conn);
   database::drop_tables(&mut conn);
   database::create_tables(&mut conn);
@@ -68,6 +75,7 @@ fn main() -> Result<()> {
     &mut hm_ip_id,
     &mut hm_cidr_id,
   );
+
 
   match conn.close() {
     Ok(_) => {
