@@ -40,7 +40,7 @@ library(lubridate)
   - query_id ID da transação definido pelo atacante
   - year_period ano e trimestre em que ocorreu o ataque exemplo "20212" o ataque ocorreu no segundo trimestre do 2021
 ```{r fetch_data}
-db <- dbConnect(RSQLite::SQLite(), dbname="../dnstor_statistics_dns.sqlite")
+db <- dbConnect(RSQLite::SQLite(), dbname="../../db/dnstor_statistics_dns.sqlite")
 
 data_unfetch <-dbSendQuery(db, "  
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period

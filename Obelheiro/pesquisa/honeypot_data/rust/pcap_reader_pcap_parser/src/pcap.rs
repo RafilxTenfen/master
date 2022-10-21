@@ -3,7 +3,7 @@ use chrono::{Duration, NaiveDateTime};
 use cidr_utils::cidr::Ipv4Cidr;
 use pcap_parser::{traits::PcapReaderIterator, LegacyPcapReader, PcapError};
 // use tokio_postgres::{Client};
-use rusqlite::{Connection};
+use rusqlite::Connection;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::fs;
@@ -87,7 +87,6 @@ pub fn pcap_process_dir(
   //   println!("processing file {}", pcap.display())
   // });
 
-
   let tx_conn = match conn.unchecked_transaction() {
     Ok(tx) => tx,
     Err(err) => {
@@ -95,7 +94,6 @@ pub fn pcap_process_dir(
       return;
     }
   };
-
 
   // check again all the attacks with > 5 packets that were not inserted
   pcap_process_end(
@@ -133,7 +131,6 @@ pub fn pcap_process(
   // }
 
   println!("processing pcap {}", pcap_bz2_path.display());
-
 
   let pcap_bz2_reader = match File::open(pcap_bz2_path) {
     Ok(pcap_bz2) => BzDecoder::new(pcap_bz2),
@@ -190,6 +187,24 @@ pub fn pcap_process(
     }
     Err(err) => {
       println!("Error reading LegacyPcapReader {}", err)
+    }
+  };
+
+  match tx_conn.commit() {
+    Ok(_) => {
+      // println!("Sending commit");
+    }
+    Err(err) => {
+      println!("Error openning file {}", err);
+    }
+  };
+
+
+  let tx_conn = match conn.unchecked_transaction() {
+    Ok(tx) => tx,
+    Err(err) => {
+      println!("Error creating tx {}", err);
+      return;
     }
   };
 

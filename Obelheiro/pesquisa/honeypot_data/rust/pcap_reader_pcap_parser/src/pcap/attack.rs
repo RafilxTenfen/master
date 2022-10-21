@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 use cidr_utils::cidr::Ipv4Cidr;
 // use tokio_postgres::Client;
 // use rusqlite::params;
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use std::collections::HashMap;
 
 use super::block::PcapPacket;
@@ -55,8 +55,7 @@ impl PcapAttack {
     hm_ip_id: &mut HashMap<String, u32>,
     hm_cidr_id: &mut HashMap<Ipv4Cidr, u32>,
   ) {
-
-    let vitima_cidr_id = match hm_cidr_id.get(&self.ip_vitima_cidr) {
+    let ip_vitima_cidr_id = match hm_cidr_id.get(&self.ip_vitima_cidr) {
       Some(id_cidr) => id_cidr,
       None => {
         let cidr_id = hm_id.entry("tbcidr").or_insert(0);
@@ -75,13 +74,38 @@ impl PcapAttack {
       }
     };
 
+    let packet = match self.packets.first() {
+      Some(p) => p,
+      None => return,
+    };
+
+    let ip_vitima_addr_id = match hm_ip_id.get(&packet.ip.vitima_addr) {
+      Some(id_cidr) => id_cidr,
+      None => {
+        *tb_ip_id += 1;
+
+        let vitima_addr_str = packet.ip.vitima_addr.to_string();
+        match conn.execute(
+          "INSERT INTO TBIP (id, ip) values ($1, $2)",
+          params![*tb_ip_id, &vitima_addr_str],
+        ) {
+          Ok(_) => {}
+          Err(err) => {
+            println!("Problem inserting TBIP: {:?}", err)
+          }
+        }
+        hm_ip_id.insert(vitima_addr_str, *tb_ip_id);
+        tb_ip_id
+      }
+    };
+
     match conn.execute(
-      "INSERT INTO PCAP_ATTACK (id, vitima_cidr_id, packets_per_attack, timestamp_inicio, timestamp_fim) values ($1, $2, $3, $4, $5)",
-      params![&self.id, vitima_cidr_id, &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
+      "INSERT INTO PCAP_ATTACK (id, ip_vitima_addr_id, ip_vitima_cidr_id, udp_destination_port, packets_per_attack, timestamp_inicio, timestamp_fim) values ($1, $2, $3, $4, $5, $6, $7)",
+      params![&self.id, ip_vitima_addr_id, ip_vitima_cidr_id, packet.udp.destination_port, &self.packets.len(), &self.timestamp_inicio.to_string(), &self.timestamp_fim.to_string()],
     ) {
       Ok(_) => {
         // println!("attack inserted");
-        self.insert_pcap_packets(conn, tb_ip_id, hm_ip_id, vitima_cidr_id);
+        self.insert_pcap_packets(conn);
       }
       Err(err) => {
         println!("Problem inserting attack: {:?}", err)
@@ -89,15 +113,9 @@ impl PcapAttack {
     }
   }
 
-  fn insert_pcap_packets(
-    &self,
-    conn: &Connection,
-    tb_ip_id: &mut u32,
-    hm_ip_id: &mut HashMap<String, u32>,
-    vitima_cidr_id: &u32,
-  ) {
+  fn insert_pcap_packets(&self, conn: &Connection) {
     for packet in &self.packets {
-      packet.insert(conn, &self.id, tb_ip_id, hm_ip_id, vitima_cidr_id);
+      packet.insert(conn, &self.id);
     }
   }
 }

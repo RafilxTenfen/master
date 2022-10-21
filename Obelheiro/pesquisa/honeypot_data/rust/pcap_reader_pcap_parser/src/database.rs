@@ -1,7 +1,7 @@
 // use postgres::tls::NoTlsStream;
 // use postgres::{Socket, tls::NoTlsStream};
-use std::path::PathBuf;
 use rusqlite::{Connection, Result};
+use std::path::PathBuf;
 // use tokio_postgres::{Client, NoTls};
 // use tokio_postgres::{Client, NoTls, Socket};
 
@@ -82,7 +82,8 @@ pub fn drop_tables(conn: &mut Connection) {
 }
 
 pub fn journal_mode(conn: &mut Connection) {
-  match conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=OFF;") {
+  // PRAGMA journal_mode=WAL;
+  match conn.execute_batch("PRAGMA synchronous=OFF;") {
     Ok(_) => {
       println!("journal_mode=WAL!")
     }
@@ -97,7 +98,9 @@ pub fn create_tables(conn: &mut Connection) {
     "
     CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
       id INT NOT NULL,
-      vitima_cidr_id INT NOT NULL,
+      ip_vitima_addr_id INT NOT NULL,
+      ip_vitima_cidr_id INT NOT NULL,
+      udp_destination_port SMALLINT NOT NULL,
       packets_per_attack INT NOT NULL,
       timestamp_inicio TEXT NOT NULL,
       timestamp_fim TEXT NOT NULL
@@ -105,25 +108,9 @@ pub fn create_tables(conn: &mut Connection) {
 
     CREATE TABLE IF NOT EXISTS PCAP_PACKET (
       id INT NOT NULL,
-      timestamp_str TEXT NOT NULL,
       attack_id INT NOT NULL,
-      ip_id INT NOT NULL,
-      udp_id INT NOT NULL,
-      attack_type TEXT NOT NULL,
-      dns_id INT,
-      ldap_id INT,
-      ntp_id INT
-    );
-
-    CREATE TABLE IF NOT EXISTS PCAP_IP (
-      id INT NOT NULL,
-      vitima_addr_id INT NOT NULL,
-      vitima_cidr_id INT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS PCAP_UDP (
-      id INT NOT NULL,
-      destination_port SMALLINT NOT NULL
+      attack_type INT NOT NULL,
+      relation_id INT
     );
 
     CREATE TABLE IF NOT EXISTS PCAP_DNS (
@@ -164,6 +151,68 @@ pub fn create_tables(conn: &mut Connection) {
     }
   }
 }
+
+// "
+// CREATE TABLE IF NOT EXISTS PCAP_ATTACK (
+//   id INT NOT NULL,
+//   vitima_cidr_id INT NOT NULL,
+//   packets_per_attack INT NOT NULL,
+//   timestamp_inicio TEXT NOT NULL,
+//   timestamp_fim TEXT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_PACKET (
+//   id INT NOT NULL,
+//   timestamp_str TEXT NOT NULL,
+//   attack_id INT NOT NULL,
+//   ip_id INT NOT NULL,
+//   udp_id INT NOT NULL,
+//   attack_type TEXT NOT NULL,
+//   dns_id INT,
+//   ldap_id INT,
+//   ntp_id INT
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_IP (
+//   id INT NOT NULL,
+//   vitima_addr_id INT NOT NULL,
+//   vitima_cidr_id INT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_UDP (
+//   id INT NOT NULL,
+//   destination_port SMALLINT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_DNS (
+//   id INT NOT NULL,
+//   tx_id INT NOT NULL,
+//   qname TEXT NOT NULL,
+//   qtype TEXT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_LDAP (
+//   id INT NOT NULL,
+//   message_id INT NOT NULL,
+//   protocol_op INT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS PCAP_NTP (
+//   id INT NOT NULL,
+//   refid INT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS TBIP (
+//   id INT NOT NULL,
+//   ip TEXT NOT NULL
+// );
+
+// CREATE TABLE IF NOT EXISTS TBCIDR (
+//   id INT NOT NULL,
+//   cidr TEXT NOT NULL
+// );
+
+// ",
 
 // pub async fn disable_vacuum(conn: &mut Connection) {
 //   match conn.execute_batch(

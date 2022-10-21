@@ -38,18 +38,8 @@ pub enum PcapAttackType {
 }
 
 impl PcapPacket {
-  pub fn insert(
-    &self,
-    conn: &Connection,
-    attack_id: &u32,
-    tb_ip_id: &mut u32,
-    hm_ip_id: &mut HashMap<String, u32>,
-    vitima_cidr_id: &u32,
-  ) {
+  pub fn insert(&self, conn: &Connection, attack_id: &u32) {
     let mut result: Result<usize, rusqlite::Error> = Ok(0);
-
-    self.ip.insert(conn, tb_ip_id, hm_ip_id, vitima_cidr_id);
-    self.udp.insert(conn);
 
     match self.attack_type {
       PcapAttackType::DNS => match self.dns {
@@ -59,14 +49,11 @@ impl PcapPacket {
         Some(ref dns) => {
           dns.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, attack_id, ip_id, udp_id, attack_type, dns_id) values ($1, $2, $3, $4, $5, $6)",
+                "INSERT INTO PCAP_PACKET (id, attack_id, attack_type, relation_id) values (?1, ?2, ?3, ?4)",
                 params![
                   &self.id,
-                  &self.timestamp.to_string(),
                   attack_id,
-                  &self.ip.id,
-                  &self.udp.id,
-                  &self.attack_type.to_string(),
+                  &self.attack_type.to_int(),
                   &dns.id
                 ],
               );
@@ -79,8 +66,8 @@ impl PcapPacket {
         Some(ref ldap) => {
           ldap.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ldap_id) values ($1, $2, $3, $4, $5, $6)",
-                params![&self.id, &self.timestamp.to_string(), &self.ip.id, &self.udp.id, &self.attack_type.to_string(), &ldap.id],
+                "INSERT INTO PCAP_PACKET (id, attack_id, attack_type, relation_id) values (?1, ?2, ?3, ?4)",
+                params![&self.id, attack_id, &self.attack_type.to_int(), &ldap.id],
               );
         }
       },
@@ -91,19 +78,22 @@ impl PcapPacket {
         Some(ref ntp) => {
           ntp.insert(conn);
           result = conn.execute(
-                "INSERT INTO PCAP_PACKET (id, timestamp_str, ip_id, udp_id, attack_type, ntp_id) values ($1, $2, $3, $4, $5, $6)",
+                "INSERT INTO PCAP_PACKET (id, attack_id, attack_type, relation_id) values (?1, ?2, ?3, ?4)",
                 params![
                   &self.id,
-                  &self.timestamp.to_string(),
-                  &self.ip.id,
-                  &self.udp.id,
-                  &self.attack_type.to_string(),
+                  attack_id,
+                  &self.attack_type.to_int(),
                   &ntp.id
                 ],
               );
         }
       },
-      _ => {}
+      _ => {
+        result = conn.execute(
+          "INSERT INTO PCAP_PACKET (id, attack_id, attack_type) values (?1, ?2, ?3)",
+          params![&self.id, attack_id, &self.attack_type.to_int(),],
+        );
+      }
     }
 
     match result {
@@ -121,17 +111,30 @@ impl PcapPacket {
 }
 
 impl PcapAttackType {
-  pub fn to_string(&self) -> String {
+  // pub fn to_string(&self) -> String {
+  //   match self {
+  //     PcapAttackType::STEAM => String::from("STEAM_GAMES"),
+  //     PcapAttackType::SSDP => String::from("SSDP"),
+  //     PcapAttackType::QOTD => String::from("QOTD"),
+  //     PcapAttackType::NTP => String::from("NTP"),
+  //     PcapAttackType::MEMCACHED => String::from("MEMCACHED"),
+  //     PcapAttackType::DNS => String::from("DNS"),
+  //     PcapAttackType::COAP => String::from("COAP"),
+  //     PcapAttackType::LDAP => String::from("LDAP"),
+  //     PcapAttackType::CHARGEN => String::from("CHARGEN"),
+  //   }
+  // }
+  pub fn to_int(&self) -> u8 {
     match self {
-      PcapAttackType::STEAM => String::from("STEAM_GAMES"),
-      PcapAttackType::SSDP => String::from("SSDP"),
-      PcapAttackType::QOTD => String::from("QOTD"),
-      PcapAttackType::NTP => String::from("NTP"),
-      PcapAttackType::MEMCACHED => String::from("MEMCACHED"),
-      PcapAttackType::DNS => String::from("DNS"),
-      PcapAttackType::COAP => String::from("COAP"),
-      PcapAttackType::LDAP => String::from("LDAP"),
-      PcapAttackType::CHARGEN => String::from("CHARGEN"),
+      PcapAttackType::STEAM => 1,
+      PcapAttackType::SSDP => 2,
+      PcapAttackType::QOTD => 3,
+      PcapAttackType::NTP => 4,
+      PcapAttackType::MEMCACHED => 5,
+      PcapAttackType::DNS => 6,
+      PcapAttackType::COAP => 7,
+      PcapAttackType::LDAP => 8,
+      PcapAttackType::CHARGEN => 9,
     }
   }
 }

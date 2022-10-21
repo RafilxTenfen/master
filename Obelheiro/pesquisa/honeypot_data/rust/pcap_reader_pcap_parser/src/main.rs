@@ -77,7 +77,6 @@ fn main() -> Result<()> {
     &mut hm_cidr_id,
   );
 
-
   // match conn.close() {
   //   Ok(_) => {
   //     print!("gcp db conn closed")
