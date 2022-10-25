@@ -848,11 +848,12 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
     geom_text(aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
     facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) + 
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
     ggtitle("NTP - Ataques por Comandos")
 
-pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10)
+pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10, pointsize=16)
 print(ntp_plot_monlist)
 dev.off()
 

@@ -144,14 +144,6 @@ pub fn pcap_process(
     }
   };
 
-  let tx_conn = match conn.unchecked_transaction() {
-    Ok(tx) => tx,
-    Err(err) => {
-      println!("Error creating tx {}", err);
-      return;
-    }
-  };
-
   let mut last_packet_timestamp: NaiveDateTime = NaiveDateTime::default();
   // 65536 recommended by the lib
   match LegacyPcapReader::new(65536, pcap_bz2_reader) {
@@ -163,8 +155,16 @@ pub fn pcap_process(
               Some(new_packet) => {
                 last_packet_timestamp = new_packet.timestamp;
 
+                let tx_conn = match conn.unchecked_transaction() {
+                  Ok(tx) => tx,
+                  Err(err) => {
+                    println!("Error creating tx {}", err);
+                    return;
+                  }
+                };
+
                 attack::process_new_packet(
-                  &tx_conn,
+                  &conn,
                   hm_cidr_udp_attack,
                   hm_id,
                   tb_ip_id,
@@ -172,6 +172,15 @@ pub fn pcap_process(
                   hm_cidr_id,
                   new_packet,
                 );
+
+                match tx_conn.commit() {
+                  Ok(_) => {
+                    // println!("Sending commit");
+                  }
+                  Err(err) => {
+                    println!("Error openning file {}", err);
+                  }
+                };
               }
               None => {}
             }
@@ -189,16 +198,6 @@ pub fn pcap_process(
       println!("Error reading LegacyPcapReader {}", err)
     }
   };
-
-  match tx_conn.commit() {
-    Ok(_) => {
-      // println!("Sending commit");
-    }
-    Err(err) => {
-      println!("Error openning file {}", err);
-    }
-  };
-
 
   let tx_conn = match conn.unchecked_transaction() {
     Ok(tx) => tx,
