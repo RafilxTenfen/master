@@ -43,7 +43,7 @@ fn main() -> Result<()> {
   //   }
   // });
 
-  database::journal_mode(&mut conn);
+  // database::journal_mode(&mut conn);
   database::drop_tables(&mut conn);
   database::create_tables(&mut conn);
   // database::disable_vacuum(&mut conn);

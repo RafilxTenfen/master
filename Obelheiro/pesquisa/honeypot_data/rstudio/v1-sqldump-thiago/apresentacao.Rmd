@@ -559,6 +559,15 @@ data_dns_grouped = data_dns %>%
 data_dns_grouped
 ```
 
+```{r}
+data_dns_grouped %>%
+  filter(tempo_diff_secs <= days) %>%
+  filter(number_of_attacks == 1)
+
+# 12,016 rows < 1 dia
+# 11,741 rows apenas 1 attack
+```
+
 
 
 - Dessa forma é buscado apresentar quanto tempo um QNAME em conjunto com o QTYPE, permanece ativo, ex o qname "peacecorps.gov." do qtype "ANY" teve o primeiro ataque registrado em 31/10/2020 e o ultimo ataque com o mesmo qname e qtype em 11/05/2022 totalizando uma longevidade de aproximadamente um ano e meio (48092066 secs)
@@ -573,7 +582,7 @@ dns_plot_logevidade_meses = data_dns_grouped %>%
   ylab("Quantidade de Registros") + 
   scale_y_continuous(labels = addUnits) +
   scale_x_continuous(labels = addUnitMeses) + 
-  theme(plot.margin = margin(r = 15))
+  theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16))
 # verificar para colocar a cada 3 ou 4 meses
 
 pdf(paste(plots_path, "/dns_longevidade_rr_meses.pdf", sep=""), width = 16, height = 10)
@@ -603,9 +612,21 @@ data_dns_grouped %>%
   xlab("Longevidade")
 ```
 
+```{r}
+data_dns_grouped %>% 
+  arrange(desc(sum_requests_per_attack)) 
+
+data_dns_grouped['order'] = 1:16125
+
+data_dns_grouped %>%
+  filter(grepl('dfafa', qname))
+
+```
+
 
 ```{r fig.align="center", fig.width = 10}
 percentage_76_secs = quantile(data_dns_grouped$tempo_diff_secs, c(.76))[[1]]
+
 
 data_dns_grouped %>%
   filter(grepl('cpsc', qname))
@@ -617,8 +638,11 @@ data_dns_grouped %>%
 # cpsc.gov. A
 # filter(tempo_diff_secs > percentage_76_secs) 
 
+data_dns_grouped %>%
+  filter(tempo_diff_secs > (months * 9)) 
+
 data_dns_bigger_than_76 = data_dns_grouped %>%
-  filter(tempo_diff_secs > percentage_76_secs) %>%
+  filter(tempo_diff_secs > (months * 9))  %>%
   ungroup() %>%
   group_by(qtype) %>%
   summarise(qtype_quantity = n()) %>%
@@ -783,6 +807,7 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     ylab("Porcentagem de requisições") +
     xlab("Período (Trimestre)") + 
+    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
     ggtitle("DNS: Requisições por QTYPE")
 
 dns_plot_request_qtype <- dns_plot_request_qtype + guides(fill=guide_legend(title="QTYPE"))
@@ -851,6 +876,7 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
     theme(plot.title = element_text(size=22)) + 
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
+    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
     ggtitle("NTP - Ataques por Comandos")
 
 pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10, pointsize=16)
@@ -917,7 +943,7 @@ memcached_payload_types_quantity_percentage %>%
 
 ```{r fig.width = 14}
   
- memcached_payload_types_quantity_percentage %>%
+ memcached_comandos = memcached_payload_types_quantity_percentage %>%
   arrange(desc(quantity)) %>%
   filter(quantity > 0) %>%
   select('quantity_percentage', 'payload_limit') %>%
@@ -927,5 +953,12 @@ memcached_payload_types_quantity_percentage %>%
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     ylab("Porcentagem") +
     xlab("Comando") +
+    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
     ggtitle("Memacached: Ataques por Comando")
+
+pdf(paste(plots_path, "/memcached_comandos.pdf", sep=""), width = 16, height = 10, pointsize=16)
+print(memcached_comandos)
+dev.off()
+
+memcached_comandos
 ```
