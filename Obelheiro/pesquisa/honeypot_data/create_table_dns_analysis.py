@@ -75,7 +75,7 @@ for row in cur.execute("""
 
   for dnsQuestion in dnsRecordPayload.questions:
     # print("\n", dnsQuestion.qname, type(dnsQuestion.qname.idna()))
-    dnsAnalysisQuestions.append((dnsId, dnsQuestion.qname.idna(), dnslib.QTYPE.get(dnsQuestion.qtype)))
+    dnsAnalysisQuestions.append((dnsId, dnsQuestion.qname.idna().lower(), dnslib.QTYPE.get(dnsQuestion.qtype)))
     # print("\n", "dnsQuestion", dnsQuestion)
 
   dnsId += 1

@@ -559,6 +559,8 @@ data_dns_grouped = data_dns %>%
 data_dns_grouped
 ```
 
+Remover - "238.107.19.200.in-addr.arpa." 
+
 ```{r}
 data_dns_grouped %>%
   filter(tempo_diff_secs <= days) %>%
@@ -579,10 +581,16 @@ dns_plot_logevidade_meses = data_dns_grouped %>%
   geom_histogram(bins = 20, fill='blue', color ='black') +
   ggtitle("Longevidade de um mesmo RR (QNAME + QTYPE)") +
   xlab("Longevidade") +
-  ylab("Quantidade de Registros") + 
+  ylab("Quantidade de registros") + 
   scale_y_continuous(labels = addUnits) +
   scale_x_continuous(labels = addUnitMeses) + 
-  theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16))
+  theme(
+    plot.margin = margin(r = 26), 
+    plot.title = element_text(size = 22), 
+    axis.title = element_text(size = 16),
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 14),
+  )
 # verificar para colocar a cada 3 ou 4 meses
 
 pdf(paste(plots_path, "/dns_longevidade_rr_meses.pdf", sep=""), width = 16, height = 10)
@@ -616,10 +624,10 @@ data_dns_grouped %>%
 data_dns_grouped %>% 
   arrange(desc(sum_requests_per_attack)) 
 
-data_dns_grouped['order'] = 1:16125
+# data_dns_grouped['order'] = 1:16125
 
 data_dns_grouped %>%
-  filter(grepl('dfafa', qname))
+  filter(grepl('bind', qname))
 
 ```
 
@@ -799,15 +807,31 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
   ggplot( aes(x=year_period, y=requests_percentage, fill=qtype)) +
     geom_bar(stat="identity", width = 0.8) +
     geom_text(
-      aes(label = labelBiggerThan9(requests_percentage)), position = position_stack(vjust = 0.1)
+      size = 7,
+      aes(label = labelBiggerThan9(requests_percentage)), position = position_stack(vjust = 0.25),
       ) +
     theme(legend.title= element_text(size=12, face="bold"),
           plot.title = element_text(size=14, face="bold")) +
     scale_y_continuous(labels = add_percentage) +
-    scale_fill_viridis(discrete=TRUE, direction = -1) +
+    scale_fill_viridis(
+      discrete=TRUE, 
+      direction = -1,
+      alpha = 1,
+      begin = 0.2,
+      end = 1,
+    ) +
     ylab("Porcentagem de requisições") +
     xlab("Período (Trimestre)") + 
-    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
+    theme(
+      plot.margin = margin(r = 15), 
+      plot.title = element_text(size = 22), 
+      axis.title = element_text(size = 16),
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 14),
+      axis.text.y = element_text(size = 14),
+      legend.text = element_text(size = 14),
+    
+    ) + 
     ggtitle("DNS: Requisições por QTYPE")
 
 dns_plot_request_qtype <- dns_plot_request_qtype + guides(fill=guide_legend(title="QTYPE"))
@@ -844,10 +868,16 @@ dbDisconnect(db_ntp)
 data_ntp['tempo_final_cast'] = as.POSIXct(data_ntp[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
 data_ntp['tempo_inicio_cast'] = as.POSIXct(data_ntp[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
 
-data_ntp_grouped_period_ntp_type = data_ntp %>%
+data_ntp %>%
+  arrange(desc(tempo_final))
+
+# data_ntp_grouped_period_ntp_type = data_ntp %>%
   mutate(year_period = as.factor(year_period)) %>%
   group_by(year_period, ntp_type) %>%
-  summarise(sum_requests_per_attack = sum(requests_per_attack), number_of_attacks = n()) 
+  summarise(
+    sum_requests_per_attack = sum(requests_per_attack), 
+    number_of_attacks = n(),
+  ) 
 
 data_ntp_grouped_period_ntp_type_percentage = data_ntp_grouped_period_ntp_type %>%
   group_by(year_period) %>%
@@ -874,9 +904,18 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
     scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
     facet_grid(~year_period) +
     theme(plot.title = element_text(size=22)) + 
+    scale_y_continuous(labels = add_percentage) +
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
-    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
+    theme(
+      plot.margin = margin(r = 15), 
+      plot.title = element_text(size = 22), 
+      axis.title = element_text(size = 16), 
+      legend.position="none", 
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 14),
+      axis.text.y = element_text(size = 14),
+    ) + 
     ggtitle("NTP - Ataques por Comandos")
 
 pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10, pointsize=16)
@@ -947,13 +986,27 @@ memcached_payload_types_quantity_percentage %>%
   arrange(desc(quantity)) %>%
   filter(quantity > 0) %>%
   select('quantity_percentage', 'payload_limit') %>%
+  arrange(quantity_percentage) %>%
+  mutate(payload_limit=factor(payload_limit, levels=payload_limit)) %>%
   ggplot( aes(x=payload_limit, y=quantity_percentage)) + 
-    geom_bar(stat="identity", width = 0.7, position="dodge") +
-    geom_text(aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -0.25)) +
+    # geom_bar(stat="identity", width = 0.7) +
+    geom_segment( aes(xend=payload_limit, yend=0)) +
+    geom_point( size=4, color="skyblue") +
+    coord_flip() +
+    geom_text(aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -1)) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
+    scale_y_continuous(labels = add_percentage) +
     ylab("Porcentagem") +
     xlab("Comando") +
-    theme(plot.margin = margin(r = 15), plot.title = element_text(size = 22), axis.title = element_text(size = 16)) + 
+    theme_bw() +
+    theme(
+      plot.margin = margin(r = 15), 
+      plot.title = element_text(size = 22), 
+      axis.title = element_text(size = 16),
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 14),
+      axis.text.y = element_text(size = 14)
+    ) + 
     ggtitle("Memacached: Ataques por Comando")
 
 pdf(paste(plots_path, "/memcached_comandos.pdf", sep=""), width = 16, height = 10, pointsize=16)
