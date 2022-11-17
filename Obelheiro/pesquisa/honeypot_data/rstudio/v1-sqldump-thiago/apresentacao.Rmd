@@ -216,13 +216,13 @@ O trimestre com maior número de ataques foi o de 2022.1 com 1.9 Milhões de ata
 
 - Juntar dois gráficos de Volume de Ataques e de Requisições
 - Total de ataques por trimestre
-```{r fig.width = 12} 
+```{r fig.width = 16} 
 scale = 4000
 color_requests = "#609cfe" # light blue
 color_attacks = "#01bb38" # green
 size_text = 14
 
-data_grouped_period %>%
+data_geral_request_attack = data_grouped_period %>%
   mutate(sum_requests_per_attack = sum_requests_per_attack/scale) %>%
   select("Requisições"="sum_requests_per_attack", Ataques="number_of_attacks", year_period) %>%
   gather("Ataques", "Requisições", -year_period, key="Quantidade", value = "number") %>%
@@ -233,15 +233,28 @@ data_grouped_period %>%
   scale_y_continuous(labels = addUnits, sec.axis = sec_axis(~ . * scale, name = "Requisições", labels = addUnits)) +
   theme(
     axis.line.y.right = element_line(color = color_requests),
-    axis.text.y.right = element_text(color = color_requests), 
-    axis.title.y.right = element_text(color = color_requests),
+    axis.text.y.right = element_text(color = color_requests, size = 14), 
+    axis.title.y.right = element_text(color = color_requests, size = 16),
     axis.line.y.left = element_line(color = color_attacks),
-    axis.text.y.left = element_text(color = color_attacks), 
-    axis.title.y.left = element_text(color = color_attacks),
+    axis.text.y.left = element_text(color = color_attacks, size = 14), 
+    axis.title.y.left = element_text(color = color_attacks, size = 16),
+    plot.title = element_text(size = 22), 
+    axis.title = element_text(size = 16), 
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 18),
   ) + 
   ylab("Ataques") + 
   xlab("Período (Trimestre)") +  
   ggtitle("Volume de tráfego de Ataques x Requisições") 
+
+pdf(paste(plots_path, "/geral_ataques_requisicoes.pdf", sep=""), width = 16, height = 12)
+print(data_geral_request_attack)
+dev.off()
+
+data_geral_request_attack
 ```
 
 
@@ -585,11 +598,12 @@ dns_plot_logevidade_meses = data_dns_grouped %>%
   scale_y_continuous(labels = addUnits) +
   scale_x_continuous(labels = addUnitMeses) + 
   theme(
-    plot.margin = margin(r = 26), 
+    plot.margin = margin(r = 30), 
     plot.title = element_text(size = 22), 
-    axis.title = element_text(size = 16),
-    axis.text.x = element_text(size = 13),
-    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 16),
   )
 # verificar para colocar a cada 3 ou 4 meses
 
@@ -612,6 +626,14 @@ data_dns_grouped %>%
 # 863 - x
 
 data_dns_grouped %>%
+  mutate(
+    days = tempo_diff_secs / days,
+    years = tempo_diff_secs / years,
+  ) %>%
+  arrange(desc(tempo_diff_secs)) %>%
+  select('qname', 'qtype', 'number_of_attacks', 'days', 'years', 'tempo_diff_secs')
+
+data_dns_grouped %>%
   mutate(tempo_diff_secs = tempo_diff_secs / months) %>%
   ggplot(aes(x= tempo_diff_secs)) +
   stat_ecdf(geom = "step", pad = FALSE) +
@@ -624,10 +646,16 @@ data_dns_grouped %>%
 data_dns_grouped %>% 
   arrange(desc(sum_requests_per_attack)) 
 
-# data_dns_grouped['order'] = 1:16125
+data_dns_grouped['order'] = 1:16123
 
+#067
+#1x1.
+# .
+# commerce
+# cpsc
 data_dns_grouped %>%
-  filter(grepl('bind', qname))
+  select(qname, qtype, order) %>%
+  filter(grepl('cpsc', qname))
 
 ```
 
@@ -636,9 +664,13 @@ data_dns_grouped %>%
 percentage_76_secs = quantile(data_dns_grouped$tempo_diff_secs, c(.76))[[1]]
 
 
+#067
+#1x1.
 data_dns_grouped %>%
-  filter(grepl('cpsc', qname))
+  filter(grepl('1x1.', qname))
   
+
+
 # TCC tiago que continua ativo 
 # 1x1.cz. ANY 
 # . ANY
@@ -647,10 +679,14 @@ data_dns_grouped %>%
 # filter(tempo_diff_secs > percentage_76_secs) 
 
 data_dns_grouped %>%
-  filter(tempo_diff_secs > (months * 9)) 
+  filter(tempo_diff_secs <= (days)) %>%
+  filter(number_of_attacks <= 1)
+
+data_dns_grouped %>%
+  filter(tempo_diff_secs > (months * 10)) 
 
 data_dns_bigger_than_76 = data_dns_grouped %>%
-  filter(tempo_diff_secs > (months * 9))  %>%
+  filter(tempo_diff_secs > (months * 10))  %>%
   ungroup() %>%
   group_by(qtype) %>%
   summarise(qtype_quantity = n()) %>%
@@ -790,7 +826,7 @@ dns_plot_ataque_qtype
 
 
 
-```{r fig.align="center", fig.width = 12}
+```{r fig.align="center", fig.width = 16, fig.height = 10}
   
 data_dns_qtype_requests_others_percentage = data_dns_qtype_percentage %>%
   mutate(
@@ -823,14 +859,12 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
     ylab("Porcentagem de requisições") +
     xlab("Período (Trimestre)") + 
     theme(
-      plot.margin = margin(r = 15), 
       plot.title = element_text(size = 22), 
-      axis.title = element_text(size = 16),
+      axis.title = element_text(size = 18),
       strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 14),
-      axis.text.y = element_text(size = 14),
-      legend.text = element_text(size = 14),
-    
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
+      legend.text = element_text(size = 16),
     ) + 
     ggtitle("DNS: Requisições por QTYPE")
 
@@ -871,7 +905,7 @@ data_ntp['tempo_inicio_cast'] = as.POSIXct(data_ntp[['tempo_inicio']], format = 
 data_ntp %>%
   arrange(desc(tempo_final))
 
-# data_ntp_grouped_period_ntp_type = data_ntp %>%
+ data_ntp_grouped_period_ntp_type = data_ntp %>%
   mutate(year_period = as.factor(year_period)) %>%
   group_by(year_period, ntp_type) %>%
   summarise(
@@ -891,7 +925,7 @@ data_ntp_grouped_period_ntp_type_percentage = data_ntp_grouped_period_ntp_type %
 ```
 
 - Gráfico de barras empilhadas apresentando a porcentagem da quantidade de ataques em cada "ntp_type" por período
-```{r fig.width = 12}
+```{r fig.width = 16, fig.height=10}
 
 ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>% 
   mutate(
@@ -900,7 +934,7 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
   ) %>%   
   ggplot( aes(x=Comando, y=number_of_attacks_percentage, fill=Comando)) +
     geom_bar(stat="identity", position="dodge") + 
-    geom_text(aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
+    geom_text(size = 6.4, aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
     facet_grid(~year_period) +
     theme(plot.title = element_text(size=22)) + 
@@ -908,13 +942,12 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
     ylab("Porcentagem da quantidade de ataques") +
     xlab("Período (Trimestre)") + 
     theme(
-      plot.margin = margin(r = 15), 
       plot.title = element_text(size = 22), 
-      axis.title = element_text(size = 16), 
+      axis.title = element_text(size = 18),
       legend.position="none", 
       strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 14),
-      axis.text.y = element_text(size = 14),
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
     ) + 
     ggtitle("NTP - Ataques por Comandos")
 
@@ -958,7 +991,26 @@ data_memcached_payload_types_unfetch <-dbSendQuery(db_memcached, "
 data_memcached_payload_types <- fetch(data_memcached_payload_types_unfetch)
 
 
+
+data_memcached_payloads_unfetch <-dbSendQuery(db_memcached, "
+  SELECT id, SUBSTR(payload,0,25) AS payload_limit, tempo_inicio, tempo_final
+    FROM MEMCACHED_ANALYSIS
+")
+data_memcached_payload <- fetch(data_memcached_payloads_unfetch)
+
 dbDisconnect(db_memcached)
+```
+
+```{r}
+data_memcached_payload['tempo_final_cast'] = as.POSIXct(data_memcached_payload[['tempo_final']], format = "%Y-%m-%d %H:%M:%S")
+data_memcached_payload['tempo_inicio_cast'] = as.POSIXct(data_memcached_payload[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
+```
+
+
+```{r}
+data_memcached_payload %>%
+  arrange(desc(tempo_final_cast))
+
 ```
 
 
@@ -980,7 +1032,7 @@ memcached_payload_types_quantity_percentage %>%
 ```
 
 
-```{r fig.width = 14}
+```{r fig.width = 16, fig.height=10}
   
  memcached_comandos = memcached_payload_types_quantity_percentage %>%
   arrange(desc(quantity)) %>%
@@ -993,25 +1045,25 @@ memcached_payload_types_quantity_percentage %>%
     geom_segment( aes(xend=payload_limit, yend=0)) +
     geom_point( size=4, color="skyblue") +
     coord_flip() +
-    geom_text(aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -1)) +
+    geom_text(
+      size = 6,
+      aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -1),) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     scale_y_continuous(labels = add_percentage) +
     ylab("Porcentagem") +
     xlab("Comando") +
     theme_bw() +
     theme(
-      plot.margin = margin(r = 15), 
       plot.title = element_text(size = 22), 
-      axis.title = element_text(size = 16),
+      axis.title = element_text(size = 20),
       strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 14),
-      axis.text.y = element_text(size = 14)
+      axis.text.x = element_text(size = 18),
+      axis.text.y = element_text(size = 18),
+      # panel.grid.major = element_blank(),
+      panel.grid = element_blank(),
+      
     ) + 
-    ggtitle("Memacached: Ataques por Comando")
-
-pdf(paste(plots_path, "/memcached_comandos.pdf", sep=""), width = 16, height = 10, pointsize=16)
-print(memcached_comandos)
-dev.off()
+    ggtitle("Memcached: Ataques por Comando")
 
 memcached_comandos
 ```
