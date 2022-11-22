@@ -93,8 +93,35 @@ data_ssdp_period = data_ssdp %>%
             number_of_attacks = n(),
             count_victim = n_distinct(vitima_ip)) 
 
+data_ssdp_period = data_ssdp_period %>%
+  mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks) %>%
+  
+
 print(data_ssdp_period, n=16)
 ``` 
+
+```{r fig.width = 16, fig.height=10} 
+data_ssdp_period %>% 
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+  ) %>%   
+  ggplot( aes(x=year_period, y=requests_by_attack)) + 
+    geom_bar(stat="identity", width = 0.8, position="dodge") +  
+    geom_text(aes(label = addUnits(requests_by_attack),  vjust = -0.25)) + 
+    scale_fill_viridis(discrete=TRUE) +
+    scale_y_continuous(labels = addUnits) +
+    ylab("Quantidade de requisições") + 
+    xlab("Período (Trimestre)") +  
+    theme(
+      plot.title = element_text(size = 22), 
+      axis.title = element_text(size = 18),
+      legend.position="none", 
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
+    ) + 
+    ggtitle("SSDP - Requisições por trimestre")
+```
 
 - SSDP Plot Requisições
 ```{r fig.width = 16, fig.height=12} 
@@ -121,7 +148,7 @@ data_ssdp_period %>%
 ```
 
 - SSDP Plot Ataques
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=10} 
 data_ssdp_period %>% 
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
@@ -217,7 +244,8 @@ data_coap_period = data_coap %>%
   group_by(year_period) %>%
   summarise(sum_requests_per_attack = sum(requests_per_attack), 
             number_of_attacks = n(),
-            count_victim = n_distinct(vitima_ip)) 
+            count_victim = n_distinct(vitima_ip))  %>%
+  mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks)
 
 print(data_coap_period, n=16)
 ``` 
@@ -339,13 +367,14 @@ data_cldap_period = data_cldap %>%
   group_by(year_period) %>%
   summarise(sum_requests_per_attack = sum(requests_per_attack), 
             number_of_attacks = n(),
-            count_victim = n_distinct(vitima_ip)) 
+            count_victim = n_distinct(vitima_ip)) %>%
+  mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks)
 
 print(data_cldap_period, n=16)
 ``` 
 
 - CLDAP Plot Requisições
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=10} 
 data_cldap_period %>% 
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
@@ -368,8 +397,14 @@ data_cldap_period %>%
     ggtitle("CLDAP - Requisições por trimestre")
 ```
 
+- 2 teorias
+  - mudaram atacantes/ferramentas de ataques
+  - os ataques estão sendo pulverizados em mais refletores
+      - Talvez houve 
+      - filtragem rate-limiting
+
 - CLDAP Plot Ataques
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=10} 
 data_cldap_period %>% 
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),

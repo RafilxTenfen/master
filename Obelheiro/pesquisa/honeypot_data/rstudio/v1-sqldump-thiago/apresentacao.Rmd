@@ -25,6 +25,8 @@ library(lubridate)
 library(blob)
 library(scales)
 library(ggrepel)
+# library(ggpubr)
+# install.packages("ggpubr")
 # library("dplyr.teradata")
 ```
 ```{r echo=FALSE}
@@ -178,6 +180,12 @@ data_new_victim_year = data_mix_protocol %>%
   mutate(year=as.factor(year))
 
 data_new_victim_year
+
+data_mix_protocol %>%
+  arrange(tempo_inicio)
+
+data_mix_protocol %>%
+  arrange(desc(tempo_final))
 ```
 
 ## Apresentar os resultados com números ao invés de porcentagens
@@ -216,7 +224,7 @@ O trimestre com maior número de ataques foi o de 2022.1 com 1.9 Milhões de ata
 
 - Juntar dois gráficos de Volume de Ataques e de Requisições
 - Total de ataques por trimestre
-```{r fig.width = 16} 
+```{r fig.width = 16, fig.height=12} 
 scale = 4000
 color_requests = "#609cfe" # light blue
 color_attacks = "#01bb38" # green
@@ -233,28 +241,99 @@ data_geral_request_attack = data_grouped_period %>%
   scale_y_continuous(labels = addUnits, sec.axis = sec_axis(~ . * scale, name = "Requisições", labels = addUnits)) +
   theme(
     axis.line.y.right = element_line(color = color_requests),
-    axis.text.y.right = element_text(color = color_requests, size = 14), 
-    axis.title.y.right = element_text(color = color_requests, size = 16),
+    axis.text.y.right = element_text(color = color_requests, size = 16), 
+    axis.title.y.right = element_text(color = color_requests, size = 18),
     axis.line.y.left = element_line(color = color_attacks),
-    axis.text.y.left = element_text(color = color_attacks, size = 14), 
-    axis.title.y.left = element_text(color = color_attacks, size = 16),
+    axis.text.y.left = element_text(color = color_attacks, size = 16), 
+    axis.title.y.left = element_text(color = color_attacks, size = 18),
     plot.title = element_text(size = 22), 
-    axis.title = element_text(size = 16), 
+    axis.title = element_text(size = 18), 
     strip.text = element_text(size = 16),
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 14),
-    legend.text = element_text(size = 14),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 16),
     legend.title = element_text(size = 18),
   ) + 
   ylab("Ataques") + 
   xlab("Período (Trimestre)") +  
   ggtitle("Volume de tráfego de Ataques x Requisições") 
 
-pdf(paste(plots_path, "/geral_ataques_requisicoes.pdf", sep=""), width = 16, height = 12)
+pdf(paste(plots_path, "/geral_ataques_requisicoes.pdf", sep=""), width = 18, height = 14)
 print(data_geral_request_attack)
 dev.off()
 
 data_geral_request_attack
+```
+
+- Apresentar ataques x requisicoes em 2 gráficos diferentes
+```{r fig.width = 16, fig.height=10} 
+plot_geral_attacks = data_grouped_period %>%
+  select("Requisições"="sum_requests_per_attack", Ataques="number_of_attacks", year_period) %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=Ataques)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(Ataques),  vjust = -0.25)) + 
+  scale_fill_manual(values = c(color_attacks, color_requests)) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 22), 
+    axis.title = element_text(size = 18), 
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18),
+  ) + 
+  ylab("Ataques") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de Ataques") 
+
+
+plot_geral_requests = data_grouped_period %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=sum_requests_per_attack)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
+  scale_fill_manual(values = c(color_attacks, color_requests)) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 22), 
+    axis.title = element_text(size = 18), 
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18),
+  ) + 
+  ylab("Requisições") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de Requisições") 
+
+
+g = arrangeGrob(plot_geral_attacks, plot_geral_requests, nrow=2)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots.pdf", sep=""), g, width = 18, height = 14)
+
+data_grouped_period %>%
+  mutate(attack_by_request=sum_requests_per_attack/number_of_attacks) %>%
+    ggplot( aes(x=year_period, y=attack_by_request)) + 
+  geom_bar(stat="identity", width = 0.8, position="dodge") +  
+  geom_text(aes(label = addUnits(attack_by_request),  vjust = -0.25)) + 
+  scale_fill_manual(values = c(color_attacks, color_requests)) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 22), 
+    axis.title = element_text(size = 18), 
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18),
+  ) + 
+  ylab("Ataques/Requisições") + 
+  xlab("Período (Trimestre)") +  
+  ggtitle("Volume de Ataques/Requisições") 
+
+grid.arrange(plot_geral_attacks, plot_geral_requests, plot_geral_attack_requests, nrow=3)
 ```
 
 
@@ -1046,7 +1125,7 @@ memcached_payload_types_quantity_percentage %>%
     geom_point( size=4, color="skyblue") +
     coord_flip() +
     geom_text(
-      size = 6,
+      size = 6.4,
       aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -1),) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     scale_y_continuous(labels = add_percentage) +
@@ -1064,6 +1143,10 @@ memcached_payload_types_quantity_percentage %>%
       
     ) + 
     ggtitle("Memcached: Ataques por Comando")
+
+pdf(paste(plots_path, "/memcached_comandos.pdf", sep=""), width = 16, height = 10, pointsize=16)
+print(memcached_comandos)
+dev.off()
 
 memcached_comandos
 ```
