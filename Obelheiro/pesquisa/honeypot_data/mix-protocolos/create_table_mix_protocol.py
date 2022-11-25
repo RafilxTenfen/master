@@ -2,6 +2,7 @@ import sqlite3
 
 mix_connection = sqlite3.connect('../db/database-2022-05-11/mix_protocol.sqlite', timeout=10)
 mix_cursor = mix_connection.cursor()
+# MIX PROTOCOL PRECISA FILTRAR >=5 E YEAR_PERIOD ENTRE 20184 E 20221
 
 mix_cursor.execute("DROP TABLE IF EXISTS MIX_PROTOCOL;")
 mix_cursor.execute("""
@@ -27,8 +28,7 @@ for ntp_row in ntp_cursor.execute("""
   SELECT count, tempoInicio, tempoFinal, ip, payload
      FROM NTP_MEMORY_DICT
 LEFT JOIN NTP_PAYLOAD_DICT
-       ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID
-    WHERE count > 5;
+       ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID;
 """):
   count = int(ntp_row[0])
   tempoInicio = ntp_row[1]

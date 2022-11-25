@@ -47,7 +47,10 @@ data_unfetch <-dbSendQuery(db, "
     FROM DNS_ANALYSIS
 		JOIN DNS_ANALYSIS_QUESTION
 		  ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
-	 WHERE QTYPE != 0
+	 WHERE QTYPE != 0 AND
+	       year_period >= 20184 AND
+         year_period <= 20221 AND
+         requests_per_attack >= 5
 ")
 data <- fetch(data_unfetch)
 
@@ -56,7 +59,10 @@ dns_data_unfetch <- dbSendQuery(db, "
     FROM DNS_ANALYSIS
     JOIN DNS_ANALYSIS_QUESTION
       ON DNS_ANALYSIS.id = DNS_ANALYSIS_QUESTION.dns_analysis_id
-   WHERE QTYPE != 0
+   WHERE QTYPE != 0 AND
+	       year_period >= 20184 AND
+         year_period <= 20221 AND
+         requests_per_attack >= 5
 GROUP BY year_period, year, period, qname, qtype
 ORDER BY quantity DESC;
 ")

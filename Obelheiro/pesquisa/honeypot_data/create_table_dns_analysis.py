@@ -39,10 +39,14 @@ dnsAnalysisQuestions = []
 unableToParse = 0
 
 for row in cur.execute("""
-  SELECT strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.ip, DNS_MEMORY_DICT.count, CAST(DNS_PAYLOAD_DICT.payload as TEXT) as payload, tempoInicio, tempoFinal, ip
-    FROM DNS_MEMORY_DICT
-    JOIN DNS_PAYLOAD_DICT
-      ON DNS_MEMORY_DICT.payloadID == DNS_PAYLOAD_DICT.payloadID;
+  SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, count AS requests_per_attack
+    FROM (SELECT strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period, DNS_MEMORY_DICT.ip, DNS_MEMORY_DICT.count, CAST(DNS_PAYLOAD_DICT.payload as TEXT) as payload, tempoInicio, tempoFinal, ip
+            FROM DNS_MEMORY_DICT
+            JOIN DNS_PAYLOAD_DICT
+              ON DNS_MEMORY_DICT.payloadID == DNS_PAYLOAD_DICT.payloadID)
+   WHERE year_period >= 20184 AND
+         year_period <= 20221 AND
+         requests_per_attack >= 5;
 """):
   year = int(row[0])
   period = int(row[1])

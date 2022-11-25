@@ -71,11 +71,14 @@ ntpId = int(1)
 ntpAnalysis = []
 
 for row in ntp_ntp.execute("""
-SELECT ip, count, tempoInicio, tempoFinal, NTP_MEMORY_DICT.payloadID, payload, strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period
-  FROM NTP_MEMORY_DICT
-  JOIN NTP_PAYLOAD_DICT
-    ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID
- WHERE count > 5;
+SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+  FROM (SELECT ip, count, tempoInicio, tempoFinal, NTP_MEMORY_DICT.payloadID, payload, strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period
+          FROM NTP_MEMORY_DICT
+          JOIN NTP_PAYLOAD_DICT
+            ON NTP_MEMORY_DICT.payloadID = NTP_PAYLOAD_DICT.payloadID)
+ WHERE year_period >= 20184 AND
+       year_period <= 20221 AND
+       count >= 5;
 """):
   ip = row[0]
   count = int(row[1])

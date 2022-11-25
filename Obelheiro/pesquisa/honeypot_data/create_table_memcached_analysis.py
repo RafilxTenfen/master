@@ -151,11 +151,16 @@ def add_to_payload_types(memcached_payload: bytes):
 
 
 for memcached_row in memcached_cursor.execute("""
-SELECT ip, count, tempoInicio, tempoFinal, payload
-  FROM MEMCACHED_MEMORY_DICT
-  JOIN MEMCACHED_PAYLOAD_DICT
-    ON MEMCACHED_MEMORY_DICT.payloadID = MEMCACHED_PAYLOAD_DICT.payloadID
- WHERE count > 5
+SELECT ip, count, tempoInicio, tempoFinal, payload, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+  FROM (
+    SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      FROM MEMCACHED_MEMORY_DICT
+      JOIN MEMCACHED_PAYLOAD_DICT
+        ON MEMCACHED_MEMORY_DICT.payloadID = MEMCACHED_PAYLOAD_DICT.payloadID
+  )
+ WHERE year_period >= 20184 AND
+       year_period <= 20221 AND
+       count >= 5;
 """):
   ip = memcached_row[0]
   requests_per_attack = int(memcached_row[1])
