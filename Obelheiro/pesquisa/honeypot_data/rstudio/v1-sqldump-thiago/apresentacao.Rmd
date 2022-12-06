@@ -734,7 +734,12 @@ data_dns %>%
             total_number_of_attacks = n(),
             inicio = min(tempo_inicio_cast),
             fim = max(tempo_final_cast)
-            )
+            ) %>%
+  mutate(requests_by_attack = total_requests_per_attack/total_number_of_attacks)
+
+data_dns %>%
+  group_by(qname, qtype) %>%
+  summarise(attack = n())
 
 data_dns %>%
   group_by(year_period) %>%
@@ -813,6 +818,18 @@ pdf(paste(plots_path, "/dns_longevidade_rr_meses.pdf", sep=""), width = 16, heig
 print(dns_plot_logevidade_meses)
 dev.off()
 
+
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H8.pdf", sep=""), width = 18, height = 8)
+print(dns_plot_logevidade_meses)
+dev.off()
+
+
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W22H10.pdf", sep=""), width = 22, height = 10)
+print(dns_plot_logevidade_meses)
+dev.off()
+
+
+
 dns_plot_logevidade_meses
 ```
 
@@ -833,8 +850,6 @@ data_dns_grouped %>%
 
 data_dns_grouped %>%
   filter(tempo_diff_secs >= months * 10)
-  
-  
 
 data_dns %>%
   group_by(year_period) %>%
