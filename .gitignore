@@ -60,3 +60,5 @@ Obelheiro/pesquisa/honeypot_data/pcap/test/get-all-pcap-files.sh
 Obelheiro/pesquisa/honeypot_data/pcap/test/*
 Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/src/.env
 Obelheiro/pesquisa/honeypot_data/rust/pcap_reader_pcap_parser/.env
+Obelheiro/pesquisa/honeypot_data/vitima_calculated.RData
+Obelheiro/pesquisa/honeypot_data/rstudio/v1-sqldump-thiago/vitimas_data_time_diff_vitima&protocol.Rds

@@ -107,6 +107,14 @@ data_mix_protocol <- fetch(data_mix_protocol_unfetch)
 
 dbDisconnect(db_mix_protocol)
 ```
+
+```{r}
+data_mix_protocol %>%
+  group_by(attack_protocol) %>%
+  summarise(median_requests = median(requests_per_attack))
+
+```
+
 - Formatando os timestamp
 
 ```{r}
