@@ -137,6 +137,8 @@ vitimas_data = vitima_data_ordered_selected %>%
     .x
   })
 
+
+saveRDS(vitimas_data, file = "vitimas_data_time_diff_vitima&protocol.Rds")
 ```
 
 
@@ -178,20 +180,57 @@ vitimas_data_selected %>%
   filter(time_diff < 0)
 
 vitimas_data_selected %>%
-  filter(vitima_ip == "61.163.117.11")
+  filter(vitima_ip == "99.47.21.54") %>%
+  arrange(tempo_inicio_cast)
 
 vitimas_filtered = vitimas_data_selected %>%
-  filter(time_diff >= 0) 
+  filter(time_diff > 0) 
 
 plot.ecdf(vitimas_filtered$time_diff, )
 
 
 summary(vitimas_filtered)
 
-vitimas_filtered %>%
-  filter(time_diff > 0) %>%
-  filter(time_diff <= 60)
+vitimas_time_diff_less60 = vitimas_filtered %>%
+  filter(time_diff <= 60) %>%
+  group_by(vitima_ip, attack_protocol) %>%
+  summarise(qnt = n()) %>%
+  arrange(desc(qnt))
+  
 
+vitimas_time_diff_less60
+  
+summary(vitimas_time_diff_less60)
+
+vitimas_data_selected %>%
+  filter(time_diff > 60) %>%
+  filter(time_diff <= 3600)
+```
+
+
+- Histograma de intervalo de tempo entre 61sec e 3600 sec
+
+```{r fig.width = 12}
+
+vitimas_data_selected %>%
+  filter(time_diff > 60) %>%
+  filter(time_diff <= 3600) %>%
+  ggplot( aes(x=time_diff)) +
+  geom_histogram(bins = 60, fill='blue', color ='black') +
+  # geom_text(aes(label = addUnits(time_diff))) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 22),
+    axis.title = element_text(size = 18),
+    strip.text = element_text(size = 16),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 16),
+    legend.title = element_text(size = 18),
+  ) +
+  ylab("Quantidade") +
+  xlab("Segundos de intervalo entre ataques de mesma vitima+protocolo") + 
+  ggtitle("Vitima + Protocolo = Intervalo entre 61 e 3600 segundos")
 ```
 
 

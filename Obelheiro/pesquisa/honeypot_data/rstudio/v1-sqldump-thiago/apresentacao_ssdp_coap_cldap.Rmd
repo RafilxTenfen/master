@@ -545,7 +545,12 @@ cldap_plot_ataq
 ```{r}
 
 g = arrangeGrob(cldap_plot_ataq, cldap_plot_req, nrow=2)
-ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots.pdf", sep=""), g, width = 18, height = 14)
+
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H14.pdf", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H10.pdf", sep=""), g, width = 18, height = 10)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H8.pdf", sep=""), g, width = 18, height = 8)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H6.pdf", sep=""), g, width = 18, height = 6)
+
 grid.arrange(cldap_plot_ataq, cldap_plot_req, nrow=2)
 ```
 

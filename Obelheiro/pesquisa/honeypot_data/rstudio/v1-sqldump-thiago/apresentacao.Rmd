@@ -394,8 +394,8 @@ plot_geral_requests = data_grouped_period %>%
     legend.title = element_text(size = 18),
   ) +
   ylab("Requisições") +
-  xlab("Período (Trimestre)") 
-  # ggtitle("Volume de Requisições")
+  xlab("Período (Trimestre)") +
+  ggtitle("Volume de Requisições")
 
 plot_geral_requests
 
@@ -404,8 +404,11 @@ pdf(paste(plots_path, "/plot_geral_requests_sem_titulo_W18H6.pdf", sep=""), widt
 print(plot_geral_requests)
 dev.off()
 
-# g = arrangeGrob(plot_geral_attacks, plot_geral_requests, nrow=2)
-# ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots.pdf", sep=""), g, width = 18, height = 14)
+g = arrangeGrob(plot_geral_attacks, plot_geral_requests, nrow=2)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H14.pdf", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H10.pdf", sep=""), g, width = 18, height = 10)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H8.pdf", sep=""), g, width = 18, height = 8)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H6.pdf", sep=""), g, width = 18, height = 6)
 
 data_grouped_period %>%
   mutate(attack_by_request=sum_requests_per_attack/number_of_attacks) %>%
@@ -822,15 +825,29 @@ dns_plot_logevidade_meses = data_dns_grouped %>%
   )
 # verificar para colocar a cada 3 ou 4 meses
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses.pdf", sep=""), width = 16, height = 10)
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W16H10.pdf", sep=""), width = 16, height = 10)
 print(dns_plot_logevidade_meses)
 dev.off()
 
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W16H8.pdf", sep=""), width = 16, height = 8)
+print(dns_plot_logevidade_meses)
+dev.off()
+
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H10.pdf", sep=""), width = 18, height = 10)
+print(dns_plot_logevidade_meses)
+dev.off()
 
 pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H8.pdf", sep=""), width = 18, height = 8)
 print(dns_plot_logevidade_meses)
 dev.off()
 
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H6.pdf", sep=""), width = 18, height = 6)
+print(dns_plot_logevidade_meses)
+dev.off()
+
+pdf(paste(plots_path, "/dns_longevidade_rr_meses_W20H10.pdf", sep=""), width = 20, height = 10)
+print(dns_plot_logevidade_meses)
+dev.off()
 
 pdf(paste(plots_path, "/dns_longevidade_rr_meses_W22H10.pdf", sep=""), width = 22, height = 10)
 print(dns_plot_logevidade_meses)
@@ -1132,10 +1149,29 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
 dns_plot_request_qtype <- dns_plot_request_qtype + guides(fill=guide_legend(title="QTYPE"))
 
 
-pdf(paste(plots_path, "/dns_request_qtype.pdf", sep=""), width = 16, height = 10)
+pdf(paste(plots_path, "/dns_request_qtype_W16H10.pdf", sep=""), width = 16, height = 10)
 print(dns_plot_request_qtype)
 dev.off()
 
+pdf(paste(plots_path, "/dns_request_qtype_W16H8.pdf", sep=""), width = 16, height = 8)
+print(dns_plot_request_qtype)
+dev.off()
+
+pdf(paste(plots_path, "/dns_request_qtype_W16H6.pdf", sep=""), width = 16, height = 6)
+print(dns_plot_request_qtype)
+dev.off()
+
+pdf(paste(plots_path, "/dns_request_qtype_W18H10.pdf", sep=""), width = 18, height = 10)
+print(dns_plot_request_qtype)
+dev.off()
+
+pdf(paste(plots_path, "/dns_request_qtype_W18H8.pdf", sep=""), width = 18, height = 8)
+print(dns_plot_request_qtype)
+dev.off()
+
+pdf(paste(plots_path, "/dns_request_qtype_W18H6.pdf", sep=""), width = 18, height = 6)
+print(dns_plot_request_qtype)
+dev.off()
 
 dns_plot_request_qtype
 ```
@@ -1215,7 +1251,24 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
     ) +
     ggtitle("NTP - Ataques por Comandos")
 
-pdf(paste(plots_path, "/ntp_monlist_incidence.pdf", sep=""), width = 16, height = 10, pointsize=16)
+pdf(paste(plots_path, "/ntp_monlist_incidence_W16H10.pdf", sep=""), width = 16, height = 10, pointsize=16)
+print(ntp_plot_monlist)
+dev.off()
+
+
+pdf(paste(plots_path, "/ntp_monlist_incidence_W16H8.pdf", sep=""), width = 16, height = 8, pointsize=16)
+print(ntp_plot_monlist)
+dev.off()
+
+pdf(paste(plots_path, "/ntp_monlist_incidence_W18H10.pdf", sep=""), width = 18, height = 10, pointsize=16)
+print(ntp_plot_monlist)
+dev.off()
+
+pdf(paste(plots_path, "/ntp_monlist_incidence_W18H8.pdf", sep=""), width = 18, height = 8)
+print(ntp_plot_monlist)
+dev.off()
+
+pdf(paste(plots_path, "/ntp_monlist_incidence_W18H6.pdf", sep=""), width = 18, height = 6, pointsize=16)
 print(ntp_plot_monlist)
 dev.off()
 
@@ -1335,7 +1388,23 @@ memcached_payload_types_quantity_percentage %>%
     ) +
     ggtitle("Memcached: Ataques por Comando")
 
-pdf(paste(plots_path, "/memcached_comandos.pdf", sep=""), width = 16, height = 10, pointsize=16)
+pdf(paste(plots_path, "/memcached_comandos_W16H10.pdf", sep=""), width = 16, height = 10, pointsize=16)
+print(memcached_comandos)
+dev.off()
+
+pdf(paste(plots_path, "/memcached_comandos_W16H8.pdf", sep=""), width = 16, height = 8, pointsize=16)
+print(memcached_comandos)
+dev.off()
+
+pdf(paste(plots_path, "/memcached_comandos_W18H10.pdf", sep=""), width = 18, height = 10)
+print(memcached_comandos)
+dev.off()
+
+pdf(paste(plots_path, "/memcached_comandos_W18H8.pdf", sep=""), width = 18, height = 8)
+print(memcached_comandos)
+dev.off()
+
+pdf(paste(plots_path, "/memcached_comandos_W18H6.pdf", sep=""), width = 18, height = 6)
 print(memcached_comandos)
 dev.off()
 
