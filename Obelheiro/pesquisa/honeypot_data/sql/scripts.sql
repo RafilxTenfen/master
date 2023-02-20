@@ -252,3 +252,44 @@ SELECT *
     LIMIT 200
 ) AS TOP200
 ORDER BY TOP200.ip
+
+
+
+  SELECT payload, count(1) as qnt
+    FROM (
+
+  SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, payload
+    FROM (
+      SELECT *,  strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period
+        FROM SSDP_MEMORY_DICT
+		JOIN SSDP_PAYLOAD_DICT
+		  ON SSDP_MEMORY_DICT.payloadID = SSDP_PAYLOAD_DICT.payloadID
+    )
+   WHERE year_period >= 20184 AND
+         year_period <= 20221 AND
+         requests_per_attack >= 5
+
+	)
+
+
+
+
+
+
+  SELECT payload, count(1) as qnt
+    FROM (
+
+  SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, payload
+    FROM (
+      SELECT *,  strftime("%Y", tempoFinal) as year, ((strftime("%m", tempoFinal) - 1) / 3) + 1 AS period
+        FROM SSDP_MEMORY_DICT
+		JOIN SSDP_PAYLOAD_DICT
+		  ON SSDP_MEMORY_DICT.payloadID = SSDP_PAYLOAD_DICT.payloadID
+    )
+   WHERE year_period >= 20184 AND
+         year_period <= 20221 AND
+         requests_per_attack >= 5
+
+	)
+  GROUP BY payload
+  ORDER BY qnt DESC

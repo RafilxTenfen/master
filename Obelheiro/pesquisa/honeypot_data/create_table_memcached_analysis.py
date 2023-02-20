@@ -9,7 +9,8 @@ mix_cursor.execute("""
 CREATE TABLE MEMCACHED_PAYLOAD_TYPES (
 	id INTEGER NOT NULL,
   payload TEXT NOT NULL,
-  quantity INTEGER NOT NULL
+  attacks INTEGER NOT NULL,
+  requests_per_attack INTEGER NOT NULL
 );
 """)
 
@@ -48,6 +49,19 @@ byte_prepend = b"prepend"
 byte_flush_all = b"flush_all"
 
 payload_types = {
+  'stats': 0,
+  'set': 0,
+  'add': 0,
+  'get': 0,
+  'cas': 0,
+  'replace': 0,
+  'append': 0,
+  'prepend': 0,
+  'flush_all': 0,
+  'outros': 0,
+}
+
+payload_types_requests = {
   'stats': 0,
   'set': 0,
   'add': 0,
@@ -108,39 +122,50 @@ def get_bytes_after(memcached_payload, byte_keyword):
 
   return "-"
 
-def get_memcached_request_type(memcached_payload):
+def get_memcached_request_type(memcached_payload, requests):
 
   print("get_memcached_request_type", memcached_payload)
 
   if contain_bytes(memcached_payload, byte_set):
     payload_types['set'] += 1
+    payload_types_requests['set'] += requests
+
     return "Set"
   if contain_bytes(memcached_payload, byte_stats):
     payload_types['stats'] += 1
+    payload_types_requests['stats'] += requests
     return "Stats"
   if contain_bytes(memcached_payload, byte_get):
     payload_types['get'] += 1
+    payload_types_requests['get'] += requests
     return "Get"
   if contain_bytes(memcached_payload, byte_add):
     payload_types['add'] += 1
+    payload_types_requests['add'] += requests
     return "Add"
   if contain_bytes(memcached_payload, byte_flush_all):
     payload_types['flush_all'] += 1
+    payload_types_requests['flush_all'] += requests
     return "FlushAll"
   if contain_bytes(memcached_payload, byte_cas):
     payload_types['cas'] += 1
+    payload_types_requests['cas'] += requests
     return "Cas"
   if contain_bytes(memcached_payload, byte_replace):
     payload_types['replace'] += 1
+    payload_types_requests['replace'] += requests
     return "Replace"
   if contain_bytes(memcached_payload, byte_append):
     payload_types['append'] += 1
+    payload_types_requests['append'] += requests
     return "Append"
   if contain_bytes(memcached_payload, byte_prepend):
     payload_types['prepend'] += 1
+    payload_types_requests['prepend'] += requests
     return "Prepend"
 
   payload_types['outros'] += 1
+  payload_types_requests['outros'] += requests
   # add_to_payload_types(memcached_payload)
   return "Outros"
 
@@ -153,7 +178,7 @@ def add_to_payload_types(memcached_payload: bytes):
 for memcached_row in memcached_cursor.execute("""
 SELECT ip, count, tempoInicio, tempoFinal, payload, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
   FROM (
-    SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+    SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
       FROM MEMCACHED_MEMORY_DICT
       JOIN MEMCACHED_PAYLOAD_DICT
         ON MEMCACHED_MEMORY_DICT.payloadID = MEMCACHED_PAYLOAD_DICT.payloadID
@@ -173,7 +198,7 @@ SELECT ip, count, tempoInicio, tempoFinal, payload, CAST(CAST(year AS text) || C
   bytePayload = bytePayloadUnscaped.decode("unicode_escape").encode("raw_unicode_escape")
   decoded_payload = bytePayload.decode(encoding)
 
-  memcached_request_type = get_memcached_request_type(bytePayload)
+  memcached_request_type = get_memcached_request_type(bytePayload, requests_per_attack)
   get_payload_value = "-"
   if memcached_request_type == "Get":
     get_payload_value = get_bytes_after(bytePayload, byte_get)
@@ -195,7 +220,7 @@ id = 0
 for payload in payload_types:
   id += 1
   print(payload_types[payload], payload)
-  mix_cursor.execute('INSERT INTO MEMCACHED_PAYLOAD_TYPES VALUES (?,?,?)', [id, payload, payload_types[payload]])
+  mix_cursor.execute('INSERT INTO MEMCACHED_PAYLOAD_TYPES VALUES (?,?,?,?)', [id, payload, payload_types[payload], payload_types_requests[payload]])
 mix_connection.commit()
 
 mix_connection.close()

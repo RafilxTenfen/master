@@ -63,7 +63,7 @@ labelBiggerThan9 <- function(n){
   return(labels)
 }
 
-safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
+safe_colorblind_palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499",
                              "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 minimum_percentage_as_others = 5
 decimals_digits = 2
@@ -74,10 +74,12 @@ plots_path = "/home/rafilx/projects/github.com/RafilxTenfen/master/Obelheiro/pes
 db_ssdp <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/dnstor_statistics_ssdp.sqlite")
 
 data_ssdp_unfetch <-dbSendQuery(db_ssdp, "
-  SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+  SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, *
     FROM (
-      SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
         FROM SSDP_MEMORY_DICT
+   LEFT JOIN SSDP_PAYLOAD_DICT
+          ON SSDP_MEMORY_DICT.payloadID = SSDP_PAYLOAD_DICT.payloadID
     )
    WHERE year_period >= 20184 AND
          year_period <= 20221 AND
@@ -88,91 +90,98 @@ data_ssdp <- fetch(data_ssdp_unfetch)
 dbDisconnect(db_ssdp)
 ```
 
+- Quantidade de SSDP com 0 bytes payload
+```{r}
+data_ssdp %>%
+  group_by(year_period, payloadID, payload) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack)) %>%
+  
+``` 
 
 ```{r}
 data_ssdp_period = data_ssdp %>%
   group_by(year_period) %>%
-  summarise(sum_requests_per_attack = sum(requests_per_attack), 
+  summarise(sum_requests_per_attack = sum(requests_per_attack),
             number_of_attacks = n(),
-            count_victim = n_distinct(vitima_ip)) 
+            count_victim = n_distinct(vitima_ip))
 
 data_ssdp_period = data_ssdp_period %>%
   mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks) %>%
-  
+
 
 print(data_ssdp_period, n=16)
-``` 
+```
 
-```{r fig.width = 16, fig.height=10} 
-plot_ssdp_req_by_attaq = data_ssdp_period %>% 
+```{r fig.width = 16, fig.height=10}
+plot_ssdp_req_by_attaq = data_ssdp_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=requests_by_attack)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(requests_by_attack),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=requests_by_attack)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(requests_by_attack),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de requisições por ataques") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de requisições por ataques") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("SSDP - Requisições / Ataques por trimestre")
 
 plot_ssdp_req_by_attaq
 ```
 
 - SSDP Plot Requisições
-```{r fig.width = 16, fig.height=12} 
-data_ssdp_period %>% 
+```{r fig.width = 16, fig.height=12}
+data_ssdp_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=sum_requests_per_attack)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=sum_requests_per_attack)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de requisições") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de requisições") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("SSDP - Requisições por trimestre")
 ```
 
 - SSDP Plot Ataques
-```{r fig.width = 16, fig.height=10} 
-data_ssdp_period %>% 
+```{r fig.width = 16, fig.height=10}
+data_ssdp_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=number_of_attacks)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=number_of_attacks)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de ataques") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de ataques") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("SSDP - Ataques por trimestre")
 ```
 
@@ -193,29 +202,29 @@ data_ssdp_period_new_victim = data_ssdp %>%
 ```
 
 - SSDP Plot Novas Vítimas
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=12}
 
-ssdp_plot_new_victim = data_ssdp_period_new_victim %>% 
+ssdp_plot_new_victim = data_ssdp_period_new_victim %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=new_victims)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=new_victims)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de novas vítimas") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de novas vítimas") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("SSDP - Novas Vítimas")
-# 
+#
 # pdf(paste(plots_path, "/ssdp.pdf", sep=""), width = 16, height = 10, pointsize=16)
 # print(ssdp_plot_new_victim)
 # dev.off()
@@ -233,7 +242,7 @@ db_coap <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/dns
 data_coap_unfetch <-dbSendQuery(db_coap, "
   SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, tempoInicio, tempoFinal, year
     FROM (
-      SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
         FROM COAP_MEMORY_DICT
     )
    WHERE year_period >= 20184 AND
@@ -247,7 +256,7 @@ data_coap <- fetch(data_coap_unfetch)
 data_coap_payload_unfetch <-dbSendQuery(db_coap, "
   SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, tempoInicio, tempoFinal, year, payload
     FROM (
-      SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
     	  FROM COAP_MEMORY_DICT
     	  JOIN COAP_PAYLOAD_DICT
     		  ON COAP_MEMORY_DICT.payloadID = COAP_PAYLOAD_DICT.payloadID
@@ -266,7 +275,7 @@ dbDisconnect(db_coap)
 ```{r}
 data_coap %>%
   group_by() %>%
-    summarise(sum_requests_per_attack = sum(requests_per_attack), 
+    summarise(sum_requests_per_attack = sum(requests_per_attack),
             number_of_attacks = n(),
             count_victim = n_distinct(vitima_ip))
 ```
@@ -278,59 +287,59 @@ data_coap %>%
 
 data_coap_period = data_coap %>%
   group_by(year_period) %>%
-  summarise(sum_requests_per_attack = sum(requests_per_attack), 
+  summarise(sum_requests_per_attack = sum(requests_per_attack),
             number_of_attacks = n(),
             count_victim = n_distinct(vitima_ip))  %>%
   mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks)
 
 print(data_coap_period, n=16)
-``` 
+```
 
 - COAP Plot Requisições
-```{r fig.width = 16, fig.height=12} 
-data_coap_period %>% 
+```{r fig.width = 16, fig.height=12}
+data_coap_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=sum_requests_per_attack)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=sum_requests_per_attack)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de requisições") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de requisições") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("COAP - Requisições por trimestre")
 ```
 
 - COAP Plot Ataques
-```{r fig.width = 16, fig.height=12} 
-data_coap_period %>% 
+```{r fig.width = 16, fig.height=12}
+data_coap_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=number_of_attacks)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = number_of_attacks,  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=number_of_attacks)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = number_of_attacks,  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de ataques") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de ataques") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("COAP - Ataques por trimestre")
 ```
 
@@ -352,27 +361,27 @@ data_coap_period_new_victim = data_coap %>%
 ```
 
 - CoAP Plot Novas Vítimas
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=12}
 
-data_coap_period_new_victim %>% 
+data_coap_period_new_victim %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=new_victims)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = new_victims,  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=new_victims)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = new_victims,  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de novas vítimas") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de novas vítimas") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("COAP - Novas Vítimas")
 ```
 
@@ -395,7 +404,7 @@ db_cldap <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-11/dn
 data_cldap_unfetch <-dbSendQuery(db_cldap, "
   SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, tempoInicio, tempoFinal
     FROM (
-      SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
         FROM CLDAP_MEMORY_DICT
     )
    WHERE year_period >= 20184 AND
@@ -409,7 +418,7 @@ data_cldap <- fetch(data_cldap_unfetch)
 data_cldap_unfetch_payload <-dbSendQuery(db_cldap, "
   SELECT ip AS vitima_ip, count AS requests_per_attack, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, payload
     FROM (
-      SELECT *,  strftime(\"%Y\", tempoInicio) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempoFinal) as year, ((strftime(\"%m\", tempoFinal) - 1) / 3) + 1 AS period
         FROM CLDAP_MEMORY_DICT
         JOIN CLDAP_PAYLOAD_DICT
 		      ON CLDAP_MEMORY_DICT.payloadID = CLDAP_PAYLOAD_DICT.payloadID
@@ -431,11 +440,11 @@ data_cldap['tempo_inicio_cast'] = as.POSIXct(data_cldap[['tempoInicio']], format
 data_cldap %>%
   group_by() %>%
   summarise(
-    sum_requests_per_attack = sum(requests_per_attack), 
+    sum_requests_per_attack = sum(requests_per_attack),
     number_of_attacks = n(),
     count_victim = n_distinct(vitima_ip),
     tempo_inicio=min(tempo_inicio_cast), tempo_final=max(tempo_final_cast),
-  ) 
+  )
 
 ```
 
@@ -445,35 +454,38 @@ data_cldap %>%
 ```{r}
 data_cldap_period = data_cldap %>%
   group_by(year_period) %>%
-  summarise(sum_requests_per_attack = sum(requests_per_attack), 
+  summarise(sum_requests_per_attack = sum(requests_per_attack),
             number_of_attacks = n(),
             count_victim = n_distinct(vitima_ip)) %>%
   mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks)
 
 print(data_cldap_period, n=16)
-``` 
+
+data_cldap %>%
+  arrange(tempoInicio)
+```
 
 - CLDAP Plot Requisições/ataques
-```{r fig.width = 16, fig.height=8} 
-plot_cldap_req_by_attaq = data_cldap_period %>% 
+```{r fig.width = 16, fig.height=8}
+plot_cldap_req_by_attaq = data_cldap_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=requests_by_attack)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(requests_by_attack),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=requests_by_attack)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(requests_by_attack),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade ") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade ") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("CLDAP - Requisições/Ataques por trimestre")
 
 plot_cldap_req_by_attaq
@@ -482,27 +494,27 @@ plot_cldap_req_by_attaq
 - Os ultimos quatro trimestres foram inferiores aos demais
 
 - CLDAP Plot Requisições
-```{r fig.width = 16, fig.height=10} 
-cldap_plot_req = data_cldap_period %>% 
+```{r fig.width = 16, fig.height=10}
+cldap_plot_req = data_cldap_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=sum_requests_per_attack)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=sum_requests_per_attack)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25), size = 7) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de requisições") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Requisições") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      strip.text = element_text(size = 30),
+      axis.text.x = element_text(size = 21),
+      axis.text.y = element_text(size = 30),
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
-      strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 16),
-      axis.text.y = element_text(size = 16),
-    ) + 
-    ggtitle("CLDAP - Requisições por trimestre")
+      legend.position="none",
+    ) +
+    ggtitle("CLDAP - Volume de Requisições")
 
 cldap_plot_req
 ```
@@ -510,31 +522,31 @@ cldap_plot_req
 - 2 teorias
   - mudaram atacantes/ferramentas de ataques
   - os ataques estão sendo pulverizados em mais refletores
-      - Talvez houve 
+      - Talvez houve
       - filtragem rate-limiting
 
 - CLDAP Plot Ataques
-```{r fig.width = 16, fig.height=10} 
-cldap_plot_ataq = data_cldap_period %>% 
+```{r fig.width = 16, fig.height=10}
+cldap_plot_ataq = data_cldap_period %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=number_of_attacks)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=number_of_attacks)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(number_of_attacks),  vjust = -0.25), size = 7) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de ataques") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Ataques") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      strip.text = element_text(size = 30),
+      axis.text.x = element_text(size = 21),
+      axis.text.y = element_text(size = 30),
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
-      strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 16),
-      axis.text.y = element_text(size = 16),
-    ) + 
-    ggtitle("CLDAP - Ataques por trimestre")
+      legend.position="none",
+    ) +
+    ggtitle("CLDAP - Volume de Ataques")
 
 cldap_plot_ataq
 ```
@@ -571,27 +583,27 @@ data_cldap_period_new_victim = data_cldap %>%
 ```
 
 - CLDAP Plot Novas Vítimas
-```{r fig.width = 16, fig.height=12} 
+```{r fig.width = 16, fig.height=12}
 
-data_cldap_period_new_victim %>% 
+data_cldap_period_new_victim %>%
   mutate(
     year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
-  ) %>%   
-  ggplot( aes(x=year_period, y=new_victims)) + 
-    geom_bar(stat="identity", width = 0.8, position="dodge") +  
-    geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) + 
+  ) %>%
+  ggplot( aes(x=year_period, y=new_victims)) +
+    geom_bar(stat="identity", width = 0.8, position="dodge") +
+    geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE) +
     scale_y_continuous(labels = addUnits) +
-    ylab("Quantidade de novas vítimas") + 
-    xlab("Período (Trimestre)") +  
+    ylab("Quantidade de novas vítimas") +
+    xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22), 
+      plot.title = element_text(size = 22),
       axis.title = element_text(size = 18),
-      legend.position="none", 
+      legend.position="none",
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) + 
+    ) +
     ggtitle("CLDAP - Novas Vítimas")
 ```
 
@@ -603,15 +615,37 @@ data_cldap_period_new_victim %>%
 ```{r}
 
 data_cldap_payload %>%
-  count(payload) %>% 
+  mutate(is_object_class = grepl('object', payload)) %>%
+  group_by(year_period, is_object_class) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  ungroup() %>%
+  group_by(year_period) %>%
+  mutate(
+    total_period_ataques = sum(ataques),
+    total_period_requests = sum(requests)
+    ) %>%
+  mutate(percentage_ataques = (ataques*100) / total_period_ataques,
+         percentage_requests = (requests*100) / total_period_requests) %>%
+  select(year_period, is_object_class, ataques, percentage_ataques, requests, percentage_requests)
+
+
+
+
+data_cldap_payload %>%  
+  count(payload) %>%
   select('n', 'payload') %>%
   arrange(desc(n))
 
 data_cldap_payload %>%
-  filter(grepl('objectclass0', payload))
+  mutate(grepl('object', payload))
 
 # total 5,330,991
-# 2,755,686
+# 2,755,686 old 51,69%^
+# 5330984
+# (5330984*100)/5330991 = 99,99
 
+
+
+# QOTD e Chargen
 ```
 

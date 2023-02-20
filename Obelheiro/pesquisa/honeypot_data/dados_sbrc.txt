@@ -262,12 +262,38 @@ year_period      ataques      percentage_ataques      requests      percentage_r
 
 
 
+------------------------------------------------------------------------------------
+DNS
+
+RR top 10 longevidade com aplificação
+
+     RR                Ataques    Longevidade   Tamanho Requisição     Tamanho Resposta      Aplificação
+ambulance.gov.ae MX        69      510,7 dias         87                     147               1,689655172
+ncc.ae           MX        39      509,2 dias         77                      98               1,272727273
+szgmc.gov.ae.    MX        22      508,9 dias         83                     150               1,807228916
+dc.gov.ae.       MX        27      507,3 dias         80                     108               1,35
+fca.gov.ae.      MX        58      506,4 dias         81                     142               1,75308642
+dans.gov.ae.     MX        37      505,8 dias         82                     137               1,670731707
+almajles.gov.ae. MX        39      505,5 dias         86                     107               1,244186047
+investbank.ae.   MX        40      504,7 dias         84                     128               1,523809524
+tstng.net.        A        39      504,4 dias         80                      96               1,2
+pwad.gov.ae.     MX        58      504,2 dias         82                     142               1,731707317
 
 
 
+Dados de amplificacao verificados com wireshark e shell
 
+```sh
+sudo resolvectl flush-caches
 
-
-
-
-
+dig +novc +edns=0 +bufsize=16384 +dnssec ambulance.gov.ae MX  87  147
+dig +novc +edns=0 +bufsize=16384 +dnssec ncc.ae MX            77   98
+dig +novc +edns=0 +bufsize=16384 +dnssec szgmc.gov.ae. MX     83  150
+dig +novc +edns=0 +bufsize=16384 +dnssec dc.gov.ae. MX        80  108
+dig +novc +edns=0 +bufsize=16384 +dnssec fca.gov.ae. MX       81  142
+dig +novc +edns=0 +bufsize=16384 +dnssec dans.gov.ae. MX      82  137
+dig +novc +edns=0 +bufsize=16384 +dnssec almajles.gov.ae. MX  86  107
+dig +novc +edns=0 +bufsize=16384 +dnssec investbank.ae. MX    84  128
+dig +novc +edns=0 +bufsize=16384 +dnssec tstng.net. A         80   96
+dig +novc +edns=0 +bufsize=16384 +dnssec pwad.gov.ae. MX      82  142
+```

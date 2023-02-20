@@ -30,9 +30,29 @@ library(ggrepel)
 # library("dplyr.teradata")
 ```
 ```{r echo=FALSE}
+addUnitsDecimal <- function(n) {
+  labels <- ifelse(n < 1000, n, # less than thousands
+    ifelse(n < 1e6, paste0(round(n/1e3, 1), 'k'), # in thousands
+      ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
 addUnits <- function(n) {
   labels <- ifelse(n < 1000, n, # less than thousands
     ifelse(n < 1e6, paste0(round(n/1e3), 'k'), # in thousands
+      ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
+        ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
+          ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
+  'too big!')))))
+  return(labels)
+}
+
+addUnitsQOTD <- function(n) {
+  labels <- ifelse(n < 1000, n, # less than thousands
+    ifelse(n < 1e6, paste0(round(n/1e3, 1), 'k'), # in thousands
       ifelse(n < 1e9, paste0(round(n/1e6, 1), 'M'), # in millions
         ifelse(n < 1e12, paste0(round(n/1e9, 2), 'B'), # in billions
           ifelse(n < 1e15, paste0(round(n/1e12, 3), 'T'), # in trillions
@@ -66,6 +86,19 @@ labelBiggerThan9 <- function(n){
   return(labels)
 }
 
+
+labelBiggerThan5 <- function(n){
+  labels <- ifelse(n > 5, paste(round(n, 2), "%"), "")
+  return(labels)
+}
+
+add_percentage_3 <- function(n){
+  labels <- paste(format(round(n, 3), nsmall = 2), "%")
+  return(labels)
+}
+
+
+
 add_percentage <- function(n){
   labels <- paste(round(n, 2), "%")
   return(labels)
@@ -96,7 +129,7 @@ db_mix_protocol <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-0
 data_mix_protocol_unfetch <-dbSendQuery(db_mix_protocol, "
   SELECT *, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
     FROM (
-      SELECT *,  strftime(\"%Y\", tempo_inicio) as year, ((strftime(\"%m\", tempo_final) - 1) / 3) + 1 AS period
+      SELECT *,  strftime(\"%Y\", tempo_final) as year, ((strftime(\"%m\", tempo_final) - 1) / 3) + 1 AS period
         FROM MIX_PROTOCOL
     )
    WHERE year_period >= 20184 AND
@@ -108,7 +141,35 @@ data_mix_protocol <- fetch(data_mix_protocol_unfetch)
 dbDisconnect(db_mix_protocol)
 ```
 
+- Tabela geral dados por protocolo
 ```{r}
+data_mix_protocol %>%
+  group_by(year_period, attack_protocol) %>% 
+  summarise(
+    requests = sum(requests_per_attack),
+    attacks = n(),
+  ) %>%
+  group_by(year_period) %>%
+  mutate(
+    requests_sum = sum(requests),
+    attacks_sum = sum(attacks),
+  ) %>%
+  mutate(
+    trimestre = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+    req_perc = ( requests * 100 ) / requests_sum,
+  )  
+
+  # filter(attack_protocol %in% c("CLDAP", "COAP"))
+```
+
+
+
+```{r}
+data_mix_protocol %>%
+  arrange(desc(tempo_final)) %>%
+  filter(attack_protocol %in% c("CLDAP"))
+  # filter(attack_protocol %in% c("CLDAP", "COAP")) %>%
+
 data_mix_protocol %>%
   group_by(attack_protocol) %>%
   summarise(median_requests = median(requests_per_attack))
@@ -144,7 +205,7 @@ vitima_trimestre_bar_plot = vitima_trimestre %>%
 
 vitima_trimestre_bar_plot
 
-pdf(paste(plots_path, "/vitima_trimestre_bar_plot.pdf", sep=""), width = 18, height = 14)
+pdf(paste(plots_path, "/vitima_trimestre_bar_plot.png", sep=""), width = 18, height = 14)
 print(vitima_trimestre_bar_plot)
 dev.off()
 
@@ -158,7 +219,7 @@ vitima_trimestre_ecdf = vitima_trimestre %>%
 
 summary(vitima_trimestre)
 
-pdf(paste(plots_path, "/vitima_trimestre_ecdf.pdf", sep=""), width = 18, height = 14)
+pdf(paste(plots_path, "/vitima_trimestre_ecdf.png", sep=""), width = 18, height = 14)
 print(vitima_trimestre_ecdf)
 dev.off()
 
@@ -203,8 +264,46 @@ data_grouped_period = data_mix_protocol %>%
     avg_total_requests = total_requests / 14
   )
 
-data_grouped_period
+data_grouped_period %>%
+  arrange(desc(number_of_attacks))
 ```
+- Agrupamento por ano
+```{r}
+data_mix_protocol %>%
+  group_by() %>%
+  summarise(count_victim = n_distinct(vitima_ip)) %>%
+  ungroup() 
+  
+data_mix_protocol %>%
+  ungroup() %>%
+  group_by(vitima_ip) %>%
+  summarise(year = min(year)) %>%
+  ungroup() %>%
+  group_by(year) %>%
+  summarise(count_victim = n_distinct(vitima_ip))
+
+# errado, agrupamento de vitimas esta por ano, ao inves de primeiro verificar as vitimas distintas
+
+data_mix_protocol %>%
+  mutate(year_period_int = year_period,
+         vitima_ip = as.factor(vitima_ip),
+         year = as.factor(year)) %>%
+  group_by(year) %>%
+  summarise(sum_requests_per_attack = sum(requests_per_attack),
+            number_of_attacks = n(),
+            count_victim = n_distinct(vitima_ip)) %>%
+  mutate(avarage_requests_by_attack = sum_requests_per_attack / number_of_attacks) %>%
+    mutate(
+    total_attacks = sum(number_of_attacks),
+    total_requests = sum(sum_requests_per_attack)
+  ) %>%
+  mutate(
+    avg_total_attacks = total_attacks / 14,
+    avg_total_requests = total_requests / 14
+  )
+
+```
+
 - Agrupamento por protocolo
 ```{r}
 data_mix_protocol %>%
@@ -224,7 +323,10 @@ data_mix_protocol %>%
   mutate(
     avarage_requests_by_attack = sum_requests_per_attack / number_of_attacks 
   ) %>%
-  select(attack_protocol, avarage_requests_by_attack, number_of_attacks, number_of_attacks_percentage, sum_requests_per_attack, number_of_requests_percentage)
+  select(attack_protocol, number_of_attacks, number_of_attacks_percentage, sum_requests_per_attack, number_of_requests_percentage) %>%
+  mutate(requests_by_attack = sum_requests_per_attack/number_of_attacks) %>%
+  arrange(sum_requests_per_attack)
+  # mutate(total_attacks = sum(number_of_attacks), total_requests=sum(sum_requests_per_attack))
   
   
 ```
@@ -232,6 +334,8 @@ data_mix_protocol %>%
 - Com a tabela acima, não é possível observar a quantidade de novas vítimas por trimestres, apenas as vítimas distintas naquele trimestre
 - Para pegar a quantidade de novas vítimas por trimestre, é necessário agrupar pelo ip da vítima e depois agrupar por trimestre
 ```{r}
+  
+
 data_new_victim_period = data_mix_protocol %>%
   ungroup() %>%
   group_by(vitima_ip) %>%
@@ -242,7 +346,90 @@ data_new_victim_period = data_mix_protocol %>%
   mutate(year_period=as.factor(year_period))
 
 data_new_victim_period
+
+data_distinct_victim = data_mix_protocol %>%
+  ungroup() %>%
+  group_by(year_period) %>%
+  summarise(distinct_victim = n_distinct(vitima_ip)) %>%
+  mutate(year_period=as.factor(year_period))
+data_distinct_victim
 ```
+- Combinar dados novas vítimas e vitimas distintas por trimestre
+```{r}
+data_new_victim_period %>%
+  left_join(data_distinct_victim) %>%
+  mutate(percentage_new = (new_victims * 100) / distinct_victim) %>%
+  mutate(percentage_new = round(percentage_new, 1)) %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=percentage_new)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = add_percentage(percentage_new),  vjust = -0.25)) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_y_continuous(labels = addUnits) +
+  ylab("Porcentagem de novas vítimas") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Porcentagem de novas vítimas e vítimas distintas nos trimestres")
+
+
+
+```
+
+- Dados novas vítimas e distintas por trimestre barras lado a lado
+```{r fig.width = 16, fig.height=10}
+new_victim_quarter = data_new_victim_period %>%
+  mutate(victims = new_victims, type = "Novas") %>%
+  select(year_period, victims, type)
+
+distinct_victim_quarter = data_distinct_victim %>%
+  mutate(victims = distinct_victim, type = "Distinta") %>%
+  select(year_period, victims, type)
+
+victims_quarter_new_distinct = rbind(new_victim_quarter, distinct_victim_quarter) %>%
+  arrange(year_period)
+
+victims_quarter_new_distinct %>%
+  ungroup() %>%
+  group_by(year_period) %>%
+  mutate(max_victim = max(victims)) %>%
+  mutate(percentage = (victims * 100) / max_victim) %>%
+  filter(type == "Novas") %>%
+  select(year_period, victims, percentage)
+
+victims_quarter_new_distinct %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  mutate(type = as.factor(type)) %>%
+  arrange(year_period, desc(type)) %>%
+  ggplot( aes(x=year_period, y=victims, fill=type, width=0.90)) +
+  geom_bar(stat="identity",  width = 1, position=position_dodge2(width = 1, reverse = TRUE, padding=0)) +
+  geom_text(aes(label = addUnitsQOTD(victims)), position = position_dodge2(width = 1, padding=2, reverse = TRUE), vjust=-0.25, hjust=0.55, size=6) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_y_continuous(labels = addUnits) +
+  ylab("Volume") +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_blank(),
+  
+  ) +
+  xlab("Período (Trimestre)") 
+
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H6.png", sep=""), width = 18, height = 6)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H8.png", sep=""), width = 18, height = 8)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H9.png", sep=""), width = 18, height = 9)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H10.png", sep=""), width = 18, height = 10)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H12.png", sep=""), width = 18, height = 12)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W18H14.png", sep=""), width = 18, height = 14)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W20H15.png", sep=""), width = 20, height = 15)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W22H14.png", sep=""), width = 22, height = 14)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W22H10.png", sep=""), width = 22, height = 10)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W22H12.png", sep=""), width = 22, height = 12)
+ggsave(paste(plots_path, "/vitimas_novas_distintas_W22H16.png", sep=""), width = 22, height = 16)
+``` 
+
 
 - Para a apresentação, uma tabela dividido por período ficou muito grande, vou agrupar por ano para melhor visualização
 ```{r}
@@ -346,11 +533,18 @@ data_geral_request_attack = data_grouped_period %>%
   xlab("Período (Trimestre)") +
   ggtitle("Volume de tráfego de Ataques x Requisições")
 
-pdf(paste(plots_path, "/geral_ataques_requisicoes.pdf", sep=""), width = 18, height = 14)
+pdf(paste(plots_path, "/geral_ataques_requisicoes.png", sep=""), width = 18, height = 14)
 print(data_geral_request_attack)
 dev.off()
 
 data_geral_request_attack
+```
+- Correlação ataques x req
+```{r}
+data_grouped_period %>%
+  mutate(correlation = sum_requests_per_attack/number_of_attacks) %>%
+  arrange(desc(correlation)) %>%
+  select(year_period, sum_requests_per_attack, number_of_attacks, correlation)
 ```
 
 - Apresentar ataques x requisicoes em 2 gráficos diferentes
@@ -360,17 +554,24 @@ plot_geral_attacks = data_grouped_period %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
   ggplot( aes(x=year_period, y=Ataques)) +
   geom_bar(stat="identity", width = 0.8, position="dodge") +
-  geom_text(aes(label = addUnits(Ataques),  vjust = -0.25)) +
+  geom_text(aes(label = addUnitsDecimal(Ataques),  vjust = -0.25), size=7) +
   scale_fill_manual(values = c(color_attacks, color_requests)) +
   scale_y_continuous(labels = addUnits) +
   theme(
-    plot.title = element_text(size = 22),
-    axis.title = element_text(size = 18),
-    strip.text = element_text(size = 16),
-    axis.text.x = element_text(size = 16),
-    axis.text.y = element_text(size = 16),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 18),
+    # plot.title = element_text(size = 22),
+    # axis.title = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    # axis.text.x = element_text(size = 16),
+    # axis.text.y = element_text(size = 16),
+    # legend.text = element_text(size = 16),
+    # legend.title = element_text(size = 18),
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
   ) +
   ylab("Ataques") +
   xlab("Período (Trimestre)") +
@@ -381,17 +582,24 @@ plot_geral_requests = data_grouped_period %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
   ggplot( aes(x=year_period, y=sum_requests_per_attack)) +
   geom_bar(stat="identity", width = 0.8, position="dodge") +
-  geom_text(aes(label = addUnits(sum_requests_per_attack),  vjust = -0.25)) +
+  geom_text(aes(label = addUnitsDecimal(sum_requests_per_attack),  vjust = -0.25), size=7) +
   scale_fill_manual(values = c(color_attacks, color_requests)) +
   scale_y_continuous(labels = addUnits) +
   theme(
-    plot.title = element_text(size = 22),
-    axis.title = element_text(size = 18),
-    strip.text = element_text(size = 16),
-    axis.text.x = element_text(size = 16),
-    axis.text.y = element_text(size = 16),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 18),
+    # plot.title = element_text(size = 22),
+    # axis.title = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    # axis.text.x = element_text(size = 16),
+    # axis.text.y = element_text(size = 16),
+    # legend.text = element_text(size = 16),
+    # legend.title = element_text(size = 18),
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 25),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
   ) +
   ylab("Requisições") +
   xlab("Período (Trimestre)") +
@@ -400,15 +608,31 @@ plot_geral_requests = data_grouped_period %>%
 plot_geral_requests
 
 
-pdf(paste(plots_path, "/plot_geral_requests_sem_titulo_W18H6.pdf", sep=""), width = 18, height = 6)
+pdf(paste(plots_path, "/plot_geral_requests_sem_titulo_W18H6.png", sep=""), width = 18, height = 6)
+print(plot_geral_requests)
+dev.off()
+
+
+pdf(paste(plots_path, "/plot_geral_requests_sem_titulo_W18H8.png", sep=""), width = 18, height = 8)
+print(plot_geral_requests)
+dev.off()
+
+
+pdf(paste(plots_path, "/plot_geral_requests_sem_titulo_W18H10.png", sep=""), width = 18, height = 10)
 print(plot_geral_requests)
 dev.off()
 
 g = arrangeGrob(plot_geral_attacks, plot_geral_requests, nrow=2)
-ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H14.pdf", sep=""), g, width = 18, height = 14)
-ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H10.pdf", sep=""), g, width = 18, height = 10)
-ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H8.pdf", sep=""), g, width = 18, height = 8)
-ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H6.pdf", sep=""), g, width = 18, height = 6)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W22H14.png", sep=""), g, width = 22, height = 14)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H12.png", sep=""), g, width = 18, height = 12)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H10.png", sep=""), g, width = 18, height = 10)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H10.png", sep=""), g, width = 18, height = 10)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H8.png", sep=""), g, width = 18, height = 8)
+ggsave(file = paste(plots_path, "/geral_ataques_requisicoes_2plots_W18H6.png", sep=""), g, width = 18, height = 6)
 
 data_grouped_period %>%
   mutate(attack_by_request=sum_requests_per_attack/number_of_attacks) %>%
@@ -434,7 +658,585 @@ data_grouped_period %>%
 ```
 
 
+## Memcached Plot Requests x Ataques
 
+- Apresentar ataques x requisicoes em 2 gráficos diferentes
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "MEMCACHED") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))
+
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Memcached - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Memcached - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W20H15.png", sep=""), g, width = 20, height = 15)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W18H15.png", sep=""), g, width = 18, height = 15)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/memcached_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## DNS Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "DNS") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack)) %>%
+  mutate(ratio = requests / attacks ) %>%
+  arrange(desc(ratio))
+
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("DNS - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("DNS - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/dns_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/dns_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/dns_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/dns_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## CHARGEN Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Chargen - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Chargen - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W20H16.png", sep=""), g, width = 20, height = 16)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W20H15.png", sep=""), g, width = 20, height = 15)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/chargen_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## CoAP Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "COAP", year_period >= 20203) %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack)) %>%
+  mutate(attacks_by_requests = requests / attacks )
+
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("CoAP - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("CoAP - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W18H10.png", sep=""), g, width = 18, height = 10)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W18H8.png", sep=""), g, width = 18, height = 8)
+ggsave(file = paste(plots_path, "/coap_ataques_requisicoes_2plots_W18H6.png", sep=""), g, width = 18, height = 6)
+```
+
+
+## NTP Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "NTP") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))  %>%
+  mutate(ratio = requests / attacks ) %>%
+  arrange(desc(ratio))
+
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("NTP - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("NTP - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/ntp_ataques_requisicoes_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/ntp_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/ntp_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/ntp_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/ntp_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+## QOTD Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))
+
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsQOTD(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("QOTD - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsQOTD(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("QOTD - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/qotd_ataques_requisicoes_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/qotd_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/qotd_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/qotd_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/qotd_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## SSDP Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "SSDP") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack), vitimas = n_distinct(vitima_ip)) %>%
+  mutate(ratio = requests / attacks ) %>%
+  arrange(desc(ratio))
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("SSDP - Volume de Ataques")
+
+data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=vitimas)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(vitimas),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Vítimas") +
+  xlab("Período (Trimestre)") +
+  ggtitle("SSDP - Volume de Vítimas")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("SSDP - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/ssdp_ataques_requisicoes_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/ssdp_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/ssdp_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/ssdp_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/ssdp_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## Steam Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "STEAM_GAMES") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))%>%
+  mutate(ratio = requests / attacks ) %>%
+  arrange(desc(ratio))
+
+
+data_mix_protocol %>%
+  filter(attack_protocol == "STEAM_GAMES") %>%
+  arrange(desc(requests_per_attack))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Steam - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnits(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("Steam - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/steam_ataques_requisicoes_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/steam_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/steam_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/steam_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/steam_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+
+## CLDAP Plot Requests x Ataques
+
+```{r fig.width = 16, fig.height=10}
+
+
+data_plot = data_mix_protocol %>%
+  filter(attack_protocol == "CLDAP") %>%
+  group_by(year_period) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack))
+
+
+data_plot %>%
+  group_by() %>%
+  summarise(attacks_mean = mean(attacks), requests_mean = mean(requests))
+
+plot_attacks = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=attacks)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(attacks),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Ataques") +
+  xlab("Período (Trimestre)") +
+  ggtitle("CLDAP - Volume de Ataques")
+
+
+plot_requests = data_plot %>%
+  mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
+  ggplot( aes(x=year_period, y=requests)) +
+  geom_bar(stat="identity", width = 0.8, position="dodge") +
+  geom_text(aes(label = addUnitsDecimal(requests),  vjust = -0.25), size=7) +
+  scale_y_continuous(labels = addUnits) +
+  theme(
+    plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+  ) +
+  ylab("Requisições") +
+  xlab("Período (Trimestre)") +
+  ggtitle("CLDAP - Volume de Requisições")
+
+g = arrangeGrob(plot_attacks, plot_requests, nrow=2)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ataques_requisicoes_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
 ### Vítimas novas
 - Será verificado o aparecimento e desaparecimento de ip de vítimas durante os períodos
 
@@ -445,20 +1247,27 @@ vitimas_periodo_bar_plot = data_new_victim_period %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
   ggplot( aes(x=year_period, y=new_victims)) +
   geom_bar(stat="identity", width = 0.8, position="dodge") +
-  geom_text(aes(label = addUnits(new_victims),  vjust = -0.25)) +
+  geom_text(aes(label = addUnitsDecimal(new_victims),  vjust = -0.25), size = 7) +
   scale_fill_viridis(discrete=TRUE) +
   scale_y_continuous(labels = addUnits) +
   # theme(axis.text.x=element_text(angle=60, hjust=1)) +
   # scale_fill_manual(values=safe_colorblind_palette) +
   # scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x))) +
   theme(
-    plot.title = element_text(size = 22),
-    axis.title = element_text(size = 18),
-    strip.text = element_text(size = 16),
-    axis.text.x = element_text(size = 16),
-    axis.text.y = element_text(size = 16),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 18),
+    # plot.title = element_text(size = 22),
+        plot.title = element_text(size = 30),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 23),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
+    # axis.title = element_text(size = 18),
+    # strip.text = element_text(size = 16),
+    # axis.text.x = element_text(size = 16),
+    # axis.text.y = element_text(size = 16),
+    # legend.text = element_text(size = 16),
+    # legend.title = element_text(size = 18),
   ) +
   ylab("Quantidade de novas vítimas") +
   xlab("Período (Trimestre)")
@@ -466,9 +1275,17 @@ vitimas_periodo_bar_plot = data_new_victim_period %>%
 
 vitimas_periodo_bar_plot
 
-pdf(paste(plots_path, "/vitimas_periodo_bar_plot_sem_titulo_W18H12.pdf", sep=""), width = 18, height = 12)
-print(vitimas_periodo_bar_plot)
-dev.off()
+data_new_victim_period %>%
+  group_by() %>%
+  summarise(media = mean(new_victims))
+
+ggsave(paste(plots_path, "/vitimas_periodo_bar_plot_sem_titulo_W18H6.png", sep=""), width = 18, height = 6)
+
+ggsave(paste(plots_path, "/vitimas_periodo_bar_plot_sem_titulo_W18H8.png", sep=""), width = 18, height = 8)
+
+ggsave(paste(plots_path, "/vitimas_periodo_bar_plot_sem_titulo_W18H10.png", sep=""), width = 18, height = 10)
+
+ggsave(paste(plots_path, "/vitimas_periodo_bar_plot_sem_titulo_W18H12.png", sep=""), width = 18, height = 12)
 
 ```
 
@@ -525,7 +1342,7 @@ data_grouped_period_protocol_others_percentage = data_grouped_period_protocol_pe
 - Gráfico de linhas representando a porcentagem de requisições por protocolo
   > Protocolos com menos de `r minimum_percentage_as_others`% São agrupados como "Outros"
 
-```{r fig.width = 12}
+```{r fig.width = 16}
 mix_protocol_line_requests = data_grouped_period_protocol_others_percentage %>%
     mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
   ggplot( aes(x=year_period, y=number_of_requests_percentage, group=attack_protocol)) +
@@ -536,28 +1353,37 @@ mix_protocol_line_requests = data_grouped_period_protocol_others_percentage %>%
      aes(label = paste(round(number_of_requests_percentage, decimals_digits), "%"), color=attack_protocol),
      # xlim = c(NA, Inf),
      # ylim = c(-Inf, Inf)
-      nudge_x = -0.4, direction = "y", hjust = "right"
+      # nudge_x = -0.2, direction = "y", hjust = "right"
+     size = 5.2,
+     # size = 5
     ) +
     scale_fill_viridis(discrete=TRUE) +
     theme(
-      plot.title = element_text(size = 22),
-      axis.title = element_text(size = 18),
-      strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 16),
-      axis.text.y = element_text(size = 16),
-      legend.text = element_text(size = 16),
-      legend.title = element_text(size = 18, face="bold"),
+      # plot.title = element_text(size = 22),
+      axis.title = element_text(size = 25),
+      strip.text = element_text(size = 30),
+      axis.text.x = element_text(size = 21),
+      axis.text.y = element_text(size = 30),
+      legend.text = element_text(size = 20),
+      legend.title = element_text(size = 25, face="bold"),
     ) +
     # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-    ylab("Porcentagem da quantidade de requisições") +
+    ylab("Requisições") +
     xlab("Período (Trimestre)") 
     # ggtitle("Requisições por protocolo")
 
 mix_protocol_line_requests
 
-pdf(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H6.pdf", sep=""), width = 18, height = 6)
-print(mix_protocol_line_requests)
-dev.off()
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H6.png", sep=""), width = 18, height = 6)
+
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H8.png", sep=""), width = 18, height = 8)
+
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H9.png", sep=""), width = 18, height = 9)
+
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H10.png", sep=""), width = 18, height = 10)
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H12.png", sep=""), width = 18, height = 12)
+
+ggsave(paste(plots_path, "/mix_protocol_line_requests_sem_titulo_W18H14.png", sep=""), width = 18, height = 14)
 
 # data_grouped_period_protocol_percentage %>%
 #   # mutate(attack_protocol = as.factor(attack_protocol)) %>%
@@ -601,6 +1427,7 @@ data_grouped_period_protocol_others_percentage %>%
     xlab("Período (Trimestre)")
     # ggtitle("Requisições por protocolo")
 ```
+
 
 - Pré CLDAP vs Pós CLDAP (predominante)
   - Pré é predominante de CHARGEN e MEMCACHED
@@ -772,6 +1599,22 @@ data_dns_new_victim_year = data_dns %>%
 data_dns_new_victim_year
 ```
 
+- TxID 
+
+```{r}
+
+data_dns %>%
+  group_by(query_id) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack), dominios = n_distinct(qname)) %>%
+  arrange(desc(attacks))
+
+data_dns %>%
+  group_by(qname, query_id) %>%
+  summarise(repeticao_txid = n(), requests = sum(requests_per_attack)) %>%
+  mutate(repeticao_esperada = requests / 65535) %>%
+  arrange(desc(repeticao_txid))
+```
+
 
 ```{r}
 data_dns_grouped = data_dns %>%
@@ -795,10 +1638,22 @@ data_dns_grouped %>%
   filter(tempo_diff_secs <= days) %>%
   filter(number_of_attacks == 1)
 
-
-
 # 6,048 rows < 1 dia
 # 6,014 rows apenas 1 attack
+# (6014*100)/6048 = 99.44%
+
+
+# RR Utilizados > 10 meses
+data_dns_grouped %>% 
+  filter(tempo_diff_secs >= 10*months) %>%
+  group_by(qtype) %>%
+  summarise(qnt = n()) %>%
+  ungroup() %>%
+  mutate(total = sum(qnt)) %>%
+  mutate(percentage = (qnt*100)/total)
+  
+# 9,663 total RR 
+# 
 ```
 
 
@@ -810,53 +1665,49 @@ dns_plot_logevidade_meses = data_dns_grouped %>%
   mutate(tempo_diff_secs = tempo_diff_secs / months) %>%
   ggplot(aes(x= tempo_diff_secs)) +
   geom_histogram(bins = 20, fill='blue', color ='black') +
-  ggtitle("Longevidade de um mesmo RR (QNAME + QTYPE)") +
-  xlab("Longevidade") +
+  # ggtitle("Longevidade de um mesmo RR (QNAME + QTYPE)") +
+  xlab("Longevidade em meses") +
   ylab("Quantidade de registros") +
   scale_y_continuous(labels = addUnits) +
-  scale_x_continuous(labels = addUnitMeses) +
+  # scale_x_continuous(labels = addUnitMeses) +
   theme(
-    plot.margin = margin(r = 30),
-    plot.title = element_text(size = 22),
-    axis.title = element_text(size = 18),
-    strip.text = element_text(size = 16),
-    axis.text.x = element_text(size = 14),
-    axis.text.y = element_text(size = 16),
+    axis.title = element_text(size = 30),
+    strip.text = element_text(size = 30),
+    axis.text.x = element_text(size = 30),
+    axis.text.y = element_text(size = 30),
+    legend.text = element_text(size = 30),
+    legend.title = element_text(size = 30),
   )
 # verificar para colocar a cada 3 ou 4 meses
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W16H10.pdf", sep=""), width = 16, height = 10)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W16H10_sem_titulo.png", sep=""), width = 16, height = 10, pointsize = 14)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W16H8.pdf", sep=""), width = 16, height = 8)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W16H8_sem_titulo.png", sep=""), width = 16, height = 8)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H10.pdf", sep=""), width = 18, height = 10)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W18H10_sem_titulo.png", sep=""), width = 18, height = 10)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H8.pdf", sep=""), width = 18, height = 8)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W18H8_sem_titulo.png", sep=""), width = 18, height = 8)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W18H6.pdf", sep=""), width = 18, height = 6)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W18H6_sem_titulo.png", sep=""), width = 18, height = 6)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W20H10.pdf", sep=""), width = 20, height = 10)
-print(dns_plot_logevidade_meses)
-dev.off()
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W20H10_sem_titulo.png", sep=""), width = 20, height = 10)
 
-pdf(paste(plots_path, "/dns_longevidade_rr_meses_W22H10.pdf", sep=""), width = 22, height = 10)
-print(dns_plot_logevidade_meses)
-dev.off()
-
+ggsave(paste(plots_path, "/dns_longevidade_rr_meses_W22H10_sem_titulo.png", sep=""), width = 22, height = 10)
 
 
 dns_plot_logevidade_meses
 ```
+DNS agrupado por protocolo
+```{r}
+data_dns %>%
+  mutate(qtype = as.factor(qtype)) %>%
+  group_by(qtype) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack)) %>%
+  mutate(sum_atatcks = sum(attacks), sum_requests = sum(requests)) %>%
+  mutate(attack_percentage = (attacks * 100)/sum_atatcks, requests_percentage = (requests * 100) / sum_requests)
+
+```
+
 
 ```{r fig.width = 12}
 data_dns_grouped %>%
@@ -932,7 +1783,8 @@ data_dns_grouped['order'] = 1:9663
 # cpsc
 data_dns_grouped %>%
   select(qname, qtype, order) %>%
-  filter(grepl('dfafacts', qname))
+  filter(grepl('commerce', qname))
+  # filter(qname == ".")
 
 ```
 
@@ -1082,6 +1934,28 @@ data_dns_qtype_ataques_others_percentage = data_dns_qtype_percentage %>%
 ```
 
 
+- DNS redução de requisições em 2021/3
+```{r}
+data_dns %>%
+  group_by(year_period) %>%
+  summarise(requests = sum(requests_per_attack), attacks = n()) %>%
+  mutate(requests_per_attack = requests/attacks) %>%
+  arrange(year_period)
+ 
+``` 
+- Média requisições QTYPE A e MX 
+```{r}
+data_dns %>%
+  filter(qtype %in% c("A", "MX")) %>%
+  filter(year_period >= 20221) %>%
+  group_by(year_period, qtype) %>%
+  summarise(requests = sum(requests_per_attack), attacks = n()) %>%
+  ungroup() %>%
+  mutate(requests_per_attack = requests/attacks) %>%
+  mutate(total_requests = sum(requests), total_attacks = sum(attacks)) %>%
+  mutate(total_requests_by_attack = total_requests / total_attacks)
+```
+
 ```{r fig.align="center", fig.width = 12}
 dns_plot_ataque_qtype = data_dns_qtype_ataques_others_percentage %>%
   mutate(year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/")) %>%
@@ -1122,7 +1996,7 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
     geom_bar(stat="identity", width = 0.8) +
     geom_text(
       size = 7,
-      aes(label = labelBiggerThan9(requests_percentage)), position = position_stack(vjust = 0.25),
+      aes(label = labelBiggerThan5(requests_percentage)), position = position_stack(vjust = 0.25),
       ) +
     theme(legend.title= element_text(size=12, face="bold"),
           plot.title = element_text(size=14, face="bold")) +
@@ -1137,41 +2011,32 @@ dns_plot_request_qtype = data_dns_qtype_requests_others_percentage %>%
     ylab("Porcentagem de requisições") +
     xlab("Período (Trimestre)") +
     theme(
-      plot.title = element_text(size = 22),
-      axis.title = element_text(size = 18),
-      strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 16),
-      axis.text.y = element_text(size = 16),
-      legend.text = element_text(size = 16),
-    ) +
-    ggtitle("DNS: Requisições por QTYPE")
+      # plot.title = element_text(size = 22),
+      axis.title = element_text(size = 30),
+      strip.text = element_text(size = 30),
+      axis.text.x = element_text(size = 30),
+      axis.text.y = element_text(size = 30),
+      legend.text = element_text(size = 25),
+      legend.title = element_text(size = 30),
+    ) 
+    # ggtitle("DNS: Requisições por QTYPE")
 
 dns_plot_request_qtype <- dns_plot_request_qtype + guides(fill=guide_legend(title="QTYPE"))
 
 
-pdf(paste(plots_path, "/dns_request_qtype_W16H10.pdf", sep=""), width = 16, height = 10)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W16H10_sem_titulo.png", sep=""), width = 16, height = 10)
 
-pdf(paste(plots_path, "/dns_request_qtype_W16H8.pdf", sep=""), width = 16, height = 8)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W16H8_sem_titulo.png", sep=""), width = 16, height = 8)
 
-pdf(paste(plots_path, "/dns_request_qtype_W16H6.pdf", sep=""), width = 16, height = 6)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W16H6_sem_titulo.png", sep=""), width = 16, height = 6)
 
-pdf(paste(plots_path, "/dns_request_qtype_W18H10.pdf", sep=""), width = 18, height = 10)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W18H12_sem_titulo.png", sep=""), width = 18, height = 12)
 
-pdf(paste(plots_path, "/dns_request_qtype_W18H8.pdf", sep=""), width = 18, height = 8)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W18H10_sem_titulo.png", sep=""), width = 18, height = 10)
 
-pdf(paste(plots_path, "/dns_request_qtype_W18H6.pdf", sep=""), width = 18, height = 6)
-print(dns_plot_request_qtype)
-dev.off()
+ggsave(paste(plots_path, "/dns_request_qtype_W18H8_sem_titulo.png", sep=""), width = 18, height = 8)
+
+ggsave(paste(plots_path, "/dns_request_qtype_W18H6_sem_titulo.png", sep=""), width = 18, height = 6)
 
 dns_plot_request_qtype
 ```
@@ -1196,6 +2061,19 @@ data_ntp <- fetch(data_ntp_unfetch)
 
 dbDisconnect(db_ntp)
 ```
+
+- Monlist percentage
+```{r}
+data_ntp %>%
+  group_by(ntp_type) %>%
+  summarise(qnt = n()) %>%
+  ungroup() %>%
+  group_by() %>%
+  mutate(total = sum(qnt)) %>%
+  mutate(percentage = (qnt * 100) / total )
+
+```
+
 
 ```{r}
 
@@ -1234,12 +2112,12 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
   ) %>%
   ggplot( aes(x=Comando, y=number_of_attacks_percentage, fill=Comando)) +
     geom_bar(stat="identity", position="dodge") +
-    geom_text(size = 6.4, aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
+    geom_text(size = 7, aes(label = paste(round(number_of_attacks_percentage, 2), "%"),  vjust = -0.25)) +
     scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
     facet_grid(~year_period) +
     theme(plot.title = element_text(size=22)) +
     scale_y_continuous(labels = add_percentage) +
-    ylab("Porcentagem da quantidade de ataques") +
+    ylab("Porcentagem de ataques") +
     xlab("Período (Trimestre)") +
     theme(
       plot.title = element_text(size = 22),
@@ -1248,29 +2126,19 @@ ntp_plot_monlist = data_ntp_grouped_period_ntp_type_percentage %>%
       strip.text = element_text(size = 16),
       axis.text.x = element_text(size = 16),
       axis.text.y = element_text(size = 16),
-    ) +
-    ggtitle("NTP - Ataques por Comandos")
+    ) 
+# +
+    # ggtitle("NTP - Ataques por Comandos")
 
-pdf(paste(plots_path, "/ntp_monlist_incidence_W16H10.pdf", sep=""), width = 16, height = 10, pointsize=16)
-print(ntp_plot_monlist)
-dev.off()
+ggsave(paste(plots_path, "/ntp_monlist_incidence_W16H10_sem_titulo.png", sep=""), width = 16, height = 10, pointsize=16)
 
+ggsave(paste(plots_path, "/ntp_monlist_incidence_W16H8_sem_titulo.png", sep=""), width = 16, height = 8, pointsize=16)
 
-pdf(paste(plots_path, "/ntp_monlist_incidence_W16H8.pdf", sep=""), width = 16, height = 8, pointsize=16)
-print(ntp_plot_monlist)
-dev.off()
+ggsave(paste(plots_path, "/ntp_monlist_incidence_W18H10_sem_titulo.png", sep=""), width = 18, height = 10, pointsize=16)
 
-pdf(paste(plots_path, "/ntp_monlist_incidence_W18H10.pdf", sep=""), width = 18, height = 10, pointsize=16)
-print(ntp_plot_monlist)
-dev.off()
+ggsave(paste(plots_path, "/ntp_monlist_incidence_W18H8_sem_titulo.png", sep=""), width = 18, height = 8)
 
-pdf(paste(plots_path, "/ntp_monlist_incidence_W18H8.pdf", sep=""), width = 18, height = 8)
-print(ntp_plot_monlist)
-dev.off()
-
-pdf(paste(plots_path, "/ntp_monlist_incidence_W18H6.pdf", sep=""), width = 18, height = 6, pointsize=16)
-print(ntp_plot_monlist)
-dev.off()
+ggsave(paste(plots_path, "/ntp_monlist_incidence_W18H6_sem_titulo.png", sep=""), width = 18, height = 6, pointsize=16)
 
 ntp_plot_monlist
 ```
@@ -1302,7 +2170,7 @@ db_memcached <- dbConnect(RSQLite::SQLite(), dbname="../../db/database-2022-05-1
 
 
 data_memcached_payload_types_unfetch <-dbSendQuery(db_memcached, "
-  SELECT id, quantity, SUBSTR(payload,0,25) AS payload_limit
+  SELECT id, attacks, requests_per_attack, SUBSTR(payload,0,25) AS payload_limit
     FROM MEMCACHED_PAYLOAD_TYPES
 ")
 data_memcached_payload_types <- fetch(data_memcached_payload_types_unfetch)
@@ -1310,7 +2178,7 @@ data_memcached_payload_types <- fetch(data_memcached_payload_types_unfetch)
 # filtro de count e year period feito ao montar tabela
 
 data_memcached_payloads_unfetch <-dbSendQuery(db_memcached, "
-  SELECT id, SUBSTR(payload,0,25) AS payload_limit, tempo_inicio, tempo_final, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period
+  SELECT id, SUBSTR(payload,0,25) AS payload_limit, tempo_inicio, tempo_final, CAST(CAST(year AS text) || CAST(period AS text) as integer) as year_period, requests_per_attack, memcached_request_type, raw_payload
     FROM (
       SELECT *,  strftime(\"%Y\", tempo_inicio) as year, ((strftime(\"%m\", tempo_final) - 1) / 3) + 1 AS period
         FROM MEMCACHED_ANALYSIS
@@ -1329,28 +2197,121 @@ data_memcached_payload['tempo_final_cast'] = as.POSIXct(data_memcached_payload[[
 data_memcached_payload['tempo_inicio_cast'] = as.POSIXct(data_memcached_payload[['tempo_inicio']], format = "%Y-%m-%d %H:%M:%S")
 ```
 
-
+Memcached payload anomalo
 ```{r}
 data_memcached_payload %>%
-  arrange(tempo_final_cast)
+  filter(year_period >= 20204) %>%
+  group_by(raw_payload) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  ungroup() %>%
+  mutate(total_period_ataques = sum(ataques), total_period_requests = sum(requests)) %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>%
+  select(ataques, percentage_ataques, raw_payload, percentage_requests) %>%
+  arrange(desc(percentage_requests))
+  
+
+data_memcached_payload %>%
+  filter(year_period >= 20204) %>%
+  group_by(year_period, memcached_request_type) %>% 
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques), total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, memcached_request_type, ataques, percentage_ataques, requests, percentage_requests)
+
+
+data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 10 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period = sum(qnt)) %>%
+  ungroup() %>%
+  mutate(percentage = (qnt * 100)/ total_period) %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, qnt, percentage, requests, total_period)
+
+data_memcached_payload_types
 
 ```
 
+- Memcached requisições percentage
+```{r}
+data_memcached_payload_types %>%
+  group_by(payload_limit) %>%
+  summarise(requests = sum(requests_per_attack), attacks = sum(attacks)) %>%
+  ungroup() %>%
+  mutate(total_requests = sum(requests), total_attacks = sum(attacks)) %>%
+  mutate(percent_request = (requests*100)/total_requests, percent_attacks = (attacks*100)/total_attacks) %>%
+  mutate(requests_by_attack = requests/attacks)
+```
+
+
+- Memcached requisições por type
+```{r}
+data_memcached_payload %>%
+  group_by(memcached_request_type) %>%
+  summarise(requests = sum(requests_per_attack), attacks = n()) %>%
+  ungroup() %>%
+  mutate(total_requests = sum(requests), total_attacks = sum(attacks)) %>%
+  mutate(percent_request = (requests*100)/total_requests, percent_attacks = (attacks*100)/total_attacks) %>%
+  mutate(requests_by_attack = requests/attacks) %>%
+  arrange(requests_by_attack)
+```
+
+
+
+- Memcached requisições por trimestre
+```{r}
+data_memcached_payload %>%
+  group_by(memcached_request_type, year_period) %>%
+  summarise(requests = sum(requests_per_attack), attacks = n()) %>%
+  ungroup() %>%
+  mutate(total_requests = sum(requests), total_attacks = sum(attacks)) %>%
+  mutate(percent_request = (requests*100)/total_requests, percent_attacks = (attacks*100)/total_attacks) %>%
+  mutate(requests_by_attack = requests/attacks) %>%
+  arrange(year_period)
+```
+
+- Stats requisiçoes por trimestre
+```{r}
+data_memcached_payload %>%
+  filter(memcached_request_type == "Stats") %>%
+  filter(year_period >= 20211) %>%
+  group_by(year_period) %>%
+  summarise(requests = sum(requests_per_attack), attacks = n()) %>%
+  ungroup() %>%
+  mutate(total_requests = sum(requests), total_attacks = sum(attacks)) %>%
+  mutate(percent_request = (requests*100)/total_requests, percent_attacks = (attacks*100)/total_attacks) %>%
+  mutate(requests_by_attack = requests/attacks) %>%
+  arrange(year_period)
+
+# Total ataques 63
+# 63/5 = 12,6 média de ataques por trimestre para stats 
+```
 
 ```{r}
 memcached_payload_types = data_memcached_payload_types %>%
   mutate(payload_str = toString(payload_limit)) %>%
-  arrange(desc(quantity)) %>%
-  select('quantity', 'payload_limit', 'id')
-
+  arrange(desc(requests_per_attack)) %>%
+  select('requests_per_attack', 'payload_limit', 'id')
+# 
 memcached_payload_types_quantity_percentage = memcached_payload_types %>%
-  mutate(sum_quantity = sum(quantity)) %>%
-  mutate(quantity_percentage = (quantity / sum_quantity) * 100)
-
-memcached_payload_types_quantity_percentage %>%
-  select('quantity', 'quantity_percentage', 'payload_limit') %>%
-  arrange(desc(quantity)) %>%
-  head(15)
+  mutate(requests = sum(requests_per_attack)) %>%
+  mutate(requests_percentage = (requests_per_attack / requests) * 100)
+# 
+# memcached_payload_types_quantity_percentage %>%
+#   select('quantity', 'quantity_percentage', 'payload_limit') %>%
+#   arrange(desc(quantity)) %>%
+#   head(15)
 
 ```
 
@@ -1358,19 +2319,19 @@ memcached_payload_types_quantity_percentage %>%
 ```{r fig.width = 16, fig.height=10}
 
  memcached_comandos = memcached_payload_types_quantity_percentage %>%
-  arrange(desc(quantity)) %>%
-  filter(quantity > 0) %>%
-  select('quantity_percentage', 'payload_limit') %>%
-  arrange(quantity_percentage) %>%
+  arrange(desc(requests)) %>%
+  filter(requests > 0) %>%
+  select('requests_percentage', 'payload_limit') %>%
+  arrange(requests_percentage) %>%
   mutate(payload_limit=factor(payload_limit, levels=payload_limit)) %>%
-  ggplot( aes(x=payload_limit, y=quantity_percentage)) +
+  ggplot( aes(x=payload_limit, y=requests_percentage)) +
     # geom_bar(stat="identity", width = 0.7) +
     geom_segment( aes(xend=payload_limit, yend=0)) +
     geom_point( size=4, color="skyblue") +
     coord_flip() +
     geom_text(
-      size = 6.4,
-      aes(label = paste(round(quantity_percentage, 3), "%"),  vjust = -1),) +
+      size = 7,
+      aes(label = paste(round(requests_percentage, 3), "%"),  vjust = -1),) +
     scale_fill_viridis(discrete=TRUE, direction = -1) +
     scale_y_continuous(labels = add_percentage) +
     ylab("Porcentagem") +
@@ -1378,35 +2339,668 @@ memcached_payload_types_quantity_percentage %>%
     theme_bw() +
     theme(
       plot.title = element_text(size = 22),
-      axis.title = element_text(size = 20),
+      axis.title = element_text(size = 30),
       strip.text = element_text(size = 16),
-      axis.text.x = element_text(size = 18),
-      axis.text.y = element_text(size = 18),
+      axis.text.x = element_text(size = 30),
+      axis.text.y = element_text(size = 30),
       # panel.grid.major = element_blank(),
       panel.grid = element_blank(),
 
-    ) +
-    ggtitle("Memcached: Ataques por Comando")
+    ) 
+# +
+#     ggtitle("Memcached: Ataques por Comando")
 
-pdf(paste(plots_path, "/memcached_comandos_W16H10.pdf", sep=""), width = 16, height = 10, pointsize=16)
-print(memcached_comandos)
-dev.off()
+ggsave(paste(plots_path, "/memcached_comandos_W16H10_sem_titulo.png", sep=""), width = 16, height = 10, pointsize=16)
 
-pdf(paste(plots_path, "/memcached_comandos_W16H8.pdf", sep=""), width = 16, height = 8, pointsize=16)
-print(memcached_comandos)
-dev.off()
+ggsave(paste(plots_path, "/memcached_comandos_W16H8_sem_titulo.png", sep=""), width = 16, height = 8, pointsize=16)
 
-pdf(paste(plots_path, "/memcached_comandos_W18H10.pdf", sep=""), width = 18, height = 10)
-print(memcached_comandos)
-dev.off()
+ggsave(paste(plots_path, "/memcached_comandos_W18H10_sem_titulo.png", sep=""), width = 18, height = 10)
 
-pdf(paste(plots_path, "/memcached_comandos_W18H8.pdf", sep=""), width = 18, height = 8)
-print(memcached_comandos)
-dev.off()
+ggsave(paste(plots_path, "/memcached_comandos_W18H8_sem_titulo.png", sep=""), width = 18, height = 8)
 
-pdf(paste(plots_path, "/memcached_comandos_W18H6.pdf", sep=""), width = 18, height = 6)
-print(memcached_comandos)
-dev.off()
+ggsave(paste(plots_path, "/memcached_comandos_W18H6_sem_titulo.png", sep=""), width = 18, height = 6)
 
 memcached_comandos
+```
+
+QOTD porcentagem de payloads notaveis == payloads com 0/1/2 bytes
+```{r fig.width = 12}
+qotd_payload_notavel = 
+  data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 10 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(qnt_payload = n()) %>%
+  group_by(year_period) %>%
+  mutate(sum_qnt_period = sum(qnt_payload)) %>%
+  ungroup() %>%
+  mutate(qnt_payload_notavel_percentage = (qnt_payload * 100)/ sum_qnt_period) %>% 
+  arrange(year_period) %>%
+  ggplot( aes(x=notavel, y=qnt_payload_notavel_percentage, fill=notavel)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 5, aes(label = paste(round(qnt_payload_notavel_percentage, 2), "%"),  vjust = -0.25)) +
+    # scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    # theme(plot.title = element_text(size=12)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem da quantidade de payloads notaveis") +
+    xlab("Período (Trimestre)") +
+    # theme(
+    #   plot.title = element_text(size = 22),
+    #   axis.title = element_text(size = 12),
+    #   strip.text = element_text(size = 12),
+    #   axis.text.x = element_text(size = 12),
+    #   axis.text.y = element_text(size = 12),
+    # ) +
+    ggtitle("QOTD - Quantidade de payloads notáveis")
+
+
+pdf(paste(plots_path, "/qotd_payload_notavel_W18H8.png", sep=""), width = 18, height = 8)
+print(qotd_payload_notavel)
+dev.off()
+
+```
+
+- QOTD verificar anomalo
+
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 10 ) %>%
+  group_by(raw_payload, raw_payload_len) %>%
+  summarise(attacks = n(), requests = sum(requests_per_attack)) %>%
+  select(raw_payload_len, raw_payload) %>%
+  arrange(raw_payload_len)
+  # group_by(year_period) %>%
+  # mutate(sum_qnt_period = sum(qnt_payload)) %>%
+  # ungroup() %>%
+  # mutate(qnt_payload_notavel_percentage = (qnt_payload * 100)/ sum_qnt_period) %>% 
+  # arrange(year_period) 
+
+```
+
+Gerando dados para QOTD notáveis
+
+```{r fig.width = 12}
+
+qotd_payload_notaveis = data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 10 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests,
+         protocol = "QOTD") %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, ataques, percentage_ataques, requests, percentage_requests, protocol)
+
+qotd_payload_notaveis
+```
+
+# Plot QOTD payload notaveis
+```{r fig.width = 12}
+
+
+qotd_plot_payload_requests_trimestres = qotd_payload_notaveis %>%
+  mutate(notavel = case_when(
+          notavel == FALSE ~ "Não",
+          TRUE ~ "Sim"
+  )) %>%
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+    notavel = as.factor(notavel)
+  ) %>%
+  ggplot( aes(x=notavel, y=percentage_requests, fill=notavel)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 7, aes(label = paste(round(percentage_requests, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem de Requisições") +
+    xlab("Payloads até 2 bytes") +
+    ggtitle("QOTD - Payloads por trimestre") +
+    theme(
+      plot.title = element_text(size = 22),
+      axis.title = element_text(size = 18),
+      legend.position="none",
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
+    ) 
+qotd_plot_payload_requests_trimestres
+```
+
+
+Gerando dados para Chargen notáveis
+
+```{r fig.width = 12}
+
+chargen_payload_notaveis = data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 11 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests,
+         protocol = "Chargen") %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, ataques, percentage_ataques, requests, percentage_requests, protocol)
+
+chargen_payload_notaveis
+```
+
+# Plot CHARGEN payload notaveis
+```{r fig.width = 12}
+
+
+chargen_plot_payload_requests_trimestres = chargen_payload_notaveis %>%
+  mutate(notavel = case_when(
+          notavel == FALSE ~ "Não",
+          TRUE ~ "Sim"
+  )) %>%
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+    notavel = as.factor(notavel)
+  ) %>%
+  ggplot( aes(x=notavel, y=percentage_requests, fill=notavel)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 7, aes(label = paste(round(percentage_requests, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem de Requisições") +
+    xlab("Payloads até 2 bytes") +
+    ggtitle("Chargen - Payloads por trimestre") +
+    theme(
+      plot.title = element_text(size = 22),
+      axis.title = element_text(size = 18),
+      legend.position="none",
+      strip.text = element_text(size = 16),
+      axis.text.x = element_text(size = 16),
+      axis.text.y = element_text(size = 16),
+    ) 
+
+chargen_plot_payload_requests_trimestres
+
+
+g = arrangeGrob(chargen_plot_payload_requests_trimestres, qotd_plot_payload_requests_trimestres, nrow=2)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_2plots_W22H16.png", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_2plots_W20H14.png", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_2plots_W18H14.png", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_2plots_W16H14.png", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_2plots_W18H13.png", sep=""), g, width = 18, height = 13)
+```
+
+# Juntar os Gráficos do Grupo (A) Chargen e QOTD em um gráfico só
+```{r}
+
+# chargen_payload_notaveis 
+# qotd_payload_notaveis
+
+plot_chargen_qotd_notavel = bind_rows(
+  chargen_payload_notaveis ,
+qotd_payload_notaveis
+) %>%
+  filter(notavel == TRUE) %>%
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+    notavel = as.factor(notavel)
+  ) %>%
+  ggplot( aes(x=protocol, y=percentage_requests, fill=protocol)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 7.5, aes(label = paste(round(percentage_requests, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem de Requisições") +
+    xlab(expression(paste(italic("Payloads"), " de até 2 bytes por trimestre"))) +
+    # ggtitle("Chargen - Payloads por trimestre") +
+    theme(
+      plot.title = element_text(size = 22),
+      axis.title = element_text(size = 30),
+      strip.text = element_text(size = 25),
+      axis.text.x = element_text(size = 24),
+      axis.text.y = element_text(size = 30),
+      legend.position="none",
+    ) 
+
+plot_chargen_qotd_notavel
+
+g = arrangeGrob(plot_chargen_qotd_notavel, nrow=1)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W22H16.pdf", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W20H14.pdf", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W18H14.pdf", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W16H14.pdf", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W18H13.pdf", sep=""), g, width = 18, height = 13)
+ggsave(file = paste(plots_path, "/chargen_qotd_notaveis_plot_W18H8.pdf", sep=""), g, width = 18, height = 8)
+```
+
+# 2. um gráfico de barras com % de requisições predominantes para CLDAP e SSDP (1 gráfico para os 2 protocolos)
+
+
+```{r fig.width = 14}
+ssdp_payload_notaveis = data_mix_protocol %>%
+  filter(attack_protocol == "SSDP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload = replace_na(raw_payload, 'M-SEARCH')) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = grepl('M-SEARCH', raw_payload) ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests,
+         protocol = "SSDP") %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, ataques, percentage_ataques, requests, percentage_requests, protocol)
+
+
+cldap_payload_notaveis = data_mix_protocol %>%
+  filter(attack_protocol == "CLDAP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload = replace_na(raw_payload, 'objec')) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = grepl('objec', raw_payload) ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests,
+         protocol = "CLDAP") %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, ataques, percentage_ataques, requests, percentage_requests, protocol)
+
+
+
+cldap_ssdp_binded = bind_rows(
+  cldap_payload_notaveis,
+  ssdp_payload_notaveis
+) %>%
+  mutate(req_perc = case_when(
+    percentage_requests == 100 ~ "100%",
+    TRUE ~ paste(substr(format(percentage_requests, nsmall=3, digits=3), 0, 6), "%") 
+  )) %>%
+  filter(notavel == TRUE)
+
+plot_cldap_ssdp_notavel = cldap_ssdp_binded %>%
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+  ) %>%
+  ggplot( aes(x=protocol, y=percentage_requests, fill=protocol)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 7.5, aes(label = req_perc,  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem de Requisições") +
+    xlab(expression(paste(italic("Payloads"), " predominantes por trimestre"))) +
+    # xlab("Payloads predominantes por trimestre") +
+    # ggtitle("Chargen - Payloads por trimestre") +
+    theme(
+      plot.title = element_text(size = 22),
+      axis.title = element_text(size = 30),
+      strip.text = element_text(size = 25),
+      axis.text.x = element_text(size = 24),
+      axis.text.y = element_text(size = 30),
+      legend.position="none",
+    ) 
+
+plot_cldap_ssdp_notavel
+
+g = arrangeGrob(plot_cldap_ssdp_notavel, nrow=1)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W22H16.pdf", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W20H14.pdf", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W18H14.pdf", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W16H14.pdf", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W18H13.pdf", sep=""), g, width = 18, height = 13)
+ggsave(file = paste(plots_path, "/cldap_ssdp_notaveis_plot_W18H8.pdf", sep=""), g, width = 18, height = 8)
+```
+
+
+# 3. um gráfico de barras com % de GET .well-known/core e GET 0 para CoAP
+
+```{r fig.width = 14}
+coap_payload_notaveis = data_mix_protocol %>%
+  filter(attack_protocol == "COAP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(
+      raw_payload = case_when(
+      grepl('well-known', raw_payload) ~ "well-known",
+      grepl('xc1', raw_payload) ~ "GET 0",
+      TRUE ~ as.character(raw_payload)
+    )
+  ) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, ataques, percentage_ataques, requests, percentage_requests, raw_payload)
+
+
+plot_coap_notavel = coap_payload_notaveis %>%
+  filter(!is.na(raw_payload)) %>%
+  mutate(
+    year_period = paste(substr(year_period, 0, 4), substr(year_period, 5, 5), sep = "/"),
+  ) %>%
+  ggplot( aes(x=raw_payload, y=percentage_requests, fill=raw_payload)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 7.5, aes(label = paste(round(percentage_requests, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    theme(plot.title = element_text(size=22)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem de Requisições") +
+    # xlab("Payloads predominantes por trimestre") +
+    xlab(expression(paste(italic("Payloads"), " predominantes por trimestre"))) +
+    theme(
+      plot.title = element_text(size = 22),
+      axis.title = element_text(size = 30),
+      strip.text = element_text(size = 25),
+      axis.text.x = element_text(size = 24),
+      axis.text.y = element_text(size = 30),
+      legend.position="none",
+    ) 
+
+plot_coap_notavel
+
+g = arrangeGrob(plot_coap_notavel, nrow=1)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W22H16.pdf", sep=""), g, width = 22, height = 16)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W20H14.pdf", sep=""), g, width = 20, height = 14)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W18H14.pdf", sep=""), g, width = 18, height = 14)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W16H14.pdf", sep=""), g, width = 16, height = 14)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W18H13.pdf", sep=""), g, width = 18, height = 13)
+ggsave(file = paste(plots_path, "/coap_notaveis_plot_W18H8.pdf", sep=""), g, width = 18, height = 8)
+```
+
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>%
+  summarise(qnt = n()) %>%
+  arrange(desc(qnt))
+
+```
+
+- QOTD anomalo 2020/4 para frente
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "QOTD") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload) %>%
+  summarise(qnt = n()) %>%
+  select(qnt, raw_payload)
+
+```
+
+
+
+CHARGEN porcentagem de payloads notaveis == payloads com 0/1/2 bytes
+```{r fig.width = 12}
+chargen_payload_notavel = data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 5 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(qnt_payload = n()) %>%
+  group_by(year_period) %>%
+  mutate(sum_qnt_period = sum(qnt_payload)) %>%
+  ungroup() %>%
+  mutate(qnt_payload_notavel_percentage = (qnt_payload * 100)/ sum_qnt_period) %>% 
+  arrange(year_period) %>%
+  ggplot( aes(x=notavel, y=qnt_payload_notavel_percentage, fill=notavel)) +
+    geom_bar(stat="identity", position="dodge") +
+    geom_text(size = 5, aes(label = paste(round(qnt_payload_notavel_percentage, 2), "%"),  vjust = -0.25)) +
+    scale_fill_viridis(discrete=TRUE, option="inferno", begin = 0.8, end = 0.4, direction = -1) +
+    facet_grid(~year_period) +
+    # theme(plot.title = element_text(size=12)) +
+    scale_y_continuous(labels = add_percentage) +
+    ylab("Porcentagem da quantidade de payloads notaveis") +
+    xlab("Período (Trimestre)") +
+    # theme(
+    #   plot.title = element_text(size = 22),
+    #   axis.title = element_text(size = 12),
+    #   strip.text = element_text(size = 12),
+    #   axis.text.x = element_text(size = 12),
+    #   axis.text.y = element_text(size = 12),
+    # ) +
+    ggtitle("CHARGEN - Quantidade de payloads notáveis")
+
+
+pdf(paste(plots_path, "/chargen_payload_notavel_W18H8.png", sep=""), width = 18, height = 8)
+print(chargen_payload_notavel)
+dev.off()
+
+```
+
+- Verificando o que é anomalo >= 12
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>% 
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  arrange(desc(qnt)) %>%
+  select(qnt, raw_payload_len, requests, raw_payload)
+
+
+data_mix_protocol %>%
+  filter(attack_protocol == "CHARGEN") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(notavel = raw_payload_len <= 11 ) %>%
+  group_by(notavel, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques), total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, notavel, ataques, percentage_ataques, requests, percentage_requests)
+```
+
+- SSDP, o que são anomalos
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "SSDP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload = replace_na(raw_payload, 'M-SEARCH')) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>% 
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  mutate(notavel = grepl('M-SEARCH', raw_payload) ) %>%
+  arrange(desc(qnt)) %>%
+  filter(notavel == FALSE) %>%
+  select(qnt, requests, raw_payload)
+  # select(qnt, raw_payload_len, requests, raw_payload, notavel)
+  
+
+# - Vou considerar notavel o que contem M-search
+
+data_mix_protocol %>%
+  filter(attack_protocol == "SSDP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload = replace_na(raw_payload, 'M-SEARCH')) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  mutate(is_msearch = grepl('M-SEARCH', raw_payload) ) %>%
+  group_by(is_msearch, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, is_msearch, ataques, percentage_ataques, requests, percentage_requests)
+
+
+# Desconsiderando payload NA
+
+data_mix_protocol %>%
+  filter(attack_protocol == "SSDP") %>%
+  filter(year_period >= 20204) %>%
+  filter(!is.na(raw_payload)) %>%
+  mutate(is_msearch = grepl('M-SEARCH', raw_payload) ) %>%
+  group_by(is_msearch, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, is_msearch, ataques, percentage_ataques, requests, percentage_requests)
+```
+
+CHARGEN verificando anomalia
+
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "MEMCACHED") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>% 
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  mutate(notavel = grepl('M-SEARCH', raw_payload) ) %>%
+  arrange(desc(qnt)) %>%
+  filter(notavel == FALSE) %>%
+  select(qnt, requests, raw_payload)
+
+``` 
+
+
+CoAP verificando anomalias, não possuem payloads pequenos, então o agrupamento será pelo próprio payload
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "COAP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>% 
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  arrange(desc(qnt)) %>%
+  select(qnt, raw_payload_len, requests, raw_payload)
+
+
+data_mix_protocol %>%
+  filter(attack_protocol == "COAP") %>%
+  arrange(desc(tempo_final))
+
+  # mutate(notavel = raw_payload_len <= 11 ) %>%
+data_mix_protocol %>%
+  filter(attack_protocol == "COAP") %>%
+  filter(year_period >= 20204) %>%
+  mutate(
+      raw_payload = case_when(
+      grepl('well-known', raw_payload) ~ "well-known",
+      grepl('xc1', raw_payload) ~ "GET 0",
+      TRUE ~ as.character(raw_payload)
+    )
+  ) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, ataques, percentage_ataques, requests, percentage_requests, raw_payload)
+```
+
+
+
+- Steam verificando o que é anomalo
+```{r}
+data_mix_protocol %>%
+  filter(attack_protocol == "STEAM_GAMES") %>%
+  filter(year_period >= 20204) %>%
+  mutate() %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, raw_payload_len) %>% 
+  summarise(qnt = n(), requests = sum(requests_per_attack)) %>%
+  arrange(desc(qnt)) %>%
+  select(qnt, raw_payload_len, requests, raw_payload)
+
+
+data_mix_protocol %>%
+  filter(attack_protocol == "STEAM_GAMES") %>%
+  filter(year_period >= 20204) %>%
+  mutate(
+      raw_payload = case_when(
+      grepl('family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM', raw_payload) ~ "<socket.socket fd=121, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0, laddr=('200.19.107.238', 27015), raddr=('xxxxx', xxxxxx)>",
+      TRUE ~ as.character(raw_payload)
+    )
+  ) %>%
+  mutate(raw_payload_len = nchar(raw_payload, allowNA=TRUE, keepNA = TRUE)) %>%
+  mutate(raw_payload_len = replace_na(raw_payload_len, 0)) %>%
+  group_by(raw_payload, year_period) %>%
+  summarise(ataques = n(), requests = sum(requests_per_attack)) %>%
+  group_by(year_period) %>%
+  mutate(total_period_ataques = sum(ataques),
+         total_period_requests = sum(requests)) %>%
+  ungroup() %>%
+  mutate(percentage_ataques = (ataques * 100)/ total_period_ataques,
+         percentage_requests = (requests * 100)/ total_period_requests) %>% 
+  arrange(year_period) %>%
+  select(year_period, ataques, percentage_ataques, requests, percentage_requests, raw_payload)
+  # select(year_period, raw_payload)
 ```
